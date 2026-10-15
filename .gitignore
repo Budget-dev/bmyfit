@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+.env*
+!.env.example
+coverage
+firebase-debug.log
+firestore-debug.log
+*.tsbuildinfo
+.DS_Store
