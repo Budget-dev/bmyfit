@@ -56,6 +56,27 @@ declare module "next/link" {
   export default Link;
 }
 
+declare module "next/image" {
+  import type { ImgHTMLAttributes, ComponentType } from "react";
+  export interface ImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | "width" | "height"> {
+    src: string | any;
+    alt: string;
+    width?: number | `${number}`;
+    height?: number | `${number}`;
+    fill?: boolean;
+    quality?: number | `${number}`;
+    priority?: boolean;
+    loading?: "eager" | "lazy";
+    placeholder?: "blur" | "empty";
+    blurDataURL?: string;
+    unoptimized?: boolean;
+    sizes?: string;
+  }
+  const Image: ComponentType<ImageProps>;
+  export default Image;
+}
+
+
 declare module "next/navigation" {
   export function useRouter(): {
     push(url: string): void;
@@ -103,3 +124,41 @@ declare module "next/server" {
 declare module "next/server.js" {
   export * from "next/server";
 }
+
+declare module "next/dist/lib/metadata/types/metadata-interface.js" {
+  export type Metadata = any;
+  export type ResolvingMetadata = any;
+  export type ResolvingViewport = any;
+}
+
+declare module "next/types.js" {
+  export type Metadata = any;
+  export type ResolvingMetadata = any;
+  export type ResolvingViewport = any;
+}
+
+declare module "next/font/google" {
+  export type FontOptions = {
+    subsets?: string[];
+    weight?: string | string[];
+    style?: string | string[];
+    display?: "auto" | "block" | "swap" | "fallback" | "optional";
+    variable?: string;
+    preload?: boolean;
+    fallback?: string[];
+    adjustFontFallback?: boolean;
+  };
+
+  export type NextFontWithVariable = {
+    className: string;
+    variable: string;
+    style: { fontFamily: string; fontWeight?: number; fontStyle?: string };
+  };
+
+  export function Inter(options?: FontOptions): NextFontWithVariable;
+  export function Oswald(options?: FontOptions): NextFontWithVariable;
+  export function Caveat(options?: FontOptions): NextFontWithVariable;
+}
+
+
+

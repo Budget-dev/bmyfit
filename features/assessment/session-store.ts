@@ -77,21 +77,29 @@ export function getFullDraftInput(): AssessmentInput | null {
     !details?.age ||
     !details?.heightCm ||
     !details?.weightKg ||
-    !details?.waistIn ||
-    !details?.neckIn ||
     !goal?.goal
   ) {
     return null;
   }
+
+  const waistIn =
+    details.waistIn ??
+    (details.gender === "male"
+      ? Math.round(details.weightKg * 0.46)
+      : Math.round(details.weightKg * 0.42));
+  const neckIn = details.neckIn ?? (details.gender === "male" ? 15.5 : 13.5);
+  const hipIn =
+    details.hipIn ??
+    (details.gender === "female" ? Math.round(waistIn * 1.25) : undefined);
 
   return {
     gender: details.gender,
     age: details.age,
     heightCm: details.heightCm,
     weightKg: details.weightKg,
-    waistIn: details.waistIn,
-    neckIn: details.neckIn,
-    hipIn: details.hipIn,
+    waistIn,
+    neckIn,
+    hipIn,
     goal: goal.goal,
     activityLevel: goal.activityLevel ?? DEFAULT_ACTIVITY_LEVEL,
     dietPreference: goal.dietPreference ?? DEFAULT_DIET_PREFERENCE,

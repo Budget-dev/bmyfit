@@ -8,6 +8,7 @@ export interface FunnelShellProps {
   title?: string;
   subtitle?: string;
   children: React.ReactNode;
+  maxWidthClass?: string;
 }
 
 export function FunnelShell({
@@ -15,6 +16,7 @@ export function FunnelShell({
   title,
   subtitle,
   children,
+  maxWidthClass = "w-full max-w-xl md:max-w-4xl lg:max-w-5xl mx-auto",
 }: FunnelShellProps) {
   return (
     <div className="min-h-screen flex flex-col bg-surface-50 dark:bg-surface-950 text-ink dark:text-white transition-colors relative">
@@ -43,17 +45,17 @@ export function FunnelShell({
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col justify-start py-8 sm:py-12 px-4 sm:px-6 relative">
-        <div className="w-full max-w-xl mx-auto">
+      <main className="flex-1 flex flex-col justify-start py-6 sm:py-10 md:py-12 px-4 sm:px-6 relative">
+        <div className={maxWidthClass}>
           {(title || subtitle) && (
-            <div className="text-center mb-8">
+            <div className="text-center mb-6 sm:mb-8">
               {title && (
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-ink dark:text-white">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-ink dark:text-white">
                   {title}
                 </h1>
               )}
               {subtitle && (
-                <p className="mt-2 text-sm text-ink-muted dark:text-surface-400 leading-relaxed">
+                <p className="mt-2 text-sm md:text-base text-ink-muted dark:text-surface-400 leading-relaxed max-w-2xl mx-auto">
                   {subtitle}
                 </p>
               )}
@@ -65,8 +67,15 @@ export function FunnelShell({
 
       {/* Clean Bottom Note */}
       <footer className="py-6 text-center text-xs text-ink-muted dark:text-surface-500 border-t border-surface-200/60 dark:border-surface-800/60">
-        <div className="container">
+        <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <span>Private &amp; Anonymous · No account wall · Secured with Razorpay</span>
+          <div className="flex flex-wrap items-center justify-center gap-4 text-[11px]">
+            <Link href="/terms" className="hover:underline hover:text-emerald-600 transition-colors">Terms</Link>
+            <Link href="/privacy" className="hover:underline hover:text-emerald-600 transition-colors">Privacy</Link>
+            <Link href="/refund-policy" className="hover:underline hover:text-emerald-600 transition-colors">Refunds</Link>
+            <Link href="/shipping-policy" className="hover:underline hover:text-emerald-600 transition-colors">Delivery</Link>
+            <Link href="/contact" className="hover:underline hover:text-emerald-600 transition-colors">Support</Link>
+          </div>
         </div>
       </footer>
     </div>

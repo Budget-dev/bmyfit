@@ -1,18 +1,17 @@
-import React from "react";
+import React, { Suspense } from "react";
 import type { Metadata } from "next";
-import { FunnelShell } from "@/components/layout/funnel-shell";
 import { CalculatingClient } from "@/components/funnel/calculating-client";
 
 export const metadata: Metadata = {
-  title: "Processing Assessment · BMYFIT",
-  description: "Calculating your BMI and Estimated Body Fat %...",
+  title: "Analysing your body metrics · BMYFIT",
+  description: "Calculating your clinical BMI, estimated body fat %, and preparing personalized plan recommendations.",
   robots: { index: false, follow: false },
 };
 
 export default function CalculatingPage() {
   return (
-    <FunnelShell currentStep={3}>
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
       <CalculatingClient />
-    </FunnelShell>
+    </Suspense>
   );
 }
