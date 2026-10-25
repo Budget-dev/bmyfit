@@ -4,6 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase/admin";
 import { AppError } from "@/lib/errors";
 import type { Assessment, AssessmentInput, DetailedPlan } from "@/types/fitness";
+import type { PlanDashboardData, PlanStatus, TaskLogState } from "@/types/plan-dashboard";
 
 export interface PaymentOrderRecord { id: string; uid: string; assessmentId: string; amountPaise: number; currency: "INR"; status: "created" | "paid" | "failed" | "refunded"; razorpayOrderId?: string; razorpayPaymentId?: string; idempotencyKey: string; }
 
@@ -64,3 +65,81 @@ export async function recordWebhookOnce(eventId: string) {
   const ref = adminDb.collection("paymentWebhooks").doc(createHash("sha256").update(eventId).digest("hex"));
   return adminDb.runTransaction(async (transaction) => { const existing = await transaction.get(ref); if (existing.exists) return false; transaction.create(ref, { eventId, createdAt: FieldValue.serverTimestamp() }); return true; });
 }
+
+export async function storeDashboardPlan(uid: string, assessmentId: string, plan: PlanDashboardData) {
+  try {
+    await adminDb.collection("plans").doc(assessmentId).set(
+      { ...plan, uid, assessmentId, updatedAt: FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn("Firestore storeDashboardPlan skipped or failed:", err);
+  }
+}
+
+export async function getDashboardPlanById(assessmentId: string): Promise<PlanDashboardData | null> {
+  try {
+    const snapshot = await adminDb.collection("plans").doc(assessmentId).get();
+    if (!snapshot.exists) return null;
+    return snapshot.data() as PlanDashboardData;
+  } catch (err) {
+    console.warn("Firestore getDashboardPlanById error:", err);
+    return null;
+  }
+}
+
+export async function listAllDashboardPlans(): Promise<PlanDashboardData[]> {
+  try {
+    const snapshot = await adminDb.collection("plans").orderBy("createdAt", "desc").limit(50).get();
+    return snapshot.docs.map((doc) => doc.data() as PlanDashboardData);
+  } catch (err) {
+    console.warn("Firestore listAllDashboardPlans error:", err);
+    return [];
+  }
+}
+
+export async function updateDashboardPlanStatus(
+  planId: string,
+  status: PlanStatus,
+  updates?: Partial<PlanDashboardData>
+) {
+  try {
+    await adminDb.collection("plans").doc(planId).set(
+      {
+        ...updates,
+        status,
+        approvedAt: status === "approved" || status === "active" ? FieldValue.serverTimestamp() : undefined,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn("Firestore updateDashboardPlanStatus error:", err);
+  }
+}
+
+export async function saveUserTaskLogInDb(uid: string, planId: string, taskKey: string, completed: boolean) {
+  try {
+    await adminDb.collection("user_logs").doc(`${uid}_${planId}`).set(
+      {
+        [taskKey]: completed,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn("Firestore saveUserTaskLogInDb error:", err);
+  }
+}
+
+export async function getUserTaskLogsFromDb(uid: string, planId: string): Promise<TaskLogState> {
+  try {
+    const doc = await adminDb.collection("user_logs").doc(`${uid}_${planId}`).get();
+    if (!doc.exists) return {};
+    return (doc.data() || {}) as TaskLogState;
+  } catch (err) {
+    console.warn("Firestore getUserTaskLogsFromDb error:", err);
+    return {};
+  }
+}
+

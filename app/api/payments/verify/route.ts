@@ -5,6 +5,8 @@ import { AppError, toErrorResponse } from "@/lib/errors";
 import { enforceRateLimit, requestKey } from "@/lib/rate-limit";
 import { PLAN_PRICE_PAISE, verifyPaymentSignature } from "@/lib/payments/razorpay";
 import { generatePlan } from "@/features/plan";
+import { generateDashboardPlan } from "@/features/plan/dashboard-data";
+import { storeDashboardPlan } from "@/lib/firestore/repositories";
 
 export const runtime = "nodejs";
 const requestSchema = z.object({ razorpay_order_id: z.string().min(1).max(200), razorpay_payment_id: z.string().min(1).max(200), razorpay_signature: z.string().regex(/^[a-f0-9]{64}$/i) });
@@ -22,6 +24,18 @@ export async function POST(request: Request) {
     const assessment = await getAssessmentById(order.assessmentId);
     if (order.status !== "paid") await markPaymentPaid(order.id, input.razorpay_payment_id);
     await storePlan(user.uid, order.assessmentId, generatePlan(assessment, order.assessmentId));
+
+    // Create the dashboard plan in pending_review status for Admin/Coach approval
+    const dashboardPlan = generateDashboardPlan(order.assessmentId, {
+      status: "pending_review",
+      goal: assessment.goal,
+      bmi: assessment.bmi ?? undefined,
+      bodyFatPercent: assessment.bodyFatPercent ?? undefined,
+      weeksCount: 8,
+      customerName: "Fit Member",
+    });
+    await storeDashboardPlan(user.uid, order.assessmentId, dashboardPlan);
+
     return Response.json({ verified: true, assessmentId: order.assessmentId });
   } catch (error) {
     return toErrorResponse(error);
