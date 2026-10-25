@@ -1,25 +1,11 @@
 import type { Metadata } from "next";
-import { Inter, Oswald, Caveat } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-inter",
-});
-
-const oswald = Oswald({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  display: "swap",
-  variable: "--font-oswald",
-});
-
-const caveat = Caveat({
-  subsets: ["latin"],
-  weight: ["600", "700"],
-  display: "swap",
-  variable: "--font-caveat",
 });
 
 export const metadata: Metadata = {
@@ -40,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${oswald.variable} ${caveat.variable}`}>
+    <html lang="en" className={inter.variable}>
       <body className={inter.className}>{children}</body>
     </html>
   );

@@ -33,12 +33,12 @@ export function PlanClient({ id }: { id: string }) {
               age: parsed.age || 26,
               heightCm: parsed.heightCm || 175,
               weightKg: parsed.weightKg || 74,
-              waistCm: parsed.waistCm || 82,
-              neckCm: parsed.neckCm || 38,
-              hipCm: parsed.hipCm,
-              activityLevel: parsed.activityLevel || "moderate",
+              waistIn: parsed.waistIn || (parsed.waistCm ? parsed.waistCm / 2.54 : 32),
+              neckIn: parsed.neckIn || (parsed.neckCm ? parsed.neckCm / 2.54 : 15),
+              hipIn: parsed.hipIn || (parsed.hipCm ? parsed.hipCm / 2.54 : undefined),
+              activityLevel: parsed.activityLevel || "moderately-active",
               goal: parsed.goal || "fat-loss",
-              dietPreference: parsed.dietPreference || "non-veg",
+              dietPreference: parsed.dietPreference || "non-vegetarian",
             };
             const generated = generatePlan(input, id || "local");
             if (isMounted) {
@@ -77,12 +77,12 @@ export function PlanClient({ id }: { id: string }) {
               age: parsed.age || 26,
               heightCm: parsed.heightCm || 175,
               weightKg: parsed.weightKg || 74,
-              waistCm: parsed.waistCm || 82,
-              neckCm: parsed.neckCm || 38,
-              hipCm: parsed.hipCm,
-              activityLevel: parsed.activityLevel || "moderate",
+              waistIn: parsed.waistIn || (parsed.waistCm ? parsed.waistCm / 2.54 : 32),
+              neckIn: parsed.neckIn || (parsed.neckCm ? parsed.neckCm / 2.54 : 15),
+              hipIn: parsed.hipIn || (parsed.hipCm ? parsed.hipCm / 2.54 : undefined),
+              activityLevel: parsed.activityLevel || "moderately-active",
               goal: parsed.goal || "fat-loss",
-              dietPreference: parsed.dietPreference || "non-veg",
+              dietPreference: parsed.dietPreference || "non-vegetarian",
             };
             const generated = generatePlan(input, id);
             if (isMounted) {

@@ -22,14 +22,6 @@ export function BottomNav() {
     }
   };
 
-  const scrollToResults = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const el = document.getElementById("calculator-card");
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  };
-
   return (
     <>
       {/* Crisp White Fixed Bottom Navigation matching Image 2 */}
