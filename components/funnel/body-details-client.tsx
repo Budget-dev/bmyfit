@@ -240,22 +240,32 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
     "muscle-gain": {
       title: "Muscle Gain",
       subtitle: "Build lean muscle & strength",
+      image: "/images/banner-muscle-gain.jpg",
+      icon: "dumbbell",
     },
     "fat-loss": {
-      title: "Fat Loss",
-      subtitle: "Reduce body fat & preserve lean muscle",
+      title: "Lose Body Fat",
+      subtitle: "Reduce fat & keep muscle.",
+      image: "/images/model-lose-fat.jpg",
+      icon: "flame",
     },
     "weight-loss": {
-      title: "Weight Loss",
-      subtitle: "Calorie deficit & overall body slimming",
+      title: "Improve Fitness",
+      subtitle: "Increase stamina & energy.",
+      image: "/images/model-improve-fitness.jpg",
+      icon: "bars",
     },
     "weight-gain": {
-      title: "Weight Gain",
-      subtitle: "Healthy bulk & progressive strength",
+      title: "Build Consistency",
+      subtitle: "Sustainable routine plan.",
+      image: "/images/model-build-consistency.jpg",
+      icon: "target",
     },
   }[goal] || {
     title: "Muscle Gain",
     subtitle: "Build lean muscle & strength",
+    image: "/images/banner-muscle-gain.jpg",
+    icon: "dumbbell",
   };
 
   return (
@@ -317,8 +327,8 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
             {/* Selected Goal Hero Card with Change Button */}
             <div className="relative w-full rounded-2xl overflow-hidden shadow-md select-none aspect-[466/140] max-h-[110px] shrink-0 mb-2.5 bg-[#0a1510]">
               <Image
-                src="/images/banner-muscle-gain.jpg"
-                alt="Selected Goal: Muscle Gain"
+                src={goalConfig.image}
+                alt={goalConfig.title}
                 fill
                 priority
                 sizes="(max-width: 768px) 100vw, 448px"
@@ -344,13 +354,31 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
 
                 <div className="flex items-center gap-2.5 mt-auto">
                   <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm text-gray-950">
-                    <svg className="w-4 h-4 text-gray-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                      <rect x="2" y="8" width="2.5" height="8" rx="0.8" fill="currentColor" />
-                      <rect x="5.5" y="9.5" width="2" height="5" rx="0.5" fill="currentColor" />
-                      <line x1="7.5" y1="12" x2="16.5" y2="12" stroke="currentColor" strokeWidth="2.2" />
-                      <rect x="16.5" y="9.5" width="2" height="5" rx="0.5" fill="currentColor" />
-                      <rect x="19.5" y="8" width="2.5" height="8" rx="0.8" fill="currentColor" />
-                    </svg>
+                    {goalConfig.icon === "flame" ? (
+                      <svg className="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2c1.1 2.2 2.5 4.5 2.5 7 0 2.8-2.2 5-5 5-1.5 0-2.8-.7-3.7-1.7C5.3 14 7 16.5 9 18c3.9 2.9 9.3 1.8 11.8-2.2 2-3.2 1.4-7.4-1.3-9.9-.4-.4-.9-.8-1.5-1.1.2 1.3-.2 2.6-1 3.5-.8.9-1.9 1.4-3 1.4-.4 0-.8-.1-1.2-.2 1.4-1.8 1.4-4.4-.8-7.5z" />
+                      </svg>
+                    ) : goalConfig.icon === "bars" ? (
+                      <svg className="w-4 h-4 text-[#057a44]" fill="currentColor" viewBox="0 0 24 24">
+                        <rect x="3" y="12" width="3.5" height="9" rx="0.8" />
+                        <rect x="10" y="7" width="3.5" height="14" rx="0.8" />
+                        <rect x="17" y="3" width="3.5" height="18" rx="0.8" />
+                      </svg>
+                    ) : goalConfig.icon === "target" ? (
+                      <svg className="w-4 h-4 text-[#057a44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                        <circle cx="12" cy="12" r="9" />
+                        <circle cx="12" cy="12" r="5" />
+                        <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4 text-gray-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <rect x="2" y="8" width="2.5" height="8" rx="0.8" fill="currentColor" />
+                        <rect x="5.5" y="9.5" width="2" height="5" rx="0.5" fill="currentColor" />
+                        <line x1="7.5" y1="12" x2="16.5" y2="12" stroke="currentColor" strokeWidth="2.2" />
+                        <rect x="16.5" y="9.5" width="2" height="5" rx="0.5" fill="currentColor" />
+                        <rect x="19.5" y="8" width="2.5" height="8" rx="0.8" fill="currentColor" />
+                      </svg>
+                    )}
                   </div>
                   <div>
                     <div className="text-xs sm:text-sm font-extrabold text-white leading-tight">{goalConfig.title}</div>
@@ -593,11 +621,11 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
               These measurements help us estimate your body fat more accurately and create a better plan for you.
             </p>
 
-            {/* Selected Goal Hero Card with Model Curling Dumbbell */}
+            {/* Selected Goal Hero Card with Model */}
             <div className="relative w-full rounded-2xl overflow-hidden shadow-md select-none aspect-[466/150] max-h-[110px] shrink-0 mb-3 bg-[#0a1510]">
               <Image
-                src="/images/banner-muscle-gain.jpg"
-                alt="Selected Goal: Muscle Gain"
+                src={goalConfig.image}
+                alt={goalConfig.title}
                 fill
                 priority
                 sizes="(max-width: 768px) 100vw, 448px"
@@ -623,13 +651,31 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
 
                 <div className="flex items-center gap-2.5 mt-auto">
                   <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm text-gray-950">
-                    <svg className="w-4 h-4 text-gray-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                      <rect x="2" y="8" width="2.5" height="8" rx="0.8" fill="currentColor" />
-                      <rect x="5.5" y="9.5" width="2" height="5" rx="0.5" fill="currentColor" />
-                      <line x1="7.5" y1="12" x2="16.5" y2="12" stroke="currentColor" strokeWidth="2.2" />
-                      <rect x="16.5" y="9.5" width="2" height="5" rx="0.5" fill="currentColor" />
-                      <rect x="19.5" y="8" width="2.5" height="8" rx="0.8" fill="currentColor" />
-                    </svg>
+                    {goalConfig.icon === "flame" ? (
+                      <svg className="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2c1.1 2.2 2.5 4.5 2.5 7 0 2.8-2.2 5-5 5-1.5 0-2.8-.7-3.7-1.7C5.3 14 7 16.5 9 18c3.9 2.9 9.3 1.8 11.8-2.2 2-3.2 1.4-7.4-1.3-9.9-.4-.4-.9-.8-1.5-1.1.2 1.3-.2 2.6-1 3.5-.8.9-1.9 1.4-3 1.4-.4 0-.8-.1-1.2-.2 1.4-1.8 1.4-4.4-.8-7.5z" />
+                      </svg>
+                    ) : goalConfig.icon === "bars" ? (
+                      <svg className="w-4 h-4 text-[#057a44]" fill="currentColor" viewBox="0 0 24 24">
+                        <rect x="3" y="12" width="3.5" height="9" rx="0.8" />
+                        <rect x="10" y="7" width="3.5" height="14" rx="0.8" />
+                        <rect x="17" y="3" width="3.5" height="18" rx="0.8" />
+                      </svg>
+                    ) : goalConfig.icon === "target" ? (
+                      <svg className="w-4 h-4 text-[#057a44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                        <circle cx="12" cy="12" r="9" />
+                        <circle cx="12" cy="12" r="5" />
+                        <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4 text-gray-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <rect x="2" y="8" width="2.5" height="8" rx="0.8" fill="currentColor" />
+                        <rect x="5.5" y="9.5" width="2" height="5" rx="0.5" fill="currentColor" />
+                        <line x1="7.5" y1="12" x2="16.5" y2="12" stroke="currentColor" strokeWidth="2.2" />
+                        <rect x="16.5" y="9.5" width="2" height="5" rx="0.5" fill="currentColor" />
+                        <rect x="19.5" y="8" width="2.5" height="8" rx="0.8" fill="currentColor" />
+                      </svg>
+                    )}
                   </div>
                   <div>
                     <div className="text-xs sm:text-sm font-extrabold text-white leading-tight">{goalConfig.title}</div>

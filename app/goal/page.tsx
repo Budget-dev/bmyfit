@@ -6,11 +6,46 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiteHeader } from "@/components/layout/site-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
-import { saveDraftGoal } from "@/features/assessment/session-store";
+import { saveDraftGoal, loadDraftGoal } from "@/features/assessment/session-store";
 import type { FitnessGoal } from "@/types/fitness";
 
 type FocusOption = "lose-fat" | "build-strength" | "improve-fitness" | "build-consistency";
 type ExperienceOption = "beginner" | "intermediate" | "advanced";
+
+const GOAL_HERO_CARDS: Record<
+  FocusOption,
+  {
+    image: string;
+    alt: string;
+    title: string;
+    subtitle: string;
+  }
+> = {
+  "lose-fat": {
+    image: "/images/goal-card-lose-fat.png",
+    alt: "Selected Goal: Lose Body Fat - Reduce fat & keep muscle",
+    title: "Lose Body Fat",
+    subtitle: "Reduce fat & keep muscle.",
+  },
+  "build-strength": {
+    image: "/images/goal-card-build-strength.png",
+    alt: "Selected Goal: Build Strength - Get stronger & lift better",
+    title: "Build Strength",
+    subtitle: "Get stronger & lift better.",
+  },
+  "improve-fitness": {
+    image: "/images/goal-card-improve-fitness.png",
+    alt: "Selected Goal: Improve Fitness - Increase stamina & energy",
+    title: "Improve Fitness",
+    subtitle: "Increase stamina & energy.",
+  },
+  "build-consistency": {
+    image: "/images/goal-card-build-consistency.png",
+    alt: "Selected Goal: Build Consistency - Sustainable routine plan",
+    title: "Build Consistency",
+    subtitle: "Sustainable routine plan.",
+  },
+};
 
 export default function GoalPage() {
   const router = useRouter();
@@ -20,11 +55,18 @@ export default function GoalPage() {
 
   React.useEffect(() => {
     router.prefetch("/details");
+    const draft = loadDraftGoal();
+    if (draft?.goal) {
+      if (draft.goal === "fat-loss") setSelectedFocus("lose-fat");
+      else if (draft.goal === "muscle-gain") setSelectedFocus("build-strength");
+      else if (draft.goal === "weight-loss") setSelectedFocus("improve-fitness");
+      else if (draft.goal === "weight-gain") setSelectedFocus("build-consistency");
+    }
   }, [router]);
 
   const handleContinue = () => {
     // Map focus option to closest primary FitnessGoal for plan calculation
-    let goal: FitnessGoal = "muscle-gain";
+    let goal: FitnessGoal = "fat-loss";
     if (selectedFocus === "lose-fat") goal = "fat-loss";
     else if (selectedFocus === "build-strength") goal = "muscle-gain";
     else if (selectedFocus === "improve-fitness") goal = "weight-loss";
@@ -73,16 +115,29 @@ export default function GoalPage() {
           Help us understand what matters to you so we can personalize your plan better.
         </p>
 
-        {/* Selected Goal Hero Card - Preserves exact aspect ratio so checkmark, text & model are 100% visible */}
-        <div className="relative w-full rounded-2xl overflow-hidden shadow-md border border-emerald-950/40 mt-1.5 select-none aspect-[466/166] max-h-[120px] shrink-0">
-          <Image
-            src="/images/goal-card-2x.png"
-            alt="Selected Goal: Muscle Gain - Build lean muscle & strength"
-            fill
-            priority
-            sizes="(max-width: 768px) 100vw, 448px"
-            className="object-cover object-center"
-          />
+        {/* Selected Goal Hero Card - Dynamically updates based on chosen goal with smooth cross-fade */}
+        <div className="relative w-full rounded-2xl overflow-hidden shadow-md border border-emerald-950/40 mt-1.5 select-none aspect-[466/166] max-h-[120px] shrink-0 bg-[#060b09]">
+          {(Object.keys(GOAL_HERO_CARDS) as FocusOption[]).map((key) => {
+            const card = GOAL_HERO_CARDS[key];
+            const isActive = selectedFocus === key;
+            return (
+              <div
+                key={key}
+                className={`absolute inset-0 transition-opacity duration-300 ease-out ${
+                  isActive ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+                }`}
+              >
+                <Image
+                  src={card.image}
+                  alt={card.alt}
+                  fill
+                  priority={key === "lose-fat" || key === selectedFocus}
+                  sizes="(max-width: 768px) 100vw, 448px"
+                  className="object-cover object-center"
+                />
+              </div>
+            );
+          })}
         </div>
 
         {/* Section 1: What matters most to you? */}
