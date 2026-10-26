@@ -28,7 +28,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
 
   // Customer contact state for receipt & coach connection
   const [customerDetails, setCustomerDetails] = useState({
-    name: "Aryan Sharma",
+    name: "Rahul Sharma",
     email: "client@bmyfit.in",
     phone: "+91 98201 44821",
   });

@@ -1,6 +1,7 @@
 import React, { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { AuthCard } from "@/components/auth/auth-card";
 import { BmyFitLogo } from "@/components/layout/logo";
 
@@ -75,6 +76,27 @@ export default function SignupPage() {
               <div className="flex items-center gap-2.5">
                 <span className="text-[#00e676] font-bold">✓</span>
                 <span>Continuous coach updates &amp; multi-week progression</span>
+              </div>
+            </div>
+
+            {/* Coach Naveen Endorsement Badge */}
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.04] border border-white/10 mt-2">
+              <div className="relative w-11 h-11 rounded-full overflow-hidden border border-[#00e676]/60 shrink-0 shadow-sm">
+                <Image
+                  src="/images/coach-naveen.jpg"
+                  alt="Coach Naveen"
+                  fill
+                  className="object-cover object-top"
+                />
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-bold text-white">Coach Naveen</p>
+                  <span className="text-[9px] bg-emerald-500/20 text-[#00e676] px-1.5 py-0.2 rounded-full font-bold">
+                    Blaze Gym Owner
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-0.5">Every plan is verified by Coach Naveen before active delivery</p>
               </div>
             </div>
           </div>

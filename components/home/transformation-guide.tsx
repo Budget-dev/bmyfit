@@ -528,9 +528,9 @@ export function TransformationGuide() {
             <div className="bg-emerald-50 rounded-xl p-3 text-[11px] text-emerald-900 space-y-1 mb-4">
               <div className="font-bold flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span>Coach Vikram Sharma &amp; Team</span>
+                <span>Coach Naveen &amp; Blaze Gym Team</span>
               </div>
-              <div className="text-[10px] text-emerald-700">Response time: Usually within 15 minutes</div>
+              <div className="text-[10px] text-emerald-700">Response time: Usually within 15 minutes · Blaze Gym Certified</div>
             </div>
 
             <a

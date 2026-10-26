@@ -752,7 +752,7 @@ export async function updateAdminUserPlan(
 
 export async function pushPlanToUserDashboard(
   userId: string,
-  coachName: string = "Aryan Sharma (Head Coach)",
+  coachName: string = "Coach Naveen (Blaze Gym Owner & Head Coach)",
   notes?: string
 ): Promise<{ success: boolean; pushedPlan: PlanDashboardData; user: AdminUserRecord }> {
   ensureMemoryStore();

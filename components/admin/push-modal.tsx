@@ -20,7 +20,7 @@ interface PushModalProps {
 }
 
 export function PushModal({ user, onClose, onSuccess }: PushModalProps) {
-  const [coachName, setCoachName] = useState<string>("Aryan Sharma (Head Coach)");
+  const [coachName, setCoachName] = useState<string>("Coach Naveen (Blaze Gym Owner & Head Coach)");
   const [coachNotes, setCoachNotes] = useState<string>(
     user?.plan.coachNotes ||
       "Weekly plan tailored to your biometrics and goals. Stay consistent with your protein and daily step count!"

@@ -20,7 +20,7 @@ export async function POST(
 
     const result = await pushPlanToUserDashboard(
       id,
-      body.coachName || "Aryan Sharma (Head Coach)",
+      body.coachName || "Coach Naveen (Blaze Gym Owner & Head Coach)",
       body.notes
     );
 

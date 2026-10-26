@@ -1,6 +1,7 @@
 import React, { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { AuthCard } from "@/components/auth/auth-card";
 import { BmyFitLogo } from "@/components/layout/logo";
 
@@ -74,16 +75,26 @@ export default function LoginPage() {
 
             {/* Coach Quote Card */}
             <div className="p-4 rounded-2xl bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/10 text-left">
-              <p className="text-xs text-gray-300 italic mb-2">
-                &ldquo;Consistency over perfection. Every meal and every rep recorded in your plan gets you one step closer to sustainable health.&rdquo;
+              <p className="text-xs text-gray-300 italic mb-2.5">
+                &ldquo;Consistency over perfection. Every meal and every resistance set recorded in your BMYFIT plan brings you closer to sustainable, drug-free fat loss and strength.&rdquo;
               </p>
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-[#00e676] text-black font-extrabold flex items-center justify-center text-xs">
-                  CB
+              <div className="flex items-center gap-3">
+                <div className="relative w-10 h-10 rounded-full overflow-hidden border border-[#00e676]/60 shadow-sm shrink-0">
+                  <Image
+                    src="/images/coach-naveen.jpg"
+                    alt="Coach Naveen"
+                    fill
+                    className="object-cover object-top"
+                  />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-white leading-none">Coach Brijesh</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">Head of Clinical Nutrition &amp; Performance</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-white leading-none">Coach Naveen</p>
+                    <span className="text-[9px] bg-emerald-500/20 text-[#00e676] px-1.5 py-0.5 rounded-full font-bold">
+                      Blaze Gym Owner
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Certified Fitness Coach &amp; Sports Nutritionist</p>
                 </div>
               </div>
             </div>

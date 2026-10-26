@@ -361,7 +361,7 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Aryan Sharma"
+                  placeholder="Rohit Sharma"
                   className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#00e676] focus:ring-2 focus:ring-[#00e676]/20 transition-all font-medium"
                 />
               </div>

@@ -185,7 +185,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
             <div className="flex items-center gap-2.5 font-medium">
               <Clock className="w-5 h-5 flex-shrink-0 animate-pulse text-amber-100" />
               <span>
-                <strong>Coach Review in Progress:</strong> Head Coach {plan.coach?.name || "Aryan Sharma"} is customizing your week-by-week meals and workout load.
+                <strong>Coach Review in Progress:</strong> Head Coach {plan.coach?.name || "Coach Naveen (Blaze Gym Owner)"} is customizing your week-by-week meals and workout load.
               </span>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -748,8 +748,8 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
           <div className="flex items-center gap-4 text-center sm:text-left">
             <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-emerald-400 flex-shrink-0 relative">
               <Image
-                src={plan.coach?.avatar || "/images/coach-portrait.jpg"}
-                alt={plan.coach?.name || "Coach"}
+                src={plan.coach?.avatar || "/images/coach-naveen.jpg"}
+                alt={plan.coach?.name || "Coach Naveen"}
                 fill
                 className="object-cover"
                 sizes="56px"

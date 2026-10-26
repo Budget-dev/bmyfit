@@ -226,10 +226,10 @@ export function generateDashboardPlan(
     workoutDaysPerWeek,
     progressTrackingFrequency: "Weekly",
     coach: {
-      name: "Coach Aryan Sharma",
-      role: "Lead Transformation Coach & CSCS Nutritionist",
+      name: "Coach Naveen",
+      role: "Blaze Gym Owner · Certified Fitness Coach & Sports Nutritionist",
       whatsAppNumber: "+919876543210",
-      avatar: "/images/coach-portrait.jpg",
+      avatar: "/images/coach-naveen.jpg",
     },
     weeks,
     createdAt: new Date().toISOString(),
