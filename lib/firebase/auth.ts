@@ -13,3 +13,14 @@ export async function requireUser() {
     throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
   }
 }
+
+export async function optionalUser() {
+  try {
+    const authorization = (await headers()).get("authorization");
+    const token = authorization?.match(/^Bearer\s+([^\s]+)$/i)?.[1];
+    if (!token) return null;
+    return await adminAuth.verifyIdToken(token);
+  } catch {
+    return null;
+  }
+}

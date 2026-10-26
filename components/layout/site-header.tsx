@@ -2,19 +2,27 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { BmyFitLogo } from "./logo";
+import { useAuth } from "@/hooks/use-auth";
 
 export function SiteHeader() {
+  const { userProfile, isAuthenticated, signOutUser } = useAuth();
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
   const menuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         setIsMenuOpen(false);
         setIsNotificationsOpen(false);
+        setIsProfileOpen(false);
       }
     }
     function handleClickOutside(e: MouseEvent) {
@@ -23,6 +31,9 @@ export function SiteHeader() {
       }
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
         setIsNotificationsOpen(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setIsProfileOpen(false);
       }
     }
     document.addEventListener("keydown", handleKeyDown);
@@ -68,8 +79,104 @@ export function SiteHeader() {
             </Link>
           </nav>
 
-          {/* Right Header Buttons: Desktop CTA + Notification Bell + Mobile Hamburger */}
+          {/* Right Header Buttons: Auth / CTA + Notification Bell + Mobile Hamburger */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* User Profile Dropdown (when authenticated) */}
+            {isAuthenticated && userProfile ? (
+              <div className="relative" ref={profileRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileOpen((prev) => !prev);
+                    setIsNotificationsOpen(false);
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center gap-2 py-1 px-2.5 rounded-full bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-left"
+                  aria-label="User Profile Menu"
+                  aria-expanded={isProfileOpen}
+                >
+                  {userProfile.avatarUrl ? (
+                    <Image
+                      src={userProfile.avatarUrl}
+                      alt={userProfile.name}
+                      width={24}
+                      height={24}
+                      className="w-6 h-6 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-[#00e676] text-black font-black text-[10px] flex items-center justify-center">
+                      {userProfile.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="text-xs font-bold text-gray-900 hidden sm:inline max-w-[100px] truncate">
+                    {userProfile.name.split(" ")[0]}
+                  </span>
+                  <span className="text-gray-400 text-[10px]">▼</span>
+                </button>
+
+                {/* Profile Popover */}
+                {isProfileOpen && (
+                  <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-gray-100 shadow-xl z-50 p-3.5 animate-in fade-in zoom-in-95 duration-150 text-left">
+                    <div className="pb-2 border-b border-gray-100">
+                      <p className="text-xs font-black text-gray-950 truncate">{userProfile.name}</p>
+                      <p className="text-[11px] text-gray-500 truncate">{userProfile.email}</p>
+                      <div className="flex items-center gap-1.5 mt-1.5 text-[10px] text-gray-600">
+                        {userProfile.phone && (
+                          <span className="bg-gray-100 px-1.5 py-0.5 rounded font-medium">
+                            {userProfile.phone}
+                          </span>
+                        )}
+                        {userProfile.age && (
+                          <span className="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold">
+                            {userProfile.age} yrs
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="py-2 space-y-1">
+                      <Link
+                        href="/plan"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-bold text-gray-800 hover:bg-emerald-50 hover:text-emerald-800 transition-colors"
+                      >
+                        <span>My 8-Week Plan</span>
+                        <span className="text-[#00c853]">→</span>
+                      </Link>
+                      <Link
+                        href="/admin"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                      >
+                        <span>Desktop Admin Console</span>
+                        <span className="text-gray-400 text-[10px]">Admin</span>
+                      </Link>
+                    </div>
+
+                    <div className="pt-2 border-t border-gray-100">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setIsProfileOpen(false);
+                          await signOutUser();
+                        }}
+                        className="w-full text-left px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="hidden sm:inline-flex items-center gap-1 text-xs font-bold text-gray-700 hover:text-emerald-600 px-3 py-1.5 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                Sign In
+              </Link>
+            )}
+
             {/* Desktop CTA Button */}
             <Link
               href="/#calculator-card"
@@ -86,6 +193,7 @@ export function SiteHeader() {
                 onClick={() => {
                   setIsNotificationsOpen((prev) => !prev);
                   setIsMenuOpen(false);
+                  setIsProfileOpen(false);
                 }}
                 className="relative w-9 h-9 rounded-full bg-[#f4f5f6] hover:bg-[#eaecee] flex items-center justify-center text-gray-800 active:scale-95 transition-all shadow-none focus:outline-none"
                 aria-label="Notifications"
@@ -111,7 +219,7 @@ export function SiteHeader() {
 
               {/* Notification Popover */}
               {isNotificationsOpen && (
-                <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-gray-100 shadow-xl z-50 p-3.5 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-gray-100 shadow-xl z-50 p-3.5 animate-in fade-in zoom-in-95 duration-150 text-left">
                   <div className="flex items-center justify-between pb-2 border-b border-gray-100">
                     <h3 className="text-xs font-bold text-gray-900">Notifications</h3>
                     <span className="text-[9px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
@@ -146,6 +254,7 @@ export function SiteHeader() {
                 onClick={() => {
                   setIsMenuOpen((prev) => !prev);
                   setIsNotificationsOpen(false);
+                  setIsProfileOpen(false);
                 }}
                 className="w-9 h-9 rounded-full bg-[#f4f5f6] hover:bg-[#eaecee] flex items-center justify-center text-gray-800 active:scale-95 transition-all shadow-none focus:outline-none"
                 aria-label="Menu"
@@ -164,7 +273,53 @@ export function SiteHeader() {
 
               {/* Dropdown Menu */}
               {isMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white border border-gray-100 shadow-xl z-50 p-2.5 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 mt-2 w-60 rounded-2xl bg-white border border-gray-100 shadow-xl z-50 p-3 animate-in fade-in zoom-in-95 duration-150 text-left">
+                  {/* Top Mobile Auth Section */}
+                  <div className="pb-2.5 mb-2 border-b border-gray-100">
+                    {isAuthenticated && userProfile ? (
+                      <div>
+                        <p className="text-xs font-black text-gray-900">{userProfile.name}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{userProfile.email}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Link
+                            href="/plan"
+                            onClick={() => setIsMenuOpen(false)}
+                            className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg"
+                          >
+                            My Plan
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setIsMenuOpen(false);
+                              await signOutUser();
+                            }}
+                            className="text-[11px] font-semibold text-rose-600 hover:underline"
+                          >
+                            Sign Out
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Link
+                          href="/login"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="py-1.5 px-3 text-center bg-gray-100 hover:bg-gray-200 text-gray-900 text-xs font-bold rounded-xl transition-colors"
+                        >
+                          Sign In
+                        </Link>
+                        <Link
+                          href="/signup"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="py-1.5 px-3 text-center bg-[#00e676] hover:bg-[#00c864] text-black text-xs font-extrabold rounded-xl transition-colors"
+                        >
+                          Register
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+
                   <nav className="flex flex-col space-y-0.5 text-xs text-left">
                     <Link
                       href="/"
@@ -174,7 +329,7 @@ export function SiteHeader() {
                       Home
                     </Link>
                     <a
-                      href="#calculator-card"
+                      href="/#calculator-card"
                       onClick={() => setIsMenuOpen(false)}
                       className="px-3 py-2 rounded-xl text-gray-800 hover:bg-emerald-50 hover:text-emerald-700 font-semibold transition-colors flex items-center justify-between"
                     >
@@ -182,14 +337,14 @@ export function SiteHeader() {
                       <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">FREE</span>
                     </a>
                     <a
-                      href="#goals-section"
+                      href="/#goals-section"
                       onClick={() => setIsMenuOpen(false)}
                       className="px-3 py-2 rounded-xl text-gray-800 hover:bg-emerald-50 hover:text-emerald-700 font-semibold transition-colors"
                     >
                       Fitness Goals
                     </a>
                     <a
-                      href="#coach-section"
+                      href="/#coach-section"
                       onClick={() => setIsMenuOpen(false)}
                       className="px-3 py-2 rounded-xl text-gray-800 hover:bg-emerald-50 hover:text-emerald-700 font-semibold transition-colors"
                     >

@@ -52,3 +52,22 @@ export function verifyWebhookHmacSignature(
 
   return timingSafeEqual(expected, received);
 }
+
+/**
+ * Computes an HMAC SHA-256 signature for Razorpay payment callback: `${orderId}|${paymentId}`
+ */
+export function generatePaymentHmacSignature(
+  orderId: string,
+  paymentId: string,
+  secret: string,
+): string {
+  return createHmac("sha256", secret).update(`${orderId}|${paymentId}`, "utf8").digest("hex");
+}
+
+/**
+ * Computes an HMAC SHA-256 signature for Razorpay webhook raw body.
+ */
+export function generateWebhookHmacSignature(rawBody: string, secret: string): string {
+  return createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
+}
+

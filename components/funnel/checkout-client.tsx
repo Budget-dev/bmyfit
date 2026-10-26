@@ -24,12 +24,53 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
   const [selectedMethod, setSelectedMethod] = useState<"upi" | "card" | "netbanking">("upi");
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "creating" | "verifying" | "failed">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
+
+  // Customer contact state for receipt & coach connection
+  const [customerDetails, setCustomerDetails] = useState({
+    name: "Aryan Sharma",
+    email: "client@bmyfit.in",
+    phone: "+91 98201 44821",
+  });
+  const [showEditContact, setShowEditContact] = useState(false);
+
+  // Dev sandbox modal state when running locally without real Razorpay keys
+  const [sandboxOrder, setSandboxOrder] = useState<{
+    orderId: string;
+    amount: number;
+    currency: string;
+    keyId: string;
+  } | null>(null);
+  const [sandboxSecurityTestResult, setSandboxSecurityTestResult] = useState<string | null>(null);
 
   useEffect(() => {
     try {
+      const rawUser =
+        (typeof window !== "undefined" && localStorage.getItem("bmyfit_user_profile")) ||
+        sessionStorage.getItem("bmyfit_user_profile");
+      if (rawUser) {
+        const u = JSON.parse(rawUser);
+        if (u.name) {
+          setCustomerDetails((prev) => ({
+            ...prev,
+            name: u.name || prev.name,
+            email: u.email || prev.email,
+            phone: u.phone || prev.phone,
+          }));
+        }
+      }
+
       const raw = sessionStorage.getItem("bmyfit_local_assessment");
       if (raw) {
-        // Cached assessment loaded
+        const parsed = JSON.parse(raw);
+        if (parsed.name) {
+          setCustomerDetails((prev) => ({
+            ...prev,
+            name: parsed.name || prev.name,
+            email: parsed.email || prev.email,
+            phone: parsed.phone || prev.phone,
+          }));
+        }
       }
     } catch {}
   }, []);
@@ -38,81 +79,162 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
     try {
       setPaymentStatus("creating");
       setErrorMessage(null);
+      setSuccessNotice(null);
 
-      const hasRealKey =
-        process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID &&
-        process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID !== "rzp_test_placeholder";
-
-      if (hasRealKey && assessmentId !== "local" && assessmentId !== "demo") {
-        try {
-          const token = await getIdToken();
-          const headers: Record<string, string> = {
-            "Content-Type": "application/json",
-          };
-          if (token) {
-            headers["Authorization"] = `Bearer ${token}`;
-          }
-
-          const createOrderRes = await fetch("/api/payments/create-order", {
-            method: "POST",
-            headers,
-            body: JSON.stringify({ assessmentId }),
-          });
-
-          if (createOrderRes.ok) {
-            const orderData = await createOrderRes.json();
-            const { orderId, amount, currency, keyId } = orderData;
-
-            await openCheckout({
-              key: keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_placeholder",
-              amount,
-              currency: currency || "INR",
-              name: APP_CONFIG.brandName,
-              description: "8-Week Personalized Fitness & Nutrition Plan",
-              order_id: orderId,
-              theme: {
-                color: "#00c853",
-              },
-              handler: async (response: VerifyPaymentRequest) => {
-                try {
-                  setPaymentStatus("verifying");
-                  const verifyRes = await fetch("/api/payments/verify", {
-                    method: "POST",
-                    headers,
-                    body: JSON.stringify(response),
-                  });
-
-                  if (verifyRes.ok) {
-                    sessionStorage.setItem("bmyfit_local_paid", "true");
-                    router.push(`/plan/${assessmentId}`);
-                    return;
-                  }
-                } catch {
-                  sessionStorage.setItem("bmyfit_local_paid", "true");
-                  router.push(`/plan/${assessmentId}`);
-                  return;
-                }
-              },
-              modal: {
-                ondismiss: () => {
-                  setPaymentStatus("idle");
-                },
-              },
-            });
-            return;
-          }
-        } catch {
-          // Fallback to local simulation
-        }
+      const token = await getIdToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
       }
 
-      // Simulated seamless payment for local testing
-      await new Promise((res) => setTimeout(res, 900));
-      setPaymentStatus("verifying");
-      await new Promise((res) => setTimeout(res, 500));
+      // Step 1: Request authoritative server order creation (Price strictly set to ₹99 by server)
+      const createOrderRes = await fetch("/api/payments/create-order", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          assessmentId,
+          customerName: customerDetails.name,
+          customerEmail: customerDetails.email,
+          customerPhone: customerDetails.phone,
+        }),
+      });
 
+      if (!createOrderRes.ok) {
+        const errorData = await createOrderRes.json().catch(() => ({}));
+        throw new Error(
+          errorData.error?.message ||
+            errorData.message ||
+            "Unable to initialize payment order. Please try again."
+        );
+      }
+
+      const orderData = await createOrderRes.json();
+      const { orderId, amount, currency, keyId, isSandbox } = orderData;
+
+      // Step 2A: Local Dev Sandbox mode when live gateway credentials are not configured in .env.local
+      if (isSandbox) {
+        setPaymentStatus("idle");
+        setSandboxOrder({ orderId, amount, currency, keyId });
+        return;
+      }
+
+      // Step 2B: Open official Razorpay modal when credentials are configured
+      await openCheckout({
+        key: keyId,
+        amount,
+        currency: currency || "INR",
+        name: APP_CONFIG.brandName,
+        description: "8-Week Personalized Fitness & Nutrition Plan",
+        order_id: orderId,
+        prefill: {
+          name: customerDetails.name,
+          email: customerDetails.email,
+          contact: customerDetails.phone,
+        },
+        theme: {
+          color: "#00c853",
+        },
+        modal: {
+          ondismiss: () => {
+            setPaymentStatus("idle");
+          },
+        },
+        handler: async (response: VerifyPaymentRequest) => {
+          try {
+            setPaymentStatus("verifying");
+            const verifyRes = await fetch("/api/payments/verify", {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                ...response,
+                customerName: customerDetails.name,
+                customerEmail: customerDetails.email,
+                customerPhone: customerDetails.phone,
+              }),
+            });
+
+            if (!verifyRes.ok) {
+              const verifyErr = await verifyRes.json().catch(() => ({}));
+              throw new Error(
+                verifyErr.error?.message || "Payment verification failed. Signature was rejected."
+              );
+            }
+
+            sessionStorage.setItem("bmyfit_local_paid", "true");
+            try {
+              const raw = sessionStorage.getItem("bmyfit_local_assessment");
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                parsed.isPaid = true;
+                sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(parsed));
+              }
+            } catch {}
+
+            router.push(`/plan/${assessmentId}`);
+          } catch (verifyErr) {
+            setPaymentStatus("failed");
+            setErrorMessage(
+              verifyErr instanceof Error ? verifyErr.message : "Payment verification failed."
+            );
+          }
+        },
+      });
+    } catch (err) {
+      setPaymentStatus("failed");
+      setErrorMessage(
+        err instanceof Error ? err.message : "Payment processing error. Please try again."
+      );
+    }
+  };
+
+  // Complete genuine simulation in Dev Sandbox
+  const handleSandboxSimulateSuccess = async () => {
+    if (!sandboxOrder) return;
+    try {
+      setPaymentStatus("verifying");
+      setSandboxSecurityTestResult(null);
+
+      const paymentId = `pay_sbx_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+
+      // Ask dev helper on server for genuine HMAC SHA-256 signature
+      const sigRes = await fetch("/api/payments/sandbox-signature", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: sandboxOrder.orderId,
+          paymentId,
+        }),
+      });
+
+      if (!sigRes.ok) {
+        throw new Error("Sandbox signature generation failed");
+      }
+
+      const { signature } = await sigRes.json();
+
+      // Submit signature to server /api/payments/verify for HMAC timingSafeEqual validation
+      const verifyRes = await fetch("/api/payments/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razorpay_order_id: sandboxOrder.orderId,
+          razorpay_payment_id: paymentId,
+          razorpay_signature: signature,
+          customerName: customerDetails.name,
+          customerEmail: customerDetails.email,
+          customerPhone: customerDetails.phone,
+        }),
+      });
+
+      if (!verifyRes.ok) {
+        const verifyErr = await verifyRes.json().catch(() => ({}));
+        throw new Error(verifyErr.error?.message || "Server verification failed.");
+      }
+
+      sessionStorage.setItem("bmyfit_local_paid", "true");
       try {
-        sessionStorage.setItem("bmyfit_local_paid", "true");
         const raw = sessionStorage.getItem("bmyfit_local_assessment");
         if (raw) {
           const parsed = JSON.parse(raw);
@@ -121,10 +243,43 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         }
       } catch {}
 
-      router.push(`/plan/${assessmentId || "local"}`);
+      setSandboxOrder(null);
+      router.push(`/plan/${assessmentId}`);
     } catch (err) {
       setPaymentStatus("failed");
-      setErrorMessage(err instanceof Error ? err.message : "Payment processing error. Please try again.");
+      setErrorMessage(err instanceof Error ? err.message : "Sandbox verification error");
+    }
+  };
+
+  // Test security defense against tampered/forged signatures
+  const handleSandboxTestTamperedAttack = async () => {
+    if (!sandboxOrder) return;
+    try {
+      setSandboxSecurityTestResult("Sending forged signature to server...");
+      const fakePaymentId = `pay_fake_${Date.now()}`;
+      // Tampered 64-char invalid signature
+      const tamperedSignature = "0".repeat(64);
+
+      const verifyRes = await fetch("/api/payments/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razorpay_order_id: sandboxOrder.orderId,
+          razorpay_payment_id: fakePaymentId,
+          razorpay_signature: tamperedSignature,
+        }),
+      });
+
+      if (verifyRes.status === 400) {
+        const errJson = await verifyRes.json();
+        setSandboxSecurityTestResult(
+          `🛡️ Security Defended: Server rejected the forged signature with HTTP 400 (${errJson.error?.code}: ${errJson.error?.message}). TimingSafeEqual prevented unauthorized access!`
+        );
+      } else {
+        setSandboxSecurityTestResult(`Unexpected response: HTTP ${verifyRes.status}`);
+      }
+    } catch (err) {
+      setSandboxSecurityTestResult(`Error during test: ${String(err)}`);
     }
   };
 
@@ -133,7 +288,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       {/* Top Header */}
       <SiteHeader />
 
-      {/* Main Content Area - Formatted with compact precision to fit in first sight without scrolling */}
+      {/* Main Content Area */}
       <main className="flex-1 max-w-md mx-auto w-full px-3 pt-1 pb-16 flex flex-col justify-between">
         <div>
           {/* Subtitle & 4-Step Stepper Bar */}
@@ -212,7 +367,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
             </p>
           </div>
 
-          {/* Dual Offer Comparison Cards (Side-by-side) */}
+          {/* Dual Offer Comparison Cards */}
           <div className="grid grid-cols-2 gap-2 mt-2">
             {/* Card 1: Your Plan Includes */}
             <div className="bg-white rounded-xl border border-gray-150 p-2 shadow-2xs flex flex-col justify-between">
@@ -354,7 +509,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
                   ].map((item, idx) => (
                     <div key={idx} className="flex items-center gap-1.5">
                       <div className="w-3 h-3 rounded-full bg-[#00c853] text-white flex items-center justify-center shrink-0">
-                        <svg className="w-2 h-2" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M2.5 6.5l2.5 2.5 4.5-5" />
                         </svg>
                       </div>
@@ -384,13 +539,73 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
             </div>
           </div>
 
+          {/* Contact Details summary / edit row */}
+          <div className="mt-2 bg-gray-50 border border-gray-200 rounded-lg p-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-4 rounded-full bg-[#00c853]/15 text-[#00c853] flex items-center justify-center text-[10px] font-bold">
+                  ✓
+                </div>
+                <div>
+                  <div className="text-[9.5px] font-bold text-gray-900 leading-tight">
+                    Deliver Plan &amp; Receipt To: {customerDetails.name}
+                  </div>
+                  <div className="text-[7.5px] text-gray-500 leading-tight">
+                    {customerDetails.email} • {customerDetails.phone}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditContact(!showEditContact)}
+                className="text-[8px] font-bold text-[#00c853] hover:underline"
+              >
+                {showEditContact ? "Done" : "Edit Details"}
+              </button>
+            </div>
+
+            {showEditContact && (
+              <div className="mt-2 pt-2 border-t border-gray-200 grid grid-cols-1 gap-1.5">
+                <div>
+                  <label className="text-[7.5px] font-semibold text-gray-600 block mb-0.5">Your Full Name</label>
+                  <input
+                    type="text"
+                    value={customerDetails.name}
+                    onChange={(e) => setCustomerDetails({ ...customerDetails, name: e.target.value })}
+                    className="w-full text-[9px] px-2 py-1 border border-gray-300 rounded bg-white text-gray-900 focus:outline-none focus:border-[#00c853]"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div>
+                    <label className="text-[7.5px] font-semibold text-gray-600 block mb-0.5">Email Address</label>
+                    <input
+                      type="email"
+                      value={customerDetails.email}
+                      onChange={(e) => setCustomerDetails({ ...customerDetails, email: e.target.value })}
+                      className="w-full text-[9px] px-2 py-1 border border-gray-300 rounded bg-white text-gray-900 focus:outline-none focus:border-[#00c853]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[7.5px] font-semibold text-gray-600 block mb-0.5">WhatsApp / Phone</label>
+                    <input
+                      type="tel"
+                      value={customerDetails.phone}
+                      onChange={(e) => setCustomerDetails({ ...customerDetails, phone: e.target.value })}
+                      className="w-full text-[9px] px-2 py-1 border border-gray-300 rounded bg-white text-gray-900 focus:outline-none focus:border-[#00c853]"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Choose a Payment Method Section */}
           <div className="mt-2">
             <h2 className="text-[11.5px] sm:text-[12.5px] font-bold text-gray-900 leading-tight">
               Choose a Payment Method
             </h2>
             <p className="text-[8px] sm:text-[9px] text-gray-500 mt-0.5 mb-1.5 leading-none">
-              Secure and hassle-free payment. Get instant access after payment.
+              Secure and encrypted payment gateway powered by Razorpay.
             </p>
 
             <div className="space-y-1">
@@ -423,10 +638,10 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
 
                   <div>
                     <div className={`text-[9.5px] sm:text-[10.5px] font-bold ${selectedMethod === "upi" ? "text-[#00c853]" : "text-gray-900"}`}>
-                      UPI (Recommended)
+                      UPI (Google Pay, PhonePe, Paytm, QR)
                     </div>
                     <div className="text-[7px] sm:text-[8px] text-gray-500 leading-none">
-                      Pay using any UPI app (Google Pay, PhonePe, Paytm, etc.)
+                      Zero convenience fee • Instant plan activation
                     </div>
                   </div>
                 </div>
@@ -457,7 +672,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
                       Debit / Credit Card
                     </div>
                     <div className="text-[7px] sm:text-[8px] text-gray-500 leading-none">
-                      Visa, Mastercard, Rupay and more
+                      Visa, Mastercard, RuPay &amp; Diners Club
                     </div>
                   </div>
                 </div>
@@ -483,10 +698,10 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
                   </div>
                   <div>
                     <div className="text-[9.5px] sm:text-[10.5px] font-bold text-gray-900">
-                      Net Banking
+                      Net Banking &amp; Wallets
                     </div>
                     <div className="text-[7px] sm:text-[8px] text-gray-500 leading-none">
-                      All major banks supported
+                      HDFC, ICICI, SBI, Axis &amp; 50+ banks
                     </div>
                   </div>
                 </div>
@@ -499,13 +714,25 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
 
           {/* Error notice if needed */}
           {errorMessage && (
-            <div className="mt-1.5 p-1.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-[9px] flex items-center gap-1.5">
+            <div className="mt-2 p-2 rounded-lg bg-red-50 border border-red-200 text-red-700 text-[9.5px] flex items-start gap-1.5">
+              <svg className="w-3.5 h-3.5 text-red-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" strokeWidth="2" />
+                <line x1="12" y1="8" x2="12" y2="12" strokeWidth="2" />
+                <line x1="12" y1="16" x2="12.01" y2="16" strokeWidth="2" />
+              </svg>
               <span>{errorMessage}</span>
             </div>
           )}
 
-          {/* Main Action Button - In normal flow right under payment methods */}
-          <div className="mt-2">
+          {/* Success notice if needed */}
+          {successNotice && (
+            <div className="mt-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[9.5px] flex items-center gap-1.5">
+              <span>{successNotice}</span>
+            </div>
+          )}
+
+          {/* Main Action Button */}
+          <div className="mt-2.5">
             <button
               type="button"
               onClick={handlePay}
@@ -518,11 +745,13 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  <span>Processing Payment...</span>
+                  <span>
+                    {paymentStatus === "creating" ? "Initializing Gateway..." : "Verifying HMAC Signature..."}
+                  </span>
                 </>
               ) : (
                 <>
-                  <span>Pay ₹99 &amp; Get My Plan</span>
+                  <span>Pay ₹99 &amp; Unlock Plan</span>
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
@@ -531,17 +760,17 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
             </button>
 
             {/* Secure payment text */}
-            <div className="flex items-center justify-center gap-1 text-[8.5px] sm:text-[9.5px] text-gray-500 mt-1">
-              <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <div className="flex items-center justify-center gap-1.5 text-[8.5px] sm:text-[9px] text-gray-500 mt-1.5">
+              <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0110 0v4" />
               </svg>
-              <span>Secure payment powered by Razorpay</span>
+              <span>256-Bit SSL Encrypted &bull; Razorpay Payment Gateway</span>
             </div>
           </div>
 
           {/* 3 Trust Badges */}
-          <div className="grid grid-cols-3 gap-1.5 mt-1.5">
+          <div className="grid grid-cols-3 gap-1.5 mt-2">
             <div className="p-1 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center gap-1 text-center">
               <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                 <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -579,6 +808,99 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
           </div>
         </div>
       </main>
+
+      {/* Razorpay Development Sandbox Modal for Local Offline Testing */}
+      {sandboxOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-4 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#002e6e] text-white flex items-center justify-center font-black text-xs">
+                  R
+                </div>
+                <div>
+                  <div className="text-xs font-black text-gray-900 leading-tight">
+                    Razorpay Gateway Sandbox
+                  </div>
+                  <div className="text-[8.5px] text-emerald-700 font-semibold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Local Development Security Simulator
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSandboxOrder(null)}
+                className="w-6 h-6 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-700 flex items-center justify-center text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="py-3 space-y-2">
+              <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-200/80 space-y-1.5">
+                <div className="flex justify-between text-[9px]">
+                  <span className="text-gray-500">Order ID:</span>
+                  <span className="font-mono font-bold text-gray-800">{sandboxOrder.orderId}</span>
+                </div>
+                <div className="flex justify-between text-[9px]">
+                  <span className="text-gray-500">Amount:</span>
+                  <span className="font-bold text-gray-900">₹99.00 ({sandboxOrder.amount} paise)</span>
+                </div>
+                <div className="flex justify-between text-[9px]">
+                  <span className="text-gray-500">Security:</span>
+                  <span className="font-mono text-emerald-700 font-semibold">HMAC SHA-256 (timingSafeEqual)</span>
+                </div>
+                <div className="flex justify-between text-[9px]">
+                  <span className="text-gray-500">Target User:</span>
+                  <span className="font-semibold text-gray-800">{customerDetails.name}</span>
+                </div>
+              </div>
+
+              <p className="text-[8.5px] text-gray-500 leading-snug">
+                This sandbox tests the real cryptographic backend pipeline. Real Razorpay API keys can be supplied anytime in <code className="bg-gray-100 px-1 py-0.5 rounded text-[8px]">.env.local</code>.
+              </p>
+
+              {sandboxSecurityTestResult && (
+                <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-[8.5px] leading-relaxed">
+                  {sandboxSecurityTestResult}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5 pt-2">
+              <button
+                type="button"
+                onClick={handleSandboxSimulateSuccess}
+                disabled={paymentStatus === "verifying"}
+                className="w-full py-2 px-3 rounded-xl bg-[#00c853] hover:bg-[#00b048] active:bg-[#00963d] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
+              >
+                {paymentStatus === "verifying" ? (
+                  <span>Verifying HMAC Signature on Server...</span>
+                ) : (
+                  <span>✓ Authorize &amp; Verify Payment (₹99)</span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSandboxTestTamperedAttack}
+                className="w-full py-1.5 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-[10px] flex items-center justify-center gap-1 transition-all"
+              >
+                🛡️ Test Tampered Signature Rejection (Security Defense)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSandboxOrder(null)}
+                className="w-full py-1 text-center text-gray-400 hover:text-gray-600 text-[9px]"
+              >
+                Cancel and return to checkout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Navigation */}
       <BottomNav />

@@ -7,3 +7,8 @@ import { serverEnv } from "@/lib/env/server";
 const adminApp = getApps()[0] ?? initializeApp(serverEnv.FIREBASE_PROJECT_ID && serverEnv.FIREBASE_CLIENT_EMAIL && serverEnv.FIREBASE_PRIVATE_KEY ? { credential: cert({ projectId: serverEnv.FIREBASE_PROJECT_ID, clientEmail: serverEnv.FIREBASE_CLIENT_EMAIL, privateKey: serverEnv.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") }) } : undefined);
 export const adminAuth = getAuth(adminApp);
 export const adminDb = getFirestore(adminApp);
+try {
+  adminDb.settings({ ignoreUndefinedProperties: true });
+} catch {
+  // Settings might already be frozen if initialized previously
+}
