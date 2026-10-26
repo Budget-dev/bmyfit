@@ -40,6 +40,8 @@ import {
   calculateWeekProgress,
   calculateOverallProgress,
 } from "@/features/plan/dashboard-data";
+import { ShoppingBag, Sparkles } from "@/components/ui/supplement-icons";
+import { getRecommendedProductsForGoal } from "@/features/supplements/supplements-data";
 
 interface PlanDashboardProps {
   initialPlan: PlanDashboardData;
@@ -48,6 +50,7 @@ interface PlanDashboardProps {
 
 export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboardProps) {
   const [plan] = useState<PlanDashboardData>(initialPlan);
+  const recommendedSupplements = getRecommendedProductsForGoal(plan.goal);
   const [activeTab, setActiveTab] = useState<"overview" | "nutrition" | "workouts" | "progress">("overview");
   const [selectedWeekNum, setSelectedWeekNum] = useState<number>(1);
   const [taskLogs, setTaskLogs] = useState<TaskLogState>({});
@@ -279,7 +282,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
         </section>
 
         {/* ================= ACTION BUTTONS ROW ================= */}
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Button 1: Download Full Plan (PDF) */}
           <button
             type="button"
@@ -326,14 +329,28 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
               <span className="block text-[11px] text-gray-500 font-medium">With your coach</span>
             </div>
           </button>
+
+          {/* Button 4: Buy Suggested Products */}
+          <Link
+            href={`/supplements?goal=${encodeURIComponent(plan.goal)}`}
+            className="flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-[#00c853] to-[#00e676] text-black hover:opacity-95 transition shadow-sm text-left group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-black/15 flex items-center justify-center text-black flex-shrink-0 group-hover:scale-105 transition-transform">
+              <ShoppingBag className="w-5 h-5 stroke-[2.3]" />
+            </div>
+            <div>
+              <span className="block font-black text-xs sm:text-sm text-black">Buy Suggested Products</span>
+              <span className="block text-[11px] text-black/80 font-bold">Coach recommendations &rarr;</span>
+            </div>
+          </Link>
         </section>
 
-        {/* ================= 4 NAVIGATION TABS ================= */}
-        <nav className="bg-white rounded-2xl p-1.5 border border-gray-100 shadow-sm flex items-center justify-between gap-1">
+        {/* ================= 5 NAVIGATION TABS ================= */}
+        <nav className="bg-white rounded-2xl p-1.5 border border-gray-100 shadow-sm flex items-center justify-between gap-1 overflow-x-auto scrollbar-none">
           <button
             type="button"
             onClick={() => setActiveTab("overview")}
-            className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 font-bold text-xs sm:text-sm transition ${
+            className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs sm:text-sm transition min-w-[85px] ${
               activeTab === "overview"
                 ? "bg-[#e6f9ed] text-[#034423] shadow-xs"
                 : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
@@ -346,7 +363,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
           <button
             type="button"
             onClick={() => setActiveTab("nutrition")}
-            className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 font-bold text-xs sm:text-sm transition ${
+            className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs sm:text-sm transition min-w-[85px] ${
               activeTab === "nutrition"
                 ? "bg-[#e6f9ed] text-[#034423] shadow-xs"
                 : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
@@ -359,7 +376,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
           <button
             type="button"
             onClick={() => setActiveTab("workouts")}
-            className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 font-bold text-xs sm:text-sm transition ${
+            className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs sm:text-sm transition min-w-[85px] ${
               activeTab === "workouts"
                 ? "bg-[#e6f9ed] text-[#034423] shadow-xs"
                 : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
@@ -372,7 +389,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
           <button
             type="button"
             onClick={() => setActiveTab("progress")}
-            className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 font-bold text-xs sm:text-sm transition ${
+            className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs sm:text-sm transition min-w-[85px] ${
               activeTab === "progress"
                 ? "bg-[#e6f9ed] text-[#034423] shadow-xs"
                 : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
@@ -381,6 +398,14 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
             <TrendingUp className="w-4 h-4" />
             <span>Progress</span>
           </button>
+
+          <Link
+            href={`/supplements?goal=${encodeURIComponent(plan.goal)}`}
+            className="flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs sm:text-sm text-[#00a854] bg-[#eaf8ee] hover:bg-[#dcf4e3] transition min-w-[110px]"
+          >
+            <ShoppingBag className="w-4 h-4" />
+            <span>Shop</span>
+          </Link>
         </nav>
 
         {/* ================= PLAN OVERVIEW SECTION ================= */}
@@ -693,6 +718,106 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
                 <span className="text-[11px] font-bold text-emerald-700">{selectedWeek.workouts.daysPerWeek} Days / Week</span>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* ================= COACH-RECOMMENDED SUPPLEMENTS SECTION ================= */}
+        <section className="bg-white rounded-3xl p-5 sm:p-7 border border-emerald-500/20 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#eaf8ee] text-[#00c853] flex items-center justify-center flex-shrink-0">
+                <ShoppingBag className="w-5 h-5 stroke-[2.4]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-black text-gray-950">
+                    Coach-Recommended Supplements
+                  </h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#eaf8ee] text-[#035b2c]">
+                    Based on {plan.goalDisplay}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 font-medium mt-0.5">
+                  Hand-picked by Coach Naveen to accelerate muscle recovery &amp; meet your daily targets.
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href={`/supplements?goal=${encodeURIComponent(plan.goal)}`}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#0e271a] hover:bg-[#00c853] text-white hover:text-black font-bold text-xs transition self-start sm:self-auto shadow-sm"
+            >
+              <span>Explore All Products</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* 4 Recommended Products Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+            {recommendedSupplements.map((prod) => (
+              <div
+                key={prod.id}
+                className="p-3.5 rounded-2xl bg-[#fafbfa] border border-gray-100 hover:border-emerald-200 transition flex flex-col justify-between group"
+              >
+                <div>
+                  <div className="flex items-center justify-between text-[10px] mb-2 min-h-[18px]">
+                    {prod.tagBadge ? (
+                      <span className="font-bold text-[#035b2c] bg-[#eaf8ee] px-2 py-0.5 rounded-full">
+                        {prod.tagBadge}
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+                    <span className="text-gray-500 font-bold">★ {prod.rating}</span>
+                  </div>
+
+                  <Link href={`/supplements/${prod.id}`} className="block relative aspect-square w-full rounded-xl bg-white p-2 mb-2 overflow-hidden">
+                    <Image
+                      src={prod.image}
+                      alt={prod.name}
+                      fill
+                      className="object-contain p-1 group-hover:scale-105 transition-transform"
+                      sizes="140px"
+                    />
+                  </Link>
+
+                  <Link href={`/supplements/${prod.id}`}>
+                    <h4 className="font-black text-xs sm:text-sm text-gray-900 group-hover:text-[#00c853] transition-colors truncate">
+                      {prod.name}
+                    </h4>
+                  </Link>
+
+                  <p className="text-[11px] text-gray-500 line-clamp-1 mt-0.5">
+                    {prod.subtitle}
+                  </p>
+
+                  <div className="flex items-baseline gap-1.5 mt-2.5 pt-1.5 border-t border-gray-100">
+                    <span className="text-sm font-black text-gray-950">
+                      ₹{prod.price.toLocaleString()}
+                    </span>
+                    <span className="text-[10px] text-gray-400 line-through">
+                      ₹{prod.originalPrice.toLocaleString()}
+                    </span>
+                    <span className="text-[9px] font-bold text-[#00c853] bg-[#eaf8ee] px-1 rounded">
+                      {prod.discountPercent}% OFF
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-1">
+                  <a
+                    href={prod.amazonUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2 px-2.5 rounded-xl bg-[#0e271a] text-white hover:bg-[#00c853] hover:text-black transition font-bold text-xs flex items-center justify-center gap-1.5"
+                  >
+                    <span className="font-black text-xs">a</span>
+                    <span>Buy on Amazon</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -1094,17 +1219,18 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
             <span className="text-[10px]">Plans</span>
           </div>
 
-          {/* 3. Floating Center Action Button */}
-          <div className="-mt-6">
-            <button
-              type="button"
-              onClick={() => setShowProgressModal(true)}
-              className="w-13 h-13 rounded-full bg-[#00e676] hover:bg-[#00c853] text-emerald-950 flex items-center justify-center shadow-lg shadow-emerald-500/30 transform hover:scale-105 active:scale-95 transition"
-              title="Quick Log"
-            >
-              <Plus className="w-6 h-6 stroke-[3]" />
-            </button>
-          </div>
+          {/* 3. Floating Center Action Button: Shop */}
+          <Link
+            href="/supplements"
+            className="flex flex-col items-center -mt-6 group focus:outline-none"
+          >
+            <div className="w-13 h-13 rounded-full bg-[#00e676] hover:bg-[#00c853] text-emerald-950 flex items-center justify-center shadow-lg shadow-emerald-500/30 transform group-hover:scale-105 active:scale-95 transition">
+              <ShoppingBag className="w-6 h-6 stroke-[2.3]" />
+            </div>
+            <span className="text-[10px] font-bold text-gray-500 group-hover:text-[#00c853] mt-1">
+              Shop
+            </span>
+          </Link>
 
           {/* 4. Results */}
           <button
