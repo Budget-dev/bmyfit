@@ -274,7 +274,7 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
       <SiteHeader />
 
       {/* 2. Main Funnel Content Container */}
-      <main className="flex-1 max-w-md mx-auto w-full px-3.5 sm:px-4 pt-1 pb-32 sm:pb-36 flex flex-col justify-start overflow-x-hidden">
+      <main className="flex-1 max-w-md md:max-w-5xl lg:max-w-6xl mx-auto w-full px-3.5 sm:px-6 lg:px-8 pt-1 md:pt-6 pb-32 sm:pb-36 md:pb-16 flex flex-col justify-start overflow-x-hidden">
         
         {/* ======================================================== */}
         {/* ------------------- STEP 1 OF 2 ------------------------ */}
@@ -324,8 +324,8 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
               Enter a few details to get accurate results and a personalized plan for your goal.
             </p>
 
-            {/* Selected Goal Hero Card with Change Button */}
-            <div className="relative w-full rounded-2xl overflow-hidden shadow-md select-none aspect-[466/140] max-h-[110px] shrink-0 mb-2.5 bg-[#0a1510]">
+            {/* Selected Goal Hero Card with Change Button (Mobile Only) */}
+            <div className="md:hidden relative w-full rounded-2xl overflow-hidden shadow-md select-none aspect-[466/140] max-h-[110px] shrink-0 mb-2.5 bg-[#0a1510]">
               <Image
                 src={goalConfig.image}
                 alt={goalConfig.title}
@@ -388,8 +388,12 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
               </div>
             </div>
 
-            {/* Form Container Card - Step 1 Inputs */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-3 space-y-2 text-left">
+            {/* Desktop 2-Column Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10 items-start">
+              {/* Left Column: Form Inputs & Desktop Action (md:col-span-7) */}
+              <div className="md:col-span-7 space-y-4">
+                {/* Form Container Card - Step 1 Inputs */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-3 sm:p-5 space-y-2 text-left">
               {/* Gender */}
               <div>
                 <label className="block text-[11px] font-bold text-gray-950 mb-1">Gender</label>
@@ -536,8 +540,122 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
               </div>
             </div>
 
-            {/* Action Button: Proceed to Step 2 - Prominently positioned upon the navigation buttons */}
-            <div className="fixed bottom-[52px] sm:bottom-[56px] left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-100/90 py-2.5 px-3.5 sm:px-4 shadow-[0_-4px_16px_rgba(0,0,0,0.05)]">
+            {/* Desktop-only In-Flow Continue Button */}
+            <div className="hidden md:block pt-3">
+                  <button
+                    type="button"
+                    onClick={handleProceedToStep2}
+                    className="w-full py-4 px-6 rounded-2xl bg-[#022319] hover:bg-[#033022] text-white font-black text-sm flex items-center justify-center gap-3 shadow-lg shadow-emerald-950/20 active:scale-98 transition-all cursor-pointer group"
+                  >
+                    <span>Continue to Measurements</span>
+                    <span className="text-[#00e676] text-base group-hover:translate-x-1 transition-transform">→</span>
+                  </button>
+                  <div className="flex items-center justify-center gap-1.5 mt-2 text-xs text-gray-500 font-medium select-none">
+                    <svg className="w-3.5 h-3.5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
+                    </svg>
+                    <span>Your data is private, encrypted, and secure.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Goal Summary & Coach Insights (md:col-span-5) */}
+              <div className="hidden md:flex flex-col gap-5 md:col-span-5 sticky top-24">
+                {/* Selected Goal Hero Card */}
+                <div className="relative w-full rounded-3xl overflow-hidden shadow-xl border border-emerald-950/40 select-none aspect-[16/9] bg-[#0a1510] group">
+                  <Image
+                    src={goalConfig.image}
+                    alt={goalConfig.title}
+                    fill
+                    priority
+                    className="object-cover object-right group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-transparent" />
+                  <div className="absolute inset-0 p-6 flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black tracking-wider uppercase text-[#00e676]">
+                        SELECTED GOAL
+                      </span>
+                      <Link
+                        href="/goal"
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-black/60 hover:bg-black/80 border border-white/30 text-white text-xs font-bold backdrop-blur-xs transition-colors active:scale-95 shadow-sm"
+                      >
+                        <span>Change</span>
+                        <span>→</span>
+                      </Link>
+                    </div>
+
+                    <div className="flex items-center gap-3 mt-auto">
+                      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm text-gray-950">
+                        {goalConfig.icon === "flame" ? (
+                          <svg className="w-5 h-5 text-orange-500" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2c1.1 2.2 2.5 4.5 2.5 7 0 2.8-2.2 5-5 5-1.5 0-2.8-.7-3.7-1.7C5.3 14 7 16.5 9 18c3.9 2.9 9.3 1.8 11.8-2.2 2-3.2 1.4-7.4-1.3-9.9-.4-.4-.9-.8-1.5-1.1.2 1.3-.2 2.6-1 3.5-.8.9-1.9 1.4-3 1.4-.4 0-.8-.1-1.2-.2 1.4-1.8 1.4-4.4-.8-7.5z" />
+                          </svg>
+                        ) : goalConfig.icon === "bars" ? (
+                          <svg className="w-5 h-5 text-[#057a44]" fill="currentColor" viewBox="0 0 24 24">
+                            <rect x="3" y="12" width="3.5" height="9" rx="0.8" />
+                            <rect x="10" y="7" width="3.5" height="14" rx="0.8" />
+                            <rect x="17" y="3" width="3.5" height="18" rx="0.8" />
+                          </svg>
+                        ) : goalConfig.icon === "target" ? (
+                          <svg className="w-5 h-5 text-[#057a44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                            <circle cx="12" cy="12" r="9" />
+                            <circle cx="12" cy="12" r="5" />
+                            <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5 text-gray-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                            <rect x="2" y="8" width="2.5" height="8" rx="0.8" fill="currentColor" />
+                            <rect x="5.5" y="9.5" width="2" height="5" rx="0.5" fill="currentColor" />
+                            <line x1="7.5" y1="12" x2="16.5" y2="12" stroke="currentColor" strokeWidth="2.2" />
+                            <rect x="16.5" y="9.5" width="2" height="5" rx="0.5" fill="currentColor" />
+                            <rect x="19.5" y="8" width="2.5" height="8" rx="0.8" fill="currentColor" />
+                          </svg>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-sm font-extrabold text-white leading-tight">{goalConfig.title}</div>
+                        <div className="text-xs text-gray-300 mt-0.5">{goalConfig.subtitle}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Accuracy Note */}
+                <div className="p-5 rounded-2xl bg-[#eaf7ee] border border-emerald-200/80 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-emerald-200/80 text-[#057a44] flex items-center justify-center shrink-0">
+                      <svg className="w-3.5 h-3.5 text-[#057a44]" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-xs font-black uppercase text-[#057a44] tracking-wider">Metabolic Calibration</h4>
+                  </div>
+                  <p className="text-xs text-gray-700 leading-relaxed">
+                    Mifflin-St Jeor equation calibrated specifically for Indian body composition profiles to ensure realistic deficit and surplus targets without fatigue.
+                  </p>
+                </div>
+
+                {/* Coach Naveen Tip Card */}
+                <div className="p-5 rounded-2xl bg-gray-50 border border-gray-200 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden border border-emerald-500 shrink-0">
+                      <Image src="/images/coach-naveen.jpg" alt="Coach Naveen" fill className="object-cover object-top" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-gray-950">Coach Naveen’s Tip</h4>
+                      <p className="text-[11px] text-gray-500">Certified Sports Nutritionist</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-600 leading-relaxed italic">
+                    &ldquo;Be as honest as possible with your metrics. Accurate height and weight give us the exact baseline needed to prevent metabolic adaptation.&rdquo;
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Button: Proceed to Step 2 (Mobile Fixed Bottom) */}
+            <div className="md:hidden fixed bottom-[52px] sm:bottom-[56px] left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-100/90 py-2.5 px-3.5 sm:px-4 shadow-[0_-4px_16px_rgba(0,0,0,0.05)]">
               <div className="max-w-md mx-auto">
                 <button
                   type="button"
@@ -621,8 +739,8 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
               These measurements help us estimate your body fat more accurately and create a better plan for you.
             </p>
 
-            {/* Selected Goal Hero Card with Model */}
-            <div className="relative w-full rounded-2xl overflow-hidden shadow-md select-none aspect-[466/150] max-h-[110px] shrink-0 mb-3 bg-[#0a1510]">
+            {/* Selected Goal Hero Card with Model (Mobile Only) */}
+            <div className="md:hidden relative w-full rounded-2xl overflow-hidden shadow-md select-none aspect-[466/150] max-h-[110px] shrink-0 mb-3 bg-[#0a1510]">
               <Image
                 src={goalConfig.image}
                 alt={goalConfig.title}
@@ -685,8 +803,12 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
               </div>
             </div>
 
-            {/* Measurement Input Fields */}
-            <div className="space-y-3 text-left">
+            {/* Desktop 2-Column Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10 items-start">
+              {/* Left Column: Measurements & Actions (md:col-span-7) */}
+              <div className="md:col-span-7 space-y-4">
+                {/* Measurement Input Fields */}
+                <div className="space-y-3 text-left">
               {/* 1. Waist Circumference */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
@@ -908,8 +1030,78 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
               </div>
             </div>
 
-            {/* Primary Action Button: Start Body Analysis - Prominently positioned upon the navigation buttons */}
-            <div className="fixed bottom-[52px] sm:bottom-[56px] left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-100/90 py-2.5 px-3.5 sm:px-4 shadow-[0_-4px_16px_rgba(0,0,0,0.05)]">
+                {/* Desktop-only Start Body Analysis Button */}
+                <div className="hidden md:block pt-3">
+                  <button
+                    type="button"
+                    onClick={handleStartAnalysis}
+                    className="w-full py-4 px-6 rounded-2xl bg-[#022319] hover:bg-[#033022] text-white font-black text-sm flex items-center justify-center gap-3 shadow-lg shadow-emerald-950/20 active:scale-98 transition-all cursor-pointer group"
+                  >
+                    <span>Start Body Analysis</span>
+                    <span className="text-[#00e676] text-base group-hover:translate-x-1 transition-transform">→</span>
+                  </button>
+                  <div className="flex items-center justify-center gap-1.5 mt-2 text-xs text-gray-500 font-medium select-none">
+                    <svg className="w-3.5 h-3.5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
+                    </svg>
+                    <span>Your data is private and secure.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Visual Measurement Guides & Explanations (md:col-span-5) */}
+              <div className="hidden md:flex flex-col gap-5 md:col-span-5 sticky top-24">
+                <div className="bg-gray-50 p-5 rounded-3xl border border-gray-200 space-y-4">
+                  <h3 className="text-sm font-black text-gray-950 uppercase tracking-wider flex items-center gap-2">
+                    <span>Visual Measuring Guide</span>
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-gray-100">
+                        <Image
+                          src="/images/guide-waist-measurement.jpg"
+                          alt="Waist Measurement"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <p className="text-xs font-bold text-gray-900">Waist at Navel</p>
+                      <p className="text-[11px] text-gray-500 leading-snug">Relax your stomach, exhale normally, keep tape level.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-gray-100">
+                        <Image
+                          src="/images/guide-neck-measurement.jpg"
+                          alt="Neck Measurement"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <p className="text-xs font-bold text-gray-900">Neck below Adam&apos;s apple</p>
+                      <p className="text-[11px] text-gray-500 leading-snug">Snug around narrowest point, avoid flaring traps.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* US Navy Method Info */}
+                <div className="p-5 rounded-2xl bg-[#eaf7ee] border border-emerald-200/80 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-emerald-200/80 text-[#057a44] flex items-center justify-center shrink-0">
+                      <svg className="w-3.5 h-3.5 text-[#057a44]" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-xs font-black uppercase text-[#057a44] tracking-wider">US Navy Formula Accuracy</h4>
+                  </div>
+                  <p className="text-xs text-gray-700 leading-relaxed">
+                    Circumference ratios accurately isolate subcutaneous and visceral adipose tissue from active lean mass, performing within 1-3% of clinical hydrostatic immersion.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Primary Action Button: Start Body Analysis (Mobile Only) */}
+            <div className="md:hidden fixed bottom-[52px] sm:bottom-[56px] left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-100/90 py-2.5 px-3.5 sm:px-4 shadow-[0_-4px_16px_rgba(0,0,0,0.05)]">
               <div className="max-w-md mx-auto">
                 <button
                   type="button"

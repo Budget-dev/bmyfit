@@ -175,10 +175,10 @@ export function CalculatingClient() {
       <SiteHeader />
 
       {/* 2. Main Container with relative positioning for artwork */}
-      <main className="flex-1 max-w-md mx-auto w-full px-3.5 sm:px-4 pt-1 pb-28 sm:pb-32 flex flex-col justify-start relative overflow-x-hidden">
+      <main className="flex-1 max-w-md md:max-w-4xl lg:max-w-5xl mx-auto w-full px-3.5 sm:px-6 lg:px-8 pt-1 md:pt-8 pb-28 sm:pb-32 md:pb-16 flex flex-col justify-start relative overflow-x-hidden">
         
-        {/* Top Right Model with Dynamic Green Brush Splash Background Artwork */}
-        <div className="absolute top-2 -right-6 sm:-right-4 w-[205px] min-[390px]:w-[225px] sm:w-[245px] aspect-[3/4] pointer-events-none select-none z-0">
+        {/* Top Right Model with Dynamic Green Brush Splash Background Artwork (Mobile Only) */}
+        <div className="md:hidden absolute top-2 -right-6 sm:-right-4 w-[205px] min-[390px]:w-[225px] sm:w-[245px] aspect-[3/4] pointer-events-none select-none z-0">
           <Image
             src="/images/analyzing-model-splash.jpg"
             alt="Analyzing body metrics fitness model"
@@ -193,39 +193,43 @@ export function CalculatingClient() {
         </div>
 
         {/* Foreground Content (z-10) */}
-        <div className="relative z-10">
+        <div className="relative z-10 w-full">
           {/* Subheader Navigation Row */}
-          <div className="flex items-center justify-between mt-0.5">
+          <div className="flex items-center justify-between mt-0.5 mb-2 md:mb-4">
             <div className="flex items-center gap-2">
               <Link
                 href="/details?step=2"
-                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center justify-center transition-colors active:scale-95 shrink-0"
+                className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center justify-center transition-colors active:scale-95 shrink-0"
                 aria-label="Back to Measurements"
               >
                 <svg className="w-3.5 h-3.5 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                 </svg>
               </Link>
-              <span className="text-[11px] font-black uppercase tracking-wider text-[#057a44]">
-                ANALYSIS
+              <span className="text-[11px] md:text-xs font-black uppercase tracking-wider text-[#057a44]">
+                METABOLIC ENGINE · ANALYSIS
               </span>
             </div>
 
-            <span className="text-[10.5px] font-semibold text-gray-400 select-none">
-              Processing your data...
+            <span className="text-[10.5px] md:text-xs font-semibold text-gray-400 select-none">
+              Processing data with clinical precision...
             </span>
           </div>
 
-          {/* Headline matching screenshot */}
-          <h1 className="text-[25px] min-[390px]:text-[27px] sm:text-[29px] font-black tracking-tight leading-[1.08] text-gray-950 mt-1.5 text-left">
-            Analysing<br />
-            <span className="text-[#00c853]">your body metrics...</span>
-          </h1>
+          {/* 2-Column Responsive Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+            {/* Left Column (md:col-span-7) */}
+            <div className="md:col-span-7 space-y-4">
+              {/* Headline matching screenshot */}
+              <h1 className="text-[25px] min-[390px]:text-[27px] sm:text-3xl md:text-4xl font-black tracking-tight leading-[1.08] text-gray-950 text-left">
+                Analysing<br />
+                <span className="text-[#00c853]">your body metrics...</span>
+              </h1>
 
-          {/* Subtitle */}
-          <p className="text-[9.5px] min-[390px]:text-[10px] text-gray-500 leading-snug mt-1 mb-2 text-left max-w-[62%] sm:max-w-[64%]">
-            This will just take a few seconds. We&apos;re calculating your results and preparing personalized recommendations based on your goal.
-          </p>
+              {/* Subtitle */}
+              <p className="text-[9.5px] min-[390px]:text-[10px] md:text-sm text-gray-500 leading-snug text-left max-w-full md:max-w-xl">
+                This will just take a few seconds. We&apos;re calculating your clinical BMI, estimating body fat %, and preparing personalized recommendations based on your goal.
+              </p>
 
           {/* =================================================== */}
           {/* Circular Progress Indicator with Heartbeat Line     */}
@@ -413,6 +417,30 @@ export function CalculatingClient() {
             </div>
           )}
         </div>
+
+        {/* Right Column: High-tech artwork & scientific callout */}
+        <div className="hidden md:flex flex-col gap-5 md:col-span-5 sticky top-24">
+          <div className="relative w-full aspect-[4/4.8] rounded-3xl overflow-hidden shadow-2xl border border-emerald-950/60 bg-gradient-to-tr from-black via-gray-950 to-emerald-950/40 p-6 flex flex-col justify-end text-white">
+            <Image
+              src="/images/analyzing-model-splash.jpg"
+              alt="Analyzing model"
+              fill
+              className="object-contain object-right-top opacity-95"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+            <div className="relative z-10 space-y-3">
+              <div className="inline-flex items-center gap-2 bg-[#00e676]/20 border border-[#00e676]/40 px-3 py-1 rounded-full text-xs font-black text-[#00e676] uppercase">
+                <span>Clinical Anthropometry</span>
+              </div>
+              <h3 className="text-xl font-black text-white">Calibrating Indian Metabolic Thresholds</h3>
+              <p className="text-xs text-gray-300 leading-relaxed">
+                Evaluating circumference-to-height ratios to determine true visceral fat distribution, preventing metabolic adaptation and muscle loss during deficit cycles.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
       </main>
 

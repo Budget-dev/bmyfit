@@ -192,10 +192,10 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
       <SiteHeader />
 
       {/* 2. Main Container with relative positioning for artwork */}
-      <main className="flex-1 max-w-md mx-auto w-full px-2.5 min-[390px]:px-3 sm:px-4 pt-0.5 pb-14 sm:pb-16 flex flex-col justify-start relative overflow-x-hidden">
+      <main className="flex-1 max-w-md md:max-w-5xl lg:max-w-6xl mx-auto w-full px-2.5 min-[390px]:px-3 sm:px-6 lg:px-8 pt-0.5 md:pt-6 pb-14 sm:pb-16 md:pb-16 flex flex-col justify-start relative overflow-x-hidden">
         
-        {/* Top Right Shirtless Muscular Model with Emerald Brush Splash */}
-        <div className="absolute top-3 -right-6 sm:-right-4 w-[160px] min-[390px]:w-[185px] aspect-[3/4] pointer-events-none select-none z-0">
+        {/* Top Right Shirtless Muscular Model with Emerald Brush Splash (Mobile Only) */}
+        <div className="md:hidden absolute top-3 -right-6 sm:-right-4 w-[160px] min-[390px]:w-[185px] aspect-[3/4] pointer-events-none select-none z-0">
           <Image
             src="/images/snapshot-model-splash.jpg"
             alt="BMYFIT fitness transformation model"
@@ -210,45 +210,49 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
         </div>
 
         {/* Foreground Content Layer (z-10) */}
-        <div className="relative z-10">
+        <div className="relative z-10 w-full">
           
           {/* Subheader Navigation Row */}
-          <div className="flex items-center justify-between mt-0.5">
+          <div className="flex items-center justify-between mt-0.5 mb-2 md:mb-4">
             <div className="flex items-center gap-1.5">
               <Link
                 href="/details?step=2"
-                className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center justify-center transition-colors active:scale-95 shrink-0"
+                className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center justify-center transition-colors active:scale-95 shrink-0"
                 aria-label="Back to Measurements"
               >
-                <svg className="w-3 h-3 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <svg className="w-3 h-3 md:w-4 md:h-4 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                 </svg>
               </Link>
-              <span className="text-[10px] font-black uppercase tracking-wider text-[#057a44]">
-                YOUR RESULTS
+              <span className="text-[10px] md:text-xs font-black uppercase tracking-wider text-[#057a44]">
+                ASSESSMENT COMPLETE · YOUR RESULTS
               </span>
             </div>
 
             <button
               type="button"
               onClick={() => setDetailsModalOpen(true)}
-              className="text-[10px] font-bold text-gray-900 hover:text-emerald-600 flex items-center gap-1 cursor-pointer transition-colors"
+              className="text-[10px] md:text-xs font-bold text-gray-900 hover:text-emerald-600 flex items-center gap-1 cursor-pointer transition-colors"
             >
-              <span>View Details</span>
+              <span>View Full Breakdown</span>
               <span className="text-xs">→</span>
             </button>
           </div>
 
-          {/* Headline matching screenshot */}
-          <h1 className="text-[20px] min-[390px]:text-[22px] sm:text-[24px] font-black tracking-tight leading-[1.08] text-gray-950 mt-0.5 text-left">
-            Your Body{" "}
-            <span className="text-[#00c853]">Snapshot</span>
-          </h1>
+          {/* Desktop 2-Column Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10 items-start">
+            {/* Left Column: Metrics & Anthropometry (md:col-span-6) */}
+            <div className="md:col-span-6 space-y-4">
+              {/* Headline matching screenshot */}
+              <h1 className="text-[20px] min-[390px]:text-[22px] sm:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight leading-[1.08] text-gray-950 text-left">
+                Your Body{" "}
+                <span className="text-[#00c853]">Snapshot</span>
+              </h1>
 
-          {/* Subtitle */}
-          <p className="text-[8px] min-[390px]:text-[8.5px] text-gray-500 leading-snug mt-0.5 mb-1.5 text-left max-w-[62%] sm:max-w-[65%]">
-            Here are your key metrics and insights based on the details you provided.
-          </p>
+              {/* Subtitle */}
+              <p className="text-[8px] min-[390px]:text-[8.5px] md:text-xs text-gray-500 leading-snug text-left max-w-full">
+                Here are your key metrics and insights computed with the US Navy Body Fat equation and Mifflin-St Jeor formula.
+              </p>
 
           {/* =================================================== */}
           {/* 3 Metrics Cards Row matching screenshot             */}
@@ -381,15 +385,54 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
               </svg>
             </div>
             <div className="min-w-0">
-              <h3 className="text-[9.5px] min-[390px]:text-[10px] font-black text-gray-950 leading-tight">
+              <h3 className="text-[9.5px] min-[390px]:text-[10px] md:text-sm font-black text-gray-950 leading-tight">
                 What this means?
               </h3>
-              <p className="text-[7.5px] min-[390px]:text-[8px] text-gray-600 leading-snug mt-0.5">
+              <p className="text-[7.5px] min-[390px]:text-[8px] md:text-xs text-gray-600 leading-snug mt-0.5">
                 Your current numbers give you a good starting point. Based on your goal, the next focus should be reducing body fat while maintaining lean muscle. With the right nutrition and workout plan, you can achieve this safely and effectively.
               </p>
             </div>
           </div>
 
+          {/* Desktop-only Detailed Summary Card */}
+          <div className="hidden md:block bg-gray-50 rounded-2xl border border-gray-200 p-4 space-y-3 text-left">
+            <h4 className="text-xs font-black text-gray-950 uppercase tracking-wider">
+              Verified Intake Parameters
+            </h4>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="bg-white p-2.5 rounded-xl border border-gray-100">
+                <span className="text-[10px] text-gray-500 block">Height / Weight</span>
+                <span className="font-bold text-gray-900">{data.heightCm} cm · {data.weightKg} kg</span>
+              </div>
+              <div className="bg-white p-2.5 rounded-xl border border-gray-100">
+                <span className="text-[10px] text-gray-500 block">Waist / Neck</span>
+                <span className="font-bold text-gray-900">{Math.round((data.waistIn || 31.5) * 2.54)}cm · {Math.round((data.neckIn || 14.2) * 2.54)}cm</span>
+              </div>
+              <div className="bg-white p-2.5 rounded-xl border border-gray-100">
+                <span className="text-[10px] text-gray-500 block">Metabolic Baseline</span>
+                <span className="font-bold text-emerald-600">
+                  ~{Math.round(10 * data.weightKg + 6.25 * data.heightCm - 5 * data.age + (data.gender === "male" ? 5 : -161))} kcal BMR
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop-only Coach Naveen Note */}
+          <div className="hidden md:flex items-start gap-3 p-4 rounded-2xl bg-white border border-gray-200 text-left shadow-sm">
+            <div className="relative w-11 h-11 rounded-full overflow-hidden border border-emerald-500 shrink-0">
+              <Image src="/images/coach-naveen.jpg" alt="Coach Naveen" fill className="object-cover object-top" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-gray-950">Coach Naveen’s Review</h4>
+              <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                &ldquo;Your metabolic profile shows solid responsive potential. By setting your daily deficit at exactly 400 kcal and keeping protein at ~1.6g/kg with Indian meals, we can target stubborn abdominal fat while preserving muscle.&rdquo;
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Hero Offer Card & What You Get (md:col-span-6) */}
+        <div className="md:col-span-6 space-y-4 md:sticky md:top-20">
           {/* =================================================== */}
           {/* "Your personalized plan is ready" Hero Offer Card   */}
           {/* =================================================== */}
@@ -655,9 +698,11 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
             </div>
           </div>
 
+          </div>
         </div>
+      </div>
 
-      </main>
+    </main>
 
       {/* View Details Modal */}
       {detailsModalOpen && (

@@ -531,7 +531,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       <SiteHeader />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-md mx-auto w-full px-3 pt-1 pb-16 flex flex-col justify-between">
+      <main className="flex-1 max-w-md md:max-w-5xl lg:max-w-6xl mx-auto w-full px-3 sm:px-6 lg:px-8 pt-1 md:pt-6 pb-16 flex flex-col justify-between">
         {funnelStep === "payment" && (
         <div>
           {/* Subtitle & 4-Step Stepper Bar */}
@@ -548,7 +548,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
               </button>
-              <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-[#00c853]">
+              <span className="text-[10px] sm:text-[11px] md:text-xs font-extrabold uppercase tracking-wider text-[#00c853]">
                 UNLOCK YOUR PLAN
               </span>
             </div>
@@ -557,58 +557,62 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
             <div className="flex items-center justify-end shrink-0">
               {/* Step 1 */}
               <div className="flex flex-col items-center">
-                <div className="w-3.5 h-3.5 rounded-full bg-[#00c853] text-white flex items-center justify-center text-[8px] font-bold">
+                <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-[#00c853] text-white flex items-center justify-center text-[8px] md:text-[9px] font-bold">
                   ✓
                 </div>
-                <span className="text-[7.5px] text-gray-500 font-medium whitespace-nowrap mt-0.5">
+                <span className="text-[7.5px] md:text-[9px] text-gray-500 font-medium whitespace-nowrap mt-0.5">
                   Select Goal
                 </span>
               </div>
-              <div className="w-3.5 sm:w-5 h-[1.5px] bg-[#00c853] -mt-3 mx-0.5" />
+              <div className="w-3.5 sm:w-5 md:w-8 h-[1.5px] bg-[#00c853] -mt-3 mx-0.5" />
 
               {/* Step 2 */}
               <div className="flex flex-col items-center">
-                <div className="w-3.5 h-3.5 rounded-full bg-[#00c853] text-white flex items-center justify-center text-[8px] font-bold">
+                <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-[#00c853] text-white flex items-center justify-center text-[8px] md:text-[9px] font-bold">
                   ✓
                 </div>
-                <span className="text-[7.5px] text-gray-500 font-medium whitespace-nowrap mt-0.5">
+                <span className="text-[7.5px] md:text-[9px] text-gray-500 font-medium whitespace-nowrap mt-0.5">
                   Body Details
                 </span>
               </div>
-              <div className="w-3.5 sm:w-5 h-[1.5px] bg-[#00c853] -mt-3 mx-0.5" />
+              <div className="w-3.5 sm:w-5 md:w-8 h-[1.5px] bg-[#00c853] -mt-3 mx-0.5" />
 
               {/* Step 3 */}
               <div className="flex flex-col items-center">
-                <div className="w-3.5 h-3.5 rounded-full bg-[#00c853] text-white flex items-center justify-center text-[8px] font-bold">
+                <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-[#00c853] text-white flex items-center justify-center text-[8px] md:text-[9px] font-bold">
                   ✓
                 </div>
-                <span className="text-[7.5px] text-gray-500 font-medium whitespace-nowrap mt-0.5">
+                <span className="text-[7.5px] md:text-[9px] text-gray-500 font-medium whitespace-nowrap mt-0.5">
                   Analysis
                 </span>
               </div>
-              <div className="w-3.5 sm:w-5 h-[1.5px] bg-[#00c853] -mt-3 mx-0.5" />
+              <div className="w-3.5 sm:w-5 md:w-8 h-[1.5px] bg-[#00c853] -mt-3 mx-0.5" />
 
               {/* Step 4 */}
               <div className="flex flex-col items-center">
-                <div className="w-3.5 h-3.5 rounded-full bg-[#073820] text-white flex items-center justify-center text-[8px] font-black">
+                <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-[#073820] text-white flex items-center justify-center text-[8px] md:text-[9px] font-black">
                   4
                 </div>
-                <span className="text-[7.5px] text-gray-900 font-bold whitespace-nowrap mt-0.5">
+                <span className="text-[7.5px] md:text-[9px] text-gray-900 font-bold whitespace-nowrap mt-0.5">
                   Payment
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Headline & Subtitle */}
-          <div className="mt-0.5">
-            <h1 className="text-[17px] sm:text-[19px] font-black text-gray-900 tracking-tight leading-tight">
-              Get Your Personalized <span className="text-[#00c853]">Fitness Plan</span>
-            </h1>
-            <p className="text-[8.5px] sm:text-[9.5px] text-gray-500 mt-0.5 leading-snug">
-              Your analysis is complete. Unlock your full 8-week plan and start your transformation today.
-            </p>
-          </div>
+          {/* 2-Column Responsive Grid for Payment */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10 items-start mt-1 md:mt-4">
+            {/* Left Column: Plan Benefits & Visual Previews (md:col-span-7) */}
+            <div className="md:col-span-7 space-y-4">
+              {/* Headline & Subtitle */}
+              <div className="mt-0.5 text-left">
+                <h1 className="text-[17px] sm:text-xl md:text-2xl lg:text-3xl font-black text-gray-900 tracking-tight leading-tight">
+                  Get Your Personalized <span className="text-[#00c853]">Fitness Plan</span>
+                </h1>
+                <p className="text-[8.5px] sm:text-xs md:text-sm text-gray-500 mt-1 leading-snug">
+                  Your analysis is complete. Unlock your full 8-week plan and start your transformation today.
+                </p>
+              </div>
 
           {/* Dual Offer Comparison Cards */}
           <div className="grid grid-cols-2 gap-2 mt-2">
@@ -781,6 +785,48 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
               </div>
             </div>
           </div>
+
+          {/* 3 Trust Badges for Desktop Left Column */}
+          <div className="hidden md:grid grid-cols-3 gap-2 pt-2">
+            <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center gap-1.5 text-center">
+              <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <path d="M9 12l2 2 4-4" />
+                </svg>
+              </div>
+              <span className="text-[10px] text-gray-700 font-semibold leading-tight">
+                100% Secure Payments
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center gap-1.5 text-center">
+              <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+              </div>
+              <span className="text-[10px] text-gray-700 font-semibold leading-tight">
+                Instant Access After Payment
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center gap-1.5 text-center">
+              <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <circle cx="12" cy="11" r="1.5" />
+                </svg>
+              </div>
+              <span className="text-[10px] text-gray-700 font-semibold leading-tight">
+                Your Data is Private
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Contact, Payment Methods & Pay CTA (md:col-span-5) */}
+        <div className="md:col-span-5 space-y-4 md:sticky md:top-20">
 
           {/* Contact Details summary / edit row */}
           <div className="mt-2 bg-gray-50 border border-gray-200 rounded-lg p-2">
@@ -1012,253 +1058,275 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
             </div>
           </div>
 
-          {/* 3 Trust Badges */}
-          <div className="grid grid-cols-3 gap-1.5 mt-2">
-            <div className="p-1 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center gap-1 text-center">
-              <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  <path d="M9 12l2 2 4-4" />
-                </svg>
+            {/* 3 Trust Badges (Mobile Only) */}
+            <div className="md:hidden grid grid-cols-3 gap-1.5 mt-2">
+              <div className="p-1 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center gap-1 text-center">
+                <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                  <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    <path d="M9 12l2 2 4-4" />
+                  </svg>
+                </div>
+                <span className="text-[7.5px] text-gray-700 font-semibold leading-tight">
+                  100% Secure Payments
+                </span>
               </div>
-              <span className="text-[7.5px] text-gray-700 font-semibold leading-tight">
-                100% Secure Payments
-              </span>
+
+              <div className="p-1 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center gap-1 text-center">
+                <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                  <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                  </svg>
+                </div>
+                <span className="text-[7.5px] text-gray-700 font-semibold leading-tight">
+                  Instant Access After Payment
+                </span>
+              </div>
+
+              <div className="p-1 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center gap-1 text-center">
+                <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                  <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    <circle cx="12" cy="11" r="1.5" />
+                  </svg>
+                </div>
+                <span className="text-[7.5px] text-gray-700 font-semibold leading-tight">
+                  Your Data is Private
+                </span>
+              </div>
             </div>
 
-            <div className="p-1 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center gap-1 text-center">
-              <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                </svg>
+            {/* Coach Naveen Guarantee Card (Desktop Only) */}
+            <div className="hidden md:flex bg-emerald-50/70 border border-emerald-100 rounded-2xl p-4 items-center gap-3 text-left">
+              <div className="relative w-11 h-11 rounded-full overflow-hidden border border-emerald-500 shrink-0">
+                <Image src="/images/coach-naveen.jpg" alt="Coach Naveen" fill className="object-cover object-top" />
               </div>
-              <span className="text-[7.5px] text-gray-700 font-semibold leading-tight">
-                Instant Access After Payment
-              </span>
-            </div>
-
-            <div className="p-1 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center gap-1 text-center">
-              <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  <circle cx="12" cy="11" r="1.5" />
-                </svg>
+              <div className="text-left text-xs">
+                <p className="font-bold text-gray-900">Coach Naveen’s Guarantee</p>
+                <p className="text-[11px] text-gray-600 mt-0.5">100% money-back guarantee if you follow the routine and don&apos;t see results. WhatsApp support included with every plan.</p>
               </div>
-              <span className="text-[7.5px] text-gray-700 font-semibold leading-tight">
-                Your Data is Private
-              </span>
             </div>
           </div>
         </div>
-        )}
+      </div>
+      )}
 
         {/* Medical & Clinical Questionnaire Step (After ₹99 Payment) */}
         {funnelStep === "medical_questionnaire" && (
-          <div className="space-y-4 pt-1 animate-fade-in">
+          <div className="space-y-4 pt-1 animate-fade-in w-full">
             {/* Header & Status Indicator */}
             <div className="flex items-center justify-between gap-1 pb-1">
-              <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-[#00c853]">
+              <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-[#00c853]">
                 STEP 5: MEDICAL ASSESSMENT
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black text-[9px]">
+              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-black text-xs">
                 ✓ ₹99 PAID (RECEIPT #BMY99)
               </span>
             </div>
 
-            {/* Title Banner */}
-            <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/80 rounded-2xl p-3.5 space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🩺</span>
-                <h1 className="text-sm font-black text-gray-900 leading-tight">
-                  Medical &amp; Clinical Health Dossier
-                </h1>
-              </div>
-              <p className="text-[10px] text-gray-600 leading-relaxed">
-                Before Coach Naveen and our clinical nutritionist design your customized transformation plan, please let us know if you have any existing diseases or injuries, and upload your lab reports.
-              </p>
-            </div>
-
-            {/* Section 1: Diseases / Medical Conditions */}
-            <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-2xs space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-black text-gray-900 flex items-center gap-1.5">
-                  <span>1. Do you have any existing diseases or health conditions?</span>
-                </label>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Required</span>
-              </div>
-
-              {/* Disease Chips Grid */}
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                {DISEASE_OPTIONS.map((item) => {
-                  const isSelected = selectedDiseases.includes(item.label);
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => handleToggleDisease(item.label)}
-                      className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all flex items-center gap-2 ${
-                        isSelected
-                          ? "bg-emerald-600 text-white border-emerald-600 shadow-xs scale-[1.01]"
-                          : "bg-gray-50/80 hover:bg-gray-100 border-gray-200 text-gray-800"
-                      }`}
-                    >
-                      <span className="text-base">{item.icon}</span>
-                      <span className="text-[11px] leading-tight">{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Specific notes or medications input */}
-              <div className="pt-2 space-y-1.5">
-                <label className="text-[11px] font-bold text-gray-700 block">
-                  Describe symptoms, doctor advice, or ongoing medications (Optional):
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="e.g. Taking Thyronorm 50mcg daily morning; mild lower back pain on heavy squats; avoid high sodium..."
-                  value={customDiseaseDescription}
-                  onChange={(e) => setCustomDiseaseDescription(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50/40"
-                />
-              </div>
-            </div>
-
-            {/* Section 2: Upload Medical Documents & Lab Reports */}
-            <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-2xs space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xs font-black text-gray-900 flex items-center gap-1.5">
-                    <span>2. Upload Medical Reports &amp; Doctor Notes</span>
-                  </h3>
-                  <p className="text-[10px] text-gray-500">
-                    Blood tests, Thyroid profile, Prescription, Spine/MRI scan (PDF or Images)
+            {/* Desktop 2-Column Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10 items-start">
+              {/* Left Column: Conditions & Symptoms (md:col-span-7) */}
+              <div className="md:col-span-7 space-y-4">
+                {/* Title Banner */}
+                <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/80 rounded-2xl p-3.5 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🩺</span>
+                    <h1 className="text-sm font-black text-gray-900 leading-tight">
+                      Medical &amp; Clinical Health Dossier
+                    </h1>
+                  </div>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                    Before Coach Naveen and our clinical nutritionist design your customized transformation plan, please let us know if you have any existing diseases or injuries, and upload your lab reports.
                   </p>
                 </div>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                  {uploadedDocuments.length} Attached
-                </span>
-              </div>
 
-              {/* Upload Dropzone */}
-              <label className="border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-gray-50/60 hover:bg-emerald-50/30 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors text-center group">
-                <div className="w-10 h-10 rounded-full bg-white shadow-xs flex items-center justify-center text-emerald-600 mb-2 group-hover:scale-105 transition-transform text-xl">
-                  📁
-                </div>
-                <span className="text-xs font-black text-gray-900">
-                  Tap to upload medical reports &amp; prescriptions
-                </span>
-                <span className="text-[10px] text-gray-400 mt-0.5">
-                  Supports PDF, PNG, JPG (Synced securely with Firebase)
-                </span>
-                <input
-                  type="file"
-                  multiple
-                  accept=".pdf,image/*,.doc,.docx"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </label>
+                {/* Section 1: Diseases / Medical Conditions */}
+                <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-2xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-gray-900 flex items-center gap-1.5">
+                      <span>1. Do you have any existing diseases or health conditions?</span>
+                    </label>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Required</span>
+                  </div>
 
-              {/* Quick sample test documents for instant testing */}
-              <div className="pt-1 space-y-1.5">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                  Quick Testing Presets (1-Click Sample Reports):
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleAddSampleDoc(SAMPLE_MEDICAL_DOCS[0])}
-                    className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200 transition"
-                  >
-                    + Blood Test (Lipid/CBC)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleAddSampleDoc(SAMPLE_MEDICAL_DOCS[1])}
-                    className="px-2.5 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 text-[10px] font-bold border border-teal-200 transition"
-                  >
-                    + Thyroid Report (TSH)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleAddSampleDoc(SAMPLE_MEDICAL_DOCS[2])}
-                    className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 text-[10px] font-bold border border-blue-200 transition"
-                  >
-                    + Spine Clearance Note
-                  </button>
-                </div>
-              </div>
+                  {/* Disease Chips Grid */}
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    {DISEASE_OPTIONS.map((item) => {
+                      const isSelected = selectedDiseases.includes(item.label);
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleToggleDisease(item.label)}
+                          className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all flex items-center gap-2 ${
+                            isSelected
+                              ? "bg-emerald-600 text-white border-emerald-600 shadow-xs scale-[1.01]"
+                              : "bg-gray-50/80 hover:bg-gray-100 border-gray-200 text-gray-800"
+                          }`}
+                        >
+                          <span className="text-base">{item.icon}</span>
+                          <span className="text-[11px] leading-tight">{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
 
-              {/* Uploaded Documents List */}
-              {uploadedDocuments.length > 0 && (
-                <div className="space-y-2 pt-2 border-t border-gray-100">
-                  <span className="text-[11px] font-bold text-gray-700 block">
-                    Attached Documents ({uploadedDocuments.length}):
-                  </span>
-                  <div className="space-y-1.5">
-                    {uploadedDocuments.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs"
-                      >
-                        <div className="flex items-center gap-2 overflow-hidden">
-                          <span className="text-base">{doc.type === "pdf" ? "📑" : "🖼️"}</span>
-                          <div className="truncate">
-                            <p className="font-bold text-gray-900 truncate text-[11px]">{doc.name}</p>
-                            <p className="text-[9.5px] text-gray-400">{doc.sizeFormatted} · Uploaded</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {doc.dataUrl && (
-                            <button
-                              type="button"
-                              onClick={() => setPreviewDoc(doc)}
-                              className="px-2 py-1 rounded-md bg-white border border-gray-200 text-[10px] font-bold text-gray-700 hover:bg-gray-100"
-                            >
-                              Preview
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveDoc(doc.id)}
-                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md text-[11px]"
-                            title="Remove document"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                  {/* Specific notes or medications input */}
+                  <div className="pt-2 space-y-1.5">
+                    <label className="text-[11px] font-bold text-gray-700 block">
+                      Describe symptoms, doctor advice, or ongoing medications (Optional):
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="e.g. Taking Thyronorm 50mcg daily morning; mild lower back pain on heavy squats; avoid high sodium..."
+                      value={customDiseaseDescription}
+                      onChange={(e) => setCustomDiseaseDescription(e.target.value)}
+                      className="w-full p-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50/40"
+                    />
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
 
-            {/* Submit Action */}
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={handleSubmitMedical}
-                disabled={isSubmittingMedical || selectedDiseases.length === 0}
-                className="w-full py-3 px-4 rounded-xl bg-[#00c853] hover:bg-[#00b047] active:bg-[#00963d] disabled:opacity-50 text-white font-black text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
-              >
-                {isSubmittingMedical ? (
-                  <span>Registering Dossier &amp; Notifying Coach...</span>
-                ) : (
-                  <span>✓ Submit Health Dossier to Head Coach</span>
-                )}
-              </button>
-              <p className="text-[9.5px] text-center text-gray-400 mt-2">
-                🔒 Stored securely in your private dossier. Head Coach will review these medical inputs before assigning your custom plan.
-              </p>
+              {/* Right Column: Upload Medical Documents & Submit (md:col-span-5) */}
+              <div className="md:col-span-5 space-y-4 md:sticky md:top-20">
+                {/* Section 2: Upload Medical Documents & Lab Reports */}
+                <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-2xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xs font-black text-gray-900 flex items-center gap-1.5">
+                        <span>2. Upload Medical Reports &amp; Doctor Notes</span>
+                      </h3>
+                      <p className="text-[10px] text-gray-500">
+                        Blood tests, Thyroid profile, Prescription, Spine/MRI scan (PDF or Images)
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                      {uploadedDocuments.length} Attached
+                    </span>
+                  </div>
+
+                  {/* Upload Dropzone */}
+                  <label className="border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-gray-50/60 hover:bg-emerald-50/30 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors text-center group">
+                    <div className="w-10 h-10 rounded-full bg-white shadow-xs flex items-center justify-center text-emerald-600 mb-2 group-hover:scale-105 transition-transform text-xl">
+                      📁
+                    </div>
+                    <span className="text-xs font-black text-gray-900">
+                      Tap to upload medical reports &amp; prescriptions
+                    </span>
+                    <span className="text-[10px] text-gray-400 mt-0.5">
+                      Supports PDF, PNG, JPG (Synced securely with Firebase)
+                    </span>
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,image/*,.doc,.docx"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {/* Quick sample test documents for instant testing */}
+                  <div className="pt-1 space-y-1.5">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
+                      Quick Testing Presets (1-Click Sample Reports):
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleAddSampleDoc(SAMPLE_MEDICAL_DOCS[0])}
+                        className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200 transition"
+                      >
+                        + Blood Test (Lipid/CBC)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAddSampleDoc(SAMPLE_MEDICAL_DOCS[1])}
+                        className="px-2.5 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 text-[10px] font-bold border border-teal-200 transition"
+                      >
+                        + Thyroid Report (TSH)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAddSampleDoc(SAMPLE_MEDICAL_DOCS[2])}
+                        className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 text-[10px] font-bold border border-blue-200 transition"
+                      >
+                        + Spine Clearance Note
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Uploaded Documents List */}
+                  {uploadedDocuments.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-gray-100">
+                      <span className="text-[11px] font-bold text-gray-700 block">
+                        Attached Documents ({uploadedDocuments.length}):
+                      </span>
+                      <div className="space-y-1.5">
+                        {uploadedDocuments.map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs"
+                          >
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <span className="text-base">{doc.type === "pdf" ? "📑" : "🖼️"}</span>
+                              <div className="truncate">
+                                <p className="font-bold text-gray-900 truncate text-[11px]">{doc.name}</p>
+                                <p className="text-[9.5px] text-gray-400">{doc.sizeFormatted} · Uploaded</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {doc.dataUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewDoc(doc)}
+                                  className="px-2 py-1 rounded-md bg-white border border-gray-200 text-[10px] font-bold text-gray-700 hover:bg-gray-100"
+                                >
+                                  Preview
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveDoc(doc.id)}
+                                className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md text-[11px]"
+                                title="Remove document"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit Action */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleSubmitMedical}
+                    disabled={isSubmittingMedical || selectedDiseases.length === 0}
+                    className="w-full py-3.5 px-4 rounded-xl bg-[#00c853] hover:bg-[#00b047] active:bg-[#00963d] disabled:opacity-50 text-white font-black text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+                  >
+                    {isSubmittingMedical ? (
+                      <span>Registering Dossier &amp; Notifying Coach...</span>
+                    ) : (
+                      <span>✓ Submit Health Dossier to Head Coach</span>
+                    )}
+                  </button>
+                  <p className="text-[9.5px] text-center text-gray-400 mt-2">
+                    🔒 Stored securely in your private dossier. Head Coach will review these medical inputs before assigning your custom plan.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
         {/* Medical Submitted Confirmation Screen */}
         {funnelStep === "medical_submitted" && (
-          <div className="space-y-5 pt-3 text-center animate-fade-in">
+          <div className="max-w-xl mx-auto w-full p-4 md:p-8 bg-white md:border md:border-gray-200 md:rounded-3xl md:shadow-md space-y-5 pt-3 text-center animate-fade-in">
             <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner text-3xl">
               🩺
             </div>
