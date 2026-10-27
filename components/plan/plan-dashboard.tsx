@@ -43,6 +43,7 @@ import {
 } from "@/features/plan/dashboard-data";
 import { ShoppingBag, Sparkles } from "@/components/ui/supplement-icons";
 import { getRecommendedProductsForGoal } from "@/features/supplements/supplements-data";
+import { PlanPendingScreen } from "./plan-pending-screen";
 
 interface PlanDashboardProps {
   initialPlan: PlanDashboardData;
@@ -50,7 +51,12 @@ interface PlanDashboardProps {
 }
 
 export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboardProps) {
-  const [plan] = useState<PlanDashboardData>(initialPlan);
+  const [plan, setPlan] = useState<PlanDashboardData>(initialPlan);
+
+  useEffect(() => {
+    setPlan(initialPlan);
+  }, [initialPlan]);
+
   const recommendedSupplements = getRecommendedProductsForGoal(plan.goal);
   const [activeTab, setActiveTab] = useState<"overview" | "nutrition" | "workouts" | "progress">("overview");
   const [selectedWeekNum, setSelectedWeekNum] = useState<number>(1);
@@ -68,6 +74,19 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
   const [activeReviewMode, setActiveReviewMode] = useState<boolean>(
     initialPlan.status === "pending_review" && !isDevPreview
   );
+
+  // If plan is still pending coach review, show the animated pending preparation screen
+  if (plan.status === "pending_review" && !isDevPreview) {
+    return (
+      <PlanPendingScreen
+        plan={plan}
+        onPlanApproved={(approvedPlan) => {
+          setPlan(approvedPlan);
+          setActiveReviewMode(false);
+        }}
+      />
+    );
+  }
 
   // Load task completion state from Firebase Firestore
   useEffect(() => {

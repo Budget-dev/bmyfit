@@ -1,6 +1,7 @@
 import React from "react";
 import type { Metadata } from "next";
 import { AdminDesktopConsole } from "@/components/admin/admin-desktop-console";
+import { AdminLoginGuard } from "@/components/admin/admin-login-guard";
 
 export const metadata: Metadata = {
   title: "BMYFIT Coach Admin Console · Desktop Management",
@@ -9,5 +10,9 @@ export const metadata: Metadata = {
 };
 
 export default function AdminPage() {
-  return <AdminDesktopConsole />;
+  return (
+    <AdminLoginGuard>
+      <AdminDesktopConsole />
+    </AdminLoginGuard>
+  );
 }

@@ -428,12 +428,26 @@ export function AdminDesktopConsole() {
                 <span className="block font-black text-xs text-gray-900 truncate">
                   Coach Naveen
                 </span>
-                <span className="block text-[10px] text-gray-500 truncate">Blaze Gym Owner &amp; Head Coach</span>
+                <span className="block text-[10px] text-emerald-700 font-semibold truncate">bmyfitnesscoach@gmail.com</span>
               </div>
             </div>
-            <div className="text-[10px] text-emerald-700 font-bold flex items-center gap-1.5 pt-0.5 border-t border-gray-200/60">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-              <span>Ready to Push Plans</span>
+            <div className="text-[10px] text-emerald-700 font-bold flex items-center justify-between pt-1 border-t border-gray-200/60">
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                <span>Coach Active</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    sessionStorage.removeItem("bmyfit_admin_authorized");
+                    window.location.reload();
+                  }
+                }}
+                className="text-gray-400 hover:text-rose-600 font-bold underline transition-colors cursor-pointer"
+              >
+                Log Out
+              </button>
             </div>
           </div>
         </aside>

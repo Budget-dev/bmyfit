@@ -8,6 +8,7 @@ import type { PlanDashboardData } from "@/types/plan-dashboard";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 import { WeekPlanEditor } from "@/components/admin/week-plan-editor";
 import { PushModal } from "@/components/admin/push-modal";
+import { AdminLoginGuard } from "@/components/admin/admin-login-guard";
 
 export default function AdminPlanEditorPage({
   params,
@@ -114,53 +115,55 @@ export default function AdminPlanEditorPage({
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-gray-900 pb-20">
-      {/* Top Header */}
-      <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/admin"
-              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
-              title="Back to Admin Console"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
-            <div>
-              <span className="block font-black text-sm sm:text-base text-gray-950">
-                Plan Studio: {user.name}
-              </span>
-              <span className="block text-[11px] text-gray-400 font-mono">Plan ID: {user.plan.id}</span>
+    <AdminLoginGuard>
+      <div className="min-h-screen bg-[#f8fafc] text-gray-900 pb-20">
+        {/* Top Header */}
+        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-xs">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/admin"
+                className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
+                title="Back to Admin Console"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+              <div>
+                <span className="block font-black text-sm sm:text-base text-gray-950">
+                  Plan Studio: {user.name}
+                </span>
+                <span className="block text-[11px] text-gray-400 font-mono">Plan ID: {user.plan.id}</span>
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setPushModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-[#00c853] hover:bg-[#00b047] text-white font-black text-xs shadow-sm flex items-center gap-2 transition"
+            >
+              <Rocket className="w-4 h-4" />
+              <span>Push to User Dashboard</span>
+            </button>
           </div>
+        </header>
 
-          <button
-            type="button"
-            onClick={() => setPushModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-[#00c853] hover:bg-[#00b047] text-white font-black text-xs shadow-sm flex items-center gap-2 transition"
-          >
-            <Rocket className="w-4 h-4" />
-            <span>Push to User Dashboard</span>
-          </button>
-        </div>
-      </header>
+        {/* Main Studio */}
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-7">
+          <WeekPlanEditor
+            user={user}
+            onSavePlan={handleSavePlan}
+            onPushToUser={() => setPushModalOpen(true)}
+          />
+        </main>
 
-      {/* Main Studio */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-7">
-        <WeekPlanEditor
-          user={user}
-          onSavePlan={handleSavePlan}
-          onPushToUser={() => setPushModalOpen(true)}
-        />
-      </main>
-
-      {pushModalOpen && (
-        <PushModal
-          user={user}
-          onClose={() => setPushModalOpen(false)}
-          onSuccess={(updated) => setUser(updated)}
-        />
-      )}
-    </div>
+        {pushModalOpen && (
+          <PushModal
+            user={user}
+            onClose={() => setPushModalOpen(false)}
+            onSuccess={(updated) => setUser(updated)}
+          />
+        )}
+      </div>
+    </AdminLoginGuard>
   );
 }

@@ -9,7 +9,7 @@ import type {
 } from "@/types/admin";
 import type { PlanDashboardData, PlanStatus, WeekPlanData, TaskLogState } from "@/types/plan-dashboard";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
-import { adminDb } from "@/lib/firebase/admin";
+import { adminDb, hasAdminCredentials } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
 
 // In-memory cache for fast desktop administration & fallback when Firestore is offline/local
@@ -700,9 +700,10 @@ function ensureMemoryStore() {
 export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; stats: AdminStats }> {
   ensureMemoryStore();
 
-  // 1. Fetch real registered users from Firestore "users" collection
-  try {
-    const usersSnap = await adminDb.collection("users").get();
+  if (hasAdminCredentials) {
+    // 1. Fetch real registered users from Firestore "users" collection
+    try {
+      const usersSnap = await adminDb.collection("users").get();
     if (!usersSnap.empty) {
       for (const doc of usersSnap.docs) {
         const userData = doc.data();
@@ -854,6 +855,7 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
   } catch (err) {
     console.warn("Firestore user_logs collection fetch notice:", err);
   }
+}
 
   const users = Array.from(memoryStore.values());
 

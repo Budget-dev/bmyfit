@@ -6,15 +6,21 @@ import { serverEnv } from "@/lib/env/server";
 
 const projectId = serverEnv.FIREBASE_PROJECT_ID || "bmyfit-809a8";
 
+export const hasAdminCredentials = Boolean(
+  serverEnv.FIREBASE_CLIENT_EMAIL &&
+    serverEnv.FIREBASE_PRIVATE_KEY &&
+    serverEnv.FIREBASE_CLIENT_EMAIL.includes("@")
+);
+
 const adminApp =
   getApps()[0] ??
   initializeApp(
-    serverEnv.FIREBASE_CLIENT_EMAIL && serverEnv.FIREBASE_PRIVATE_KEY
+    hasAdminCredentials
       ? {
           credential: cert({
             projectId,
-            clientEmail: serverEnv.FIREBASE_CLIENT_EMAIL,
-            privateKey: serverEnv.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+            clientEmail: serverEnv.FIREBASE_CLIENT_EMAIL!,
+            privateKey: serverEnv.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n"),
           }),
         }
       : { projectId }

@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
-import { adminDb } from "@/lib/firebase/admin";
+import { adminDb, hasAdminCredentials } from "@/lib/firebase/admin";
 import { AppError } from "@/lib/errors";
 import type { Assessment, AssessmentInput, DetailedPlan } from "@/types/fitness";
 import type { PlanDashboardData, PlanStatus, TaskLogState } from "@/types/plan-dashboard";
@@ -308,6 +308,7 @@ export async function storePlan(uid: string, assessmentId: string, plan: Detaile
 }
 
 export async function getPaidPlanForUser(uid: string, assessmentId: string) {
+  if (!hasAdminCredentials) return null;
   try {
     const snapshot = await adminDb.collection("plans").doc(assessmentId).get();
     if (snapshot.exists) {
@@ -325,6 +326,8 @@ export async function recordWebhookOnce(eventId: string): Promise<boolean> {
   }
   memoryWebhooks.add(eventId);
 
+  if (!hasAdminCredentials) return true;
+
   try {
     const ref = adminDb.collection("paymentWebhooks").doc(createHash("sha256").update(eventId).digest("hex"));
     return await adminDb.runTransaction(async (transaction) => {
@@ -341,6 +344,7 @@ export async function recordWebhookOnce(eventId: string): Promise<boolean> {
 
 
 export async function storeDashboardPlan(uid: string, assessmentId: string, plan: PlanDashboardData) {
+  if (!hasAdminCredentials) return;
   try {
     await adminDb.collection("plans").doc(assessmentId).set(
       { ...plan, uid, assessmentId, updatedAt: FieldValue.serverTimestamp() },
@@ -352,6 +356,7 @@ export async function storeDashboardPlan(uid: string, assessmentId: string, plan
 }
 
 export async function getDashboardPlanById(assessmentId: string): Promise<PlanDashboardData | null> {
+  if (!hasAdminCredentials) return null;
   try {
     const snapshot = await adminDb.collection("plans").doc(assessmentId).get();
     if (!snapshot.exists) return null;
@@ -418,6 +423,7 @@ export async function getUserTaskLogsFromDb(uid: string, planId: string): Promis
 }
 
 export async function createOrUpdateSubscription(subscription: UserSubscription): Promise<void> {
+  if (!hasAdminCredentials) return;
   const subId = subscription.id || `sub_${subscription.userId}`;
   try {
     await adminDb.collection("subscriptions").doc(subId).set(
@@ -434,6 +440,7 @@ export async function createOrUpdateSubscription(subscription: UserSubscription)
 }
 
 export async function getSubscriptionByUserId(userId: string): Promise<UserSubscription | null> {
+  if (!hasAdminCredentials) return null;
   try {
     const directDoc = await adminDb.collection("subscriptions").doc(`sub_${userId}`).get();
     if (directDoc.exists) return directDoc.data() as UserSubscription;
@@ -449,6 +456,7 @@ export async function getSubscriptionByUserId(userId: string): Promise<UserSubsc
 }
 
 export async function listAllSubscriptions(): Promise<UserSubscription[]> {
+  if (!hasAdminCredentials) return [];
   try {
     const snap = await adminDb.collection("subscriptions").get();
     return snap.docs.map((doc) => {

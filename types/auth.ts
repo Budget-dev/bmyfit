@@ -4,6 +4,7 @@ export interface UserProfile {
   email: string;
   phone: string;
   age: number;
+  role?: "admin" | "user" | "coach";
   avatarUrl?: string;
   provider: "google" | "password" | "anonymous" | "demo";
   createdAt: string;
