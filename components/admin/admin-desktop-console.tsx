@@ -25,6 +25,8 @@ import {
   Sparkles,
   BarChart2,
   MessageCircle,
+  BellRing,
+  AlertTriangle,
 } from "@/components/ui/icons";
 import type { AdminUserRecord, AdminStats, MembershipCategory } from "@/types/admin";
 import type { PlanDashboardData } from "@/types/plan-dashboard";
@@ -34,14 +36,17 @@ import { BiometricsModal } from "./biometrics-modal";
 import { PushModal } from "./push-modal";
 import { WeekPlanEditor } from "./week-plan-editor";
 import { AdminChatView } from "./admin-chat-view";
+import { ClientHealthDashboard } from "./client-health-dashboard";
+import { SubscriptionsDashboard } from "./subscriptions-dashboard";
+import { AlertDispatchModal } from "./alert-dispatch-modal";
 
 export function AdminDesktopConsole() {
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<
-    "directory" | "dossier" | "studio" | "dispatch" | "chats"
-  >("directory");
+    "overview" | "directory" | "subscriptions" | "studio" | "dispatch" | "chats"
+  >("overview");
   const [categoryFilter, setCategoryFilter] = useState<
     "all" | MembershipCategory | "pending" | "medical"
   >("all");
@@ -54,6 +59,7 @@ export function AdminDesktopConsole() {
   // Modals state
   const [inspectUser, setInspectUser] = useState<AdminUserRecord | null>(null);
   const [pushUser, setPushUser] = useState<AdminUserRecord | null>(null);
+  const [alertUser, setAlertUser] = useState<AdminUserRecord | null>(null);
   const [globalAlert, setGlobalAlert] = useState<string | null>(null);
 
   const fetchUsers = async () => {
@@ -269,6 +275,57 @@ export function AdminDesktopConsole() {
 
             {/* Navigation Tabs */}
             <nav className="space-y-1.5">
+              {/* Tab 1: Status & Health Dashboard */}
+              <button
+                type="button"
+                onClick={() => setActiveTab("overview")}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${
+                  activeTab === "overview"
+                    ? "bg-[#032e1c] text-white shadow-xs"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Activity className="w-4 h-4 text-[#00e676]" />
+                  <span>Status &amp; Health</span>
+                </div>
+                <span
+                  className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                    activeTab === "overview"
+                      ? "bg-emerald-500/30 text-white"
+                      : "bg-emerald-100 text-emerald-800"
+                  }`}
+                >
+                  LIVE
+                </span>
+              </button>
+
+              {/* Tab 2: Subscriptions Dashboard */}
+              <button
+                type="button"
+                onClick={() => setActiveTab("subscriptions")}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${
+                  activeTab === "subscriptions"
+                    ? "bg-[#032e1c] text-white shadow-xs"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <CreditCard className="w-4 h-4 text-emerald-600" />
+                  <span>Subscriptions</span>
+                </div>
+                <span
+                  className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                    activeTab === "subscriptions"
+                      ? "bg-emerald-500/30 text-white"
+                      : "bg-purple-100 text-purple-800"
+                  }`}
+                >
+                  ₹99 Active
+                </span>
+              </button>
+
+              {/* Tab 3: Users Directory */}
               <button
                 type="button"
                 onClick={() => setActiveTab("directory")}
@@ -293,6 +350,7 @@ export function AdminDesktopConsole() {
                 </span>
               </button>
 
+              {/* Tab 4: Week Plan Studio */}
               <button
                 type="button"
                 onClick={() => {
@@ -316,6 +374,7 @@ export function AdminDesktopConsole() {
                 )}
               </button>
 
+              {/* Tab 5: Push & Dispatch */}
               <button
                 type="button"
                 onClick={() => setActiveTab("dispatch")}
@@ -327,7 +386,7 @@ export function AdminDesktopConsole() {
               >
                 <div className="flex items-center gap-2.5">
                   <Rocket className="w-4 h-4" />
-                  <span>Push & Dispatch</span>
+                  <span>Push &amp; Dispatch</span>
                 </div>
                 {stats && stats.pendingReviewCount > 0 && (
                   <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500 text-white animate-pulse">
@@ -336,6 +395,7 @@ export function AdminDesktopConsole() {
                 )}
               </button>
 
+              {/* Tab 6: WhatsApp Chats */}
               <button
                 type="button"
                 onClick={() => setActiveTab("chats")}
@@ -485,6 +545,8 @@ export function AdminDesktopConsole() {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-gray-950 tracking-tight">
+                  {activeTab === "overview" && "Client Performance & Health Status Dashboard"}
+                  {activeTab === "subscriptions" && "Client Subscriptions & Entitlements Dashboard"}
                   {activeTab === "directory" && "Client Management & Biometrics Dossier"}
                   {activeTab === "studio" &&
                     `Week Plan Studio: ${selectedUser ? selectedUser.name : "Select Client"}`}
@@ -492,9 +554,18 @@ export function AdminDesktopConsole() {
                   {activeTab === "chats" && "Client WhatsApp Messages · Coach Naveen"}
                 </h1>
                 <p className="text-xs text-gray-500 font-medium mt-0.5">
-                  {activeTab === "chats"
-                    ? "Direct 1-on-1 real-time messaging with all ₹99 purchased transformation clients."
-                    : "Inspect comprehensive client biometrics, customize multi-week schedules, and push live to user dashboards."}
+                  {activeTab === "overview" &&
+                    "Track real-time adherence, see who is doing good vs who needs coach attention, and dispatch instant alerts."}
+                  {activeTab === "subscriptions" &&
+                    "Monitor all ₹99 custom plans, subscription periods, payment verifications, and renewal alerts."}
+                  {activeTab === "directory" &&
+                    "Search and filter client profiles, inspect body fat & medical reports, and launch plan adjustments."}
+                  {activeTab === "studio" &&
+                    "Customize multi-week caloric targets, macro distributions, meal ingredients, and exercise progression."}
+                  {activeTab === "dispatch" &&
+                    "Review completed draft plans and dispatch directly to client dashboards."}
+                  {activeTab === "chats" &&
+                    "Direct 1-on-1 real-time messaging with all ₹99 purchased transformation clients."}
                 </p>
               </div>
 
@@ -511,69 +582,114 @@ export function AdminDesktopConsole() {
               </div>
             </div>
 
-            {/* 6 Key Stat Cards Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {/* Total Users */}
-              <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/70">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                  Total Users
-                </span>
-                <span className="text-xl font-black text-gray-950 mt-0.5 block">
-                  {stats?.totalUsers || 0}
-                </span>
-              </div>
+            {/* 6 Key Stat Cards Grid (Shown on Directory) */}
+            {activeTab === "directory" && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2">
+                {/* Total Users */}
+                <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/70">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                    Total Users
+                  </span>
+                  <span className="text-xl font-black text-gray-950 mt-0.5 block">
+                    {stats?.totalUsers || 0}
+                  </span>
+                </div>
 
-              {/* Purchased Clients */}
-              <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80">
-                <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
-                  Purchased Plans
-                </span>
-                <span className="text-xl font-black text-emerald-950 mt-0.5 block">
-                  {stats?.purchasedPlansCount || 0}
-                </span>
-              </div>
+                {/* Purchased Clients */}
+                <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80">
+                  <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
+                    Purchased Plans
+                  </span>
+                  <span className="text-xl font-black text-emerald-950 mt-0.5 block">
+                    {stats?.purchasedPlansCount || 0}
+                  </span>
+                </div>
 
-              {/* Active Memberships */}
-              <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200/80">
-                <span className="text-[10px] font-bold text-purple-800 uppercase tracking-wider block">
-                  Active Members
-                </span>
-                <span className="text-xl font-black text-purple-950 mt-0.5 block">
-                  {stats?.activeMembershipsCount || 0}
-                </span>
-              </div>
+                {/* Active Memberships */}
+                <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200/80">
+                  <span className="text-[10px] font-bold text-purple-800 uppercase tracking-wider block">
+                    Active Members
+                  </span>
+                  <span className="text-xl font-black text-purple-950 mt-0.5 block">
+                    {stats?.activeMembershipsCount || 0}
+                  </span>
+                </div>
 
-              {/* Free Members */}
-              <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/70">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                  Free Members
-                </span>
-                <span className="text-xl font-black text-gray-800 mt-0.5 block">
-                  {stats?.freeMembersCount || 0}
-                </span>
-              </div>
+                {/* Free Members */}
+                <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/70">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
+                    Free Members
+                  </span>
+                  <span className="text-xl font-black text-gray-800 mt-0.5 block">
+                    {stats?.freeMembersCount || 0}
+                  </span>
+                </div>
 
-              {/* Needs Coach Push */}
-              <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80">
-                <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
-                  Awaiting Push
-                </span>
-                <span className="text-xl font-black text-amber-950 mt-0.5 block">
-                  {stats?.pendingReviewCount || 0}
-                </span>
-              </div>
+                {/* Needs Coach Push */}
+                <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80">
+                  <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
+                    Awaiting Push
+                  </span>
+                  <span className="text-xl font-black text-amber-950 mt-0.5 block">
+                    {stats?.pendingReviewCount || 0}
+                  </span>
+                </div>
 
-              {/* Total Revenue */}
-              <div className="p-3.5 rounded-2xl bg-emerald-900 text-white">
-                <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider block">
-                  Revenue
-                </span>
-                <span className="text-xl font-black text-white mt-0.5 block">
-                  ₹{(stats?.totalRevenueINR || 0).toLocaleString()}
-                </span>
+                {/* Total Revenue */}
+                <div className="p-3.5 rounded-2xl bg-emerald-900 text-white">
+                  <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider block">
+                    Revenue
+                  </span>
+                  <span className="text-xl font-black text-white mt-0.5 block">
+                    ₹{(stats?.totalRevenueINR || 0).toLocaleString()}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </header>
+
+          {/* ================= TAB 0: CLIENT HEALTH & PERFORMANCE DASHBOARD ================= */}
+          {activeTab === "overview" && (
+            <div className="p-6">
+              <ClientHealthDashboard
+                users={users}
+                onOpenChat={(u) => {
+                  setSelectedUser(u);
+                  setActiveTab("chats");
+                }}
+                onOpenStudio={(u) => {
+                  setSelectedUser(u);
+                  setActiveTab("studio");
+                }}
+                onOpenBiometrics={(u) => {
+                  setInspectUser(u);
+                }}
+                onSendAlert={(u) => {
+                  setAlertUser(u);
+                }}
+              />
+            </div>
+          )}
+
+          {/* ================= TAB 0.5: SUBSCRIPTIONS DASHBOARD ================= */}
+          {activeTab === "subscriptions" && (
+            <div className="p-6">
+              <SubscriptionsDashboard
+                users={users}
+                onOpenChat={(u) => {
+                  setSelectedUser(u);
+                  setActiveTab("chats");
+                }}
+                onOpenStudio={(u) => {
+                  setSelectedUser(u);
+                  setActiveTab("studio");
+                }}
+                onSendAlert={(u) => {
+                  setAlertUser(u);
+                }}
+              />
+            </div>
+          )}
 
           {/* ================= TAB 1: USERS DIRECTORY ================= */}
           {activeTab === "directory" && (
@@ -940,6 +1056,16 @@ export function AdminDesktopConsole() {
 
                                 <button
                                   type="button"
+                                  onClick={() => setAlertUser(u)}
+                                  className="px-2.5 py-1.5 rounded-lg border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-800 font-black text-xs transition inline-flex items-center gap-1 shadow-2xs"
+                                  title="Send Immediate WhatsApp Alert or Nudge"
+                                >
+                                  <BellRing className="w-3.5 h-3.5 text-rose-600" />
+                                  <span>Alert</span>
+                                </button>
+
+                                <button
+                                  type="button"
                                   onClick={() => {
                                     setSelectedUser(u);
                                     setActiveTab("chats");
@@ -1206,6 +1332,18 @@ export function AdminDesktopConsole() {
           user={pushUser}
           onClose={() => setPushUser(null)}
           onSuccess={handlePushSuccess}
+        />
+      )}
+
+      {/* Alert Dispatch Modal */}
+      {alertUser && (
+        <AlertDispatchModal
+          user={alertUser}
+          onClose={() => setAlertUser(null)}
+          onSuccess={(msg) => {
+            setGlobalAlert(msg);
+            setTimeout(() => setGlobalAlert(null), 5000);
+          }}
         />
       )}
     </div>

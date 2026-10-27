@@ -523,3 +523,4 @@ export function syncPurchasedUsersToChatThreads(
     notifyChatUpdated("all");
   }
 }
+

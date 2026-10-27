@@ -26,3 +26,4 @@ export interface ChatThread {
   unreadCountClient: number; // Messages sent by Coach that Client has not read yet
   updatedAt: string;
 }
+

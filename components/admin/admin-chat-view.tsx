@@ -200,33 +200,30 @@ export function AdminChatView({
             <button
               type="button"
               onClick={() => setFilterType("all")}
-              className={`px-3 py-1 rounded-lg transition ${
-                filterType === "all"
+              className={`px-3 py-1 rounded-lg transition ${filterType === "all"
                   ? "bg-[#075E54] text-white shadow-xs"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+                }`}
             >
               All Clients ({threads.length})
             </button>
             <button
               type="button"
               onClick={() => setFilterType("purchased")}
-              className={`px-3 py-1 rounded-lg transition ${
-                filterType === "purchased"
+              className={`px-3 py-1 rounded-lg transition ${filterType === "purchased"
                   ? "bg-[#075E54] text-white shadow-xs"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+                }`}
             >
               ₹99 Paid
             </button>
             <button
               type="button"
               onClick={() => setFilterType("unread")}
-              className={`px-3 py-1 rounded-lg transition ${
-                filterType === "unread"
+              className={`px-3 py-1 rounded-lg transition ${filterType === "unread"
                   ? "bg-rose-600 text-white shadow-xs"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+                }`}
             >
               Unread
             </button>
@@ -244,9 +241,8 @@ export function AdminChatView({
                 key={thread.userId}
                 type="button"
                 onClick={() => setSelectedUserId(thread.userId)}
-                className={`w-full text-left p-3.5 flex items-start gap-3 transition hover:bg-white ${
-                  isSelected ? "bg-emerald-50/70 border-l-4 border-l-[#075E54]" : "bg-transparent"
-                }`}
+                className={`w-full text-left p-3.5 flex items-start gap-3 transition hover:bg-white ${isSelected ? "bg-emerald-50/70 border-l-4 border-l-[#075E54]" : "bg-transparent"
+                  }`}
               >
                 {/* User Avatar */}
                 <div className="relative w-11 h-11 rounded-full overflow-hidden bg-gray-200 shrink-0 border border-gray-300/80">
@@ -392,11 +388,10 @@ export function AdminChatView({
               return (
                 <div key={msg.id} className={`flex ${isCoach ? "justify-end" : "justify-start"}`}>
                   <div
-                    className={`max-w-[78%] rounded-2xl p-3.5 shadow-xs relative text-left leading-relaxed ${
-                      isCoach
+                    className={`max-w-[78%] rounded-2xl p-3.5 shadow-xs relative text-left leading-relaxed ${isCoach
                         ? "bg-[#d9fdd3] text-gray-900 rounded-tr-xs border border-emerald-200/50"
                         : "bg-white text-gray-900 rounded-tl-xs border border-gray-200/70"
-                    }`}
+                      }`}
                   >
                     {!isCoach && (
                       <p className="text-[10px] font-black text-emerald-800 mb-0.5">
@@ -467,11 +462,10 @@ export function AdminChatView({
             <button
               type="submit"
               disabled={!inputText.trim() || sending}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition shadow-md shrink-0 ${
-                inputText.trim()
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition shadow-md shrink-0 ${inputText.trim()
                   ? "bg-[#25D366] hover:bg-[#1faa53] text-white active:scale-95"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
+                }`}
               aria-label="Send Message"
             >
               <Send className="w-4 h-4 translate-x-0.5" />
