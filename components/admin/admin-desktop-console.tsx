@@ -23,9 +23,12 @@ import {
   Layers,
   Calendar,
   Sparkles,
+  BarChart2,
 } from "@/components/ui/icons";
 import type { AdminUserRecord, AdminStats, MembershipCategory } from "@/types/admin";
 import type { PlanDashboardData } from "@/types/plan-dashboard";
+import { getStoredAdminUsers } from "@/lib/storage/mock-storage";
+import { formatPlanDuration, calculateDetailedAdherence } from "@/features/plan/dashboard-data";
 import { BiometricsModal } from "./biometrics-modal";
 import { PushModal } from "./push-modal";
 import { WeekPlanEditor } from "./week-plan-editor";
@@ -37,11 +40,13 @@ export function AdminDesktopConsole() {
   const [activeTab, setActiveTab] = useState<"directory" | "dossier" | "studio" | "dispatch">(
     "directory"
   );
-  const [categoryFilter, setCategoryFilter] = useState<"all" | MembershipCategory | "pending">(
-    "all"
-  );
+  const [categoryFilter, setCategoryFilter] = useState<
+    "all" | MembershipCategory | "pending" | "medical"
+  >("all");
   const [goalFilter, setGoalFilter] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState<string>("" );
+  const [adherenceFilter, setAdherenceFilter] = useState<"all" | "high" | "low">("all");
+  const [studioInitialMode, setStudioInitialMode] = useState<"customize" | "progress">("customize");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedUser, setSelectedUser] = useState<AdminUserRecord | null>(null);
 
   // Modals state
@@ -52,17 +57,70 @@ export function AdminDesktopConsole() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/admin/users");
-      const data = await res.json();
-      if (data.users) {
-        setUsers(data.users);
-        setStats(data.stats);
-        if (!selectedUser && data.users.length > 0) {
-          setSelectedUser(data.users[0]);
-        } else if (selectedUser) {
-          const updated = data.users.find((u: AdminUserRecord) => u.id === selectedUser.id);
-          if (updated) setSelectedUser(updated);
+      let serverUsers: AdminUserRecord[] = [];
+      try {
+        const res = await fetch("/api/admin/users");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.users) serverUsers = data.users;
         }
+      } catch (e) {
+        console.warn("Could not fetch server admin users, using local cache", e);
+      }
+
+      // Merge with Firebase-synced users so newly paid clients appear instantly
+      const localUsers = getStoredAdminUsers();
+      const userMap = new Map<string, AdminUserRecord>();
+
+      serverUsers.forEach((u) => userMap.set(u.id, u));
+      localUsers.forEach((lu) => {
+        const existing = userMap.get(lu.id);
+        if (existing) {
+          userMap.set(lu.id, {
+            ...existing,
+            ...lu,
+            plan: lu.plan || existing.plan,
+            medicalAssessment: lu.medicalAssessment || existing.medicalAssessment,
+            needsPlanReview: lu.needsPlanReview ?? existing.needsPlanReview,
+          });
+        } else {
+          userMap.set(lu.id, lu);
+        }
+      });
+
+      const mergedUsers = Array.from(userMap.values());
+      setUsers(mergedUsers);
+
+      // Recompute stats
+      const totalUsers = mergedUsers.length;
+      const purchasedPlansCount = mergedUsers.filter((u) => u.membershipCategory === "purchased").length;
+      const activeMembershipsCount = mergedUsers.filter((u) => u.membershipCategory === "membership").length;
+      const freeMembersCount = mergedUsers.filter((u) => u.membershipCategory === "free").length;
+      const pendingReviewCount = mergedUsers.filter(
+        (u) => u.plan.status === "pending_review" || u.needsPlanReview
+      ).length;
+      const liveApprovedCount = mergedUsers.filter((u) => u.plan.status === "approved").length;
+      const totalRevenueINR = mergedUsers.reduce(
+        (sum, u) => sum + (u.order ? Math.round(u.order.amountPaise / 100) : 0),
+        0
+      );
+
+      setStats({
+        totalUsers,
+        purchasedPlansCount,
+        activeMembershipsCount,
+        freeMembersCount,
+        pendingReviewCount,
+        approvedCount: liveApprovedCount,
+        liveApprovedCount,
+        totalRevenueINR,
+      });
+
+      if (!selectedUser && mergedUsers.length > 0) {
+        setSelectedUser(mergedUsers[0]);
+      } else if (selectedUser) {
+        const updated = mergedUsers.find((u) => u.id === selectedUser.id);
+        if (updated) setSelectedUser(updated);
       }
     } catch (err) {
       console.error("Failed to load admin users:", err);
@@ -82,18 +140,31 @@ export function AdminDesktopConsole() {
       u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.goalDisplay.toLowerCase().includes(searchQuery.toLowerCase());
+      u.goalDisplay.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.medicalAssessment?.diseases || []).some((d) =>
+        d.toLowerCase().includes(searchQuery.toLowerCase())
+      );
 
     const matchesCategory =
       categoryFilter === "all"
         ? true
         : categoryFilter === "pending"
-        ? u.plan.status === "pending_review"
+        ? u.plan.status === "pending_review" || u.needsPlanReview
+        : categoryFilter === "medical"
+        ? Boolean(u.medicalAssessment?.hasDisease || (u.medicalAssessment?.documents?.length || 0) > 0)
         : u.membershipCategory === categoryFilter;
 
     const matchesGoal = goalFilter === "all" ? true : u.goal === goalFilter;
 
-    return matchesSearch && matchesCategory && matchesGoal;
+    const userAdherence = calculateDetailedAdherence(u.plan, u.taskLogs);
+    const matchesAdherence =
+      adherenceFilter === "all"
+        ? true
+        : adherenceFilter === "high"
+        ? userAdherence.percent >= 70
+        : userAdherence.percent < 70;
+
+    return matchesSearch && matchesCategory && matchesGoal && matchesAdherence;
   });
 
   const handleSavePlan = async (updatedPlan: PlanDashboardData) => {
@@ -537,7 +608,54 @@ export function AdminDesktopConsole() {
                         : "bg-amber-50 text-amber-800 hover:bg-amber-100"
                     }`}
                   >
-                    Needs Action ({stats?.pendingReviewCount || 0})
+                    Needs Plan ({stats?.pendingReviewCount || 0})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCategoryFilter("medical")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                      categoryFilter === "medical"
+                        ? "bg-teal-700 text-white"
+                        : "bg-teal-50 text-teal-800 hover:bg-teal-100"
+                    }`}
+                  >
+                    🩺 Medical Reports (
+                    {
+                      users.filter(
+                        (u) =>
+                          u.medicalAssessment?.hasDisease ||
+                          (u.medicalAssessment?.documents?.length || 0) > 0
+                      ).length
+                    }
+                    )
+                  </button>
+
+                  <div className="h-4 w-[1px] bg-gray-200 hidden sm:block" />
+
+                  <button
+                    type="button"
+                    onClick={() => setAdherenceFilter(adherenceFilter === "high" ? "all" : "high")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                      adherenceFilter === "high"
+                        ? "bg-[#00c853] text-white shadow-xs"
+                        : "bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                    }`}
+                  >
+                    <BarChart2 className="w-3.5 h-3.5" />
+                    <span>High Adherence (≥70%)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAdherenceFilter(adherenceFilter === "low" ? "all" : "low")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                      adherenceFilter === "low"
+                        ? "bg-amber-600 text-white shadow-xs"
+                        : "bg-amber-50 text-amber-800 hover:bg-amber-100"
+                    }`}
+                  >
+                    <span>Low Adherence (&lt;70%)</span>
                   </button>
                 </div>
               </div>
@@ -553,19 +671,20 @@ export function AdminDesktopConsole() {
                         <th className="py-3.5 px-4">Biometrics Snapshot</th>
                         <th className="py-3.5 px-4">Daily Targets</th>
                         <th className="py-3.5 px-4">Plan Status</th>
+                        <th className="py-3.5 px-4">Live Adherence &amp; Tasks</th>
                         <th className="py-3.5 px-5 text-right">Desktop Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 font-medium">
                       {filteredUsers.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="py-12 text-center text-gray-400">
+                          <td colSpan={7} className="py-12 text-center text-gray-400">
                             No users found matching current filters.
                           </td>
                         </tr>
                       ) : (
                         filteredUsers.map((u) => {
-                          const isPending = u.plan.status === "pending_review";
+                          const isPending = u.plan.status === "pending_review" || u.needsPlanReview;
                           return (
                             <tr
                               key={u.id}
@@ -581,12 +700,46 @@ export function AdminDesktopConsole() {
                                     className="w-10 h-10 rounded-xl object-cover ring-1 ring-gray-200"
                                   />
                                   <div>
-                                    <span className="block font-black text-gray-900 group-hover:text-emerald-700 transition">
-                                      {u.name}
-                                    </span>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-black text-gray-900 group-hover:text-emerald-700 transition">
+                                        {u.name}
+                                      </span>
+                                      {u.needsPlanReview && (
+                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-amber-500 text-white animate-pulse">
+                                          NEW PURCHASE
+                                        </span>
+                                      )}
+                                    </div>
                                     <span className="block text-[11px] text-gray-500">
                                       {u.email} · {u.city}
                                     </span>
+                                    {/* Medical Conditions & Attached Reports Badges */}
+                                    {u.medicalAssessment && (
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        {u.medicalAssessment.diseases &&
+                                          u.medicalAssessment.diseases.slice(0, 2).map((d, i) => (
+                                            <span
+                                              key={i}
+                                              className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-900 text-[10px] font-bold"
+                                            >
+                                              🩺 {d}
+                                            </span>
+                                          ))}
+                                        {u.medicalAssessment.documents &&
+                                          u.medicalAssessment.documents.length > 0 && (
+                                            <span
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setInspectUser(u);
+                                              }}
+                                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-100 border border-emerald-300 text-emerald-900 text-[10px] font-black hover:bg-emerald-200 transition cursor-pointer"
+                                            >
+                                              📎 {u.medicalAssessment.documents.length} Report
+                                              {u.medicalAssessment.documents.length > 1 ? "s" : ""}
+                                            </span>
+                                          )}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </td>
@@ -595,11 +748,20 @@ export function AdminDesktopConsole() {
                               <td className="py-4 px-4">
                                 {u.membershipCategory === "purchased" ? (
                                   <div>
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800">
-                                      <span>Purchased Plan</span>
+                                    <span
+                                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black ${
+                                        u.needsPlanReview
+                                          ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                          : "bg-emerald-100 text-emerald-800"
+                                      }`}
+                                    >
+                                      <span>
+                                        {u.needsPlanReview ? "🔔 Needs Plan (₹99 Paid)" : "Purchased Plan"}
+                                      </span>
                                     </span>
                                     <span className="block text-[11px] text-gray-500 font-medium mt-0.5">
-                                      {u.order?.amountFormatted || "₹999"} · {u.plan.weeksCount} Weeks
+                                      {u.order?.amountFormatted || "₹99"} ·{" "}
+                                      {formatPlanDuration(u.plan.weeksCount, u.plan.monthsCount)}
                                     </span>
                                   </div>
                                 ) : u.membershipCategory === "membership" ? (
@@ -659,8 +821,56 @@ export function AdminDesktopConsole() {
                                 )}
                               </td>
 
+                              {/* Live Adherence & Tasks */}
+                              <td className="py-4 px-4">
+                                {(() => {
+                                  const userAdh = calculateDetailedAdherence(u.plan, u.taskLogs);
+                                  return (
+                                    <div className="space-y-1.5 min-w-[130px]">
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="font-black text-gray-900">
+                                          {userAdh.percent}%
+                                        </span>
+                                        <span className="text-[10px] text-gray-500 font-semibold">
+                                          {userAdh.completedTasks}/{userAdh.totalTasks} done
+                                        </span>
+                                      </div>
+                                      <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                                        <div
+                                          className={`h-full rounded-full transition-all duration-300 ${
+                                            userAdh.percent >= 70
+                                              ? "bg-[#00c853]"
+                                              : userAdh.percent >= 40
+                                              ? "bg-amber-500"
+                                              : "bg-gray-300"
+                                          }`}
+                                          style={{ width: `${userAdh.percent}%` }}
+                                        />
+                                      </div>
+                                      <span className="text-[10px] text-gray-400 block font-medium">
+                                        {userAdh.completedMeals} meals · {userAdh.completedWorkouts} w/o
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
+                              </td>
+
                               {/* Actions */}
                               <td className="py-4 px-5 text-right space-x-1.5" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedUser(u);
+                                    setStudioInitialMode("progress");
+                                    setActiveTab("studio");
+                                  }}
+                                  className="px-2.5 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold text-xs transition inline-flex items-center gap-1 shadow-2xs"
+                                  title="Watch Client Live Progress & Checklist"
+                                >
+                                  <BarChart2 className="w-3.5 h-3.5 text-emerald-700" />
+                                  <span>Progress</span>
+                                </button>
+
                                 <button
                                   type="button"
                                   onClick={() => setInspectUser(u)}
@@ -675,6 +885,7 @@ export function AdminDesktopConsole() {
                                   type="button"
                                   onClick={() => {
                                     setSelectedUser(u);
+                                    setStudioInitialMode("customize");
                                     setActiveTab("studio");
                                   }}
                                   className="px-2.5 py-1.5 rounded-lg bg-gray-900 hover:bg-gray-800 text-white font-bold text-xs transition inline-flex items-center gap-1"
@@ -722,7 +933,9 @@ export function AdminDesktopConsole() {
             <div className="p-6">
               {selectedUser ? (
                 <WeekPlanEditor
+                  key={`${selectedUser.id}-${studioInitialMode}`}
                   user={selectedUser}
+                  initialMode={studioInitialMode}
                   onSavePlan={handleSavePlan}
                   onPushToUser={(u) => setPushUser(u)}
                   onBackToDirectory={() => setActiveTab("directory")}

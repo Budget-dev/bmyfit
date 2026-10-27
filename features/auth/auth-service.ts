@@ -10,40 +10,58 @@ import {
   sendPasswordResetEmail,
   type User,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
+import { auth, db, doc, setDoc, getDoc } from "@/lib/firebase/client";
 import type { UserProfile, SignupData, SigninData } from "@/types/auth";
 import { publicEnv } from "@/lib/env/public";
 
-const STORAGE_KEY = "bmyfit_user_profile";
 const DETAILS_STORAGE_KEY = "bmyfit_draft_details_v1";
 const LOCAL_ASSESSMENT_KEY = "bmyfit_local_assessment";
 
+// In-memory runtime profile (no localStorage, sessions are handled by Firebase Auth)
+let inMemoryProfile: UserProfile | null = null;
+
 export function getStoredProfile(): UserProfile | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as UserProfile) : null;
-  } catch {
-    return null;
-  }
+  if (inMemoryProfile) return inMemoryProfile;
+  return null;
 }
 
 export function saveStoredProfile(profile: UserProfile): void {
-  if (typeof window === "undefined") return;
-  try {
-    const json = JSON.stringify(profile);
-    localStorage.setItem(STORAGE_KEY, json);
-    sessionStorage.setItem(STORAGE_KEY, json);
+  inMemoryProfile = profile;
 
-    // Sync age into draft assessment details
+  // Persist directly to Firebase Firestore
+  if (typeof window !== "undefined" && profile.uid) {
+    try {
+      const userRef = doc(db, "users", profile.uid);
+      void setDoc(
+        userRef,
+        {
+          id: profile.uid,
+          name: profile.name,
+          email: profile.email,
+          phone: profile.phone,
+          age: profile.age,
+          avatarUrl: profile.avatarUrl,
+          provider: profile.provider,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      ).catch((err) => {
+        console.warn("Firebase profile sync notice:", err);
+      });
+    } catch (e) {
+      console.warn("Failed to dispatch profile to Firebase Firestore:", e);
+    }
+  }
+
+  // Sync draft assessment details for multi-step funnel if in browser
+  if (typeof window !== "undefined") {
     try {
       const rawDetails = sessionStorage.getItem(DETAILS_STORAGE_KEY);
       const details = rawDetails ? JSON.parse(rawDetails) : {};
       details.age = profile.age || details.age || 28;
       sessionStorage.setItem(DETAILS_STORAGE_KEY, JSON.stringify(details));
-    } catch {}
+    } catch { }
 
-    // Sync name, email, phone into local assessment for checkout & coach connection
     try {
       const rawAss = sessionStorage.getItem(LOCAL_ASSESSMENT_KEY);
       const ass = rawAss ? JSON.parse(rawAss) : {};
@@ -51,18 +69,29 @@ export function saveStoredProfile(profile: UserProfile): void {
       ass.email = profile.email;
       ass.phone = profile.phone;
       sessionStorage.setItem(LOCAL_ASSESSMENT_KEY, JSON.stringify(ass));
-    } catch {}
-  } catch {
-    // Ignore storage quota
+    } catch { }
   }
 }
 
 export function clearStoredProfile(): void {
-  if (typeof window === "undefined") return;
+  inMemoryProfile = null;
+}
+
+export async function fetchFirebaseProfile(uid: string): Promise<UserProfile | null> {
+  if (inMemoryProfile && inMemoryProfile.uid === uid) return inMemoryProfile;
+  if (typeof window === "undefined") return null;
+
   try {
-    localStorage.removeItem(STORAGE_KEY);
-    sessionStorage.removeItem(STORAGE_KEY);
-  } catch {}
+    const snap = await getDoc(doc(db, "users", uid));
+    if (snap.exists()) {
+      const data = snap.data() as UserProfile;
+      inMemoryProfile = data;
+      return data;
+    }
+  } catch (err) {
+    console.warn("Firebase fetchProfile notice:", err);
+  }
+  return null;
 }
 
 /**
@@ -273,25 +302,25 @@ export async function loginDevSandbox(preset: "new_client" | "member" = "new_cli
   const profile: UserProfile =
     preset === "new_client"
       ? {
-          uid: "demo_user_" + Math.random().toString(36).substring(2, 8),
-          name: "Aryan Sharma",
-          email: "aryan.sharma@bmyfit.in",
-          phone: "+91 98201 44821",
-          age: 26,
-          avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
-          provider: "demo",
-          createdAt: new Date().toISOString(),
-        }
+        uid: "demo_user_" + Math.random().toString(36).substring(2, 8),
+        name: "Aryan Sharma",
+        email: "aryan.sharma@bmyfit.in",
+        phone: "+91 98201 44821",
+        age: 26,
+        avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
+        provider: "demo",
+        createdAt: new Date().toISOString(),
+      }
       : {
-          uid: "demo_member_" + Math.random().toString(36).substring(2, 8),
-          name: "Simran Kaur",
-          email: "simran.kaur@bmyfit.in",
-          phone: "+91 98881 23456",
-          age: 29,
-          avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
-          provider: "demo",
-          createdAt: new Date().toISOString(),
-        };
+        uid: "demo_member_" + Math.random().toString(36).substring(2, 8),
+        name: "Simran Kaur",
+        email: "simran.kaur@bmyfit.in",
+        phone: "+91 98881 23456",
+        age: 29,
+        avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+        provider: "demo",
+        createdAt: new Date().toISOString(),
+      };
 
   saveStoredProfile(profile);
   await syncProfileToServer(profile);

@@ -1,4 +1,5 @@
 import type { FitnessGoal } from "@/types/fitness";
+import { db, doc, setDoc, getDoc } from "@/lib/firebase/client";
 import type {
   PlanDashboardData,
   WeekPlanData,
@@ -8,8 +9,9 @@ import type {
   TaskLogState,
 } from "@/types/plan-dashboard";
 
-interface PlanGeneratorOptions {
+export interface PlanGeneratorOptions {
   weeksCount?: number;
+  monthsCount?: number;
   status?: PlanStatus;
   customerName?: string;
   goal?: FitnessGoal;
@@ -19,6 +21,20 @@ interface PlanGeneratorOptions {
   proteinTargetGrams?: number;
   workoutDaysPerWeek?: number;
   coachNotes?: string;
+  medicalAssessment?: {
+    hasDisease: boolean;
+    diseases: string[];
+    customDiseaseDescription?: string;
+    medications?: string;
+    documents?: unknown[];
+  };
+  medicalSummary?: {
+    hasDisease: boolean;
+    diseases: string[];
+    customDiseaseDescription?: string;
+    medications?: string;
+    documentsCount?: number;
+  };
 }
 
 const WEEK_THEMES = [
@@ -36,11 +52,22 @@ const WEEK_THEMES = [
   { phase: "Ultimate peak condition", desc: "Achieve and maintain your sharpest, strongest physical condition." },
 ];
 
+export function formatPlanDuration(weeksCount: number, monthsCount?: number): string {
+  const m = monthsCount || Math.max(1, Math.round(weeksCount / 4));
+  if (weeksCount % 4 === 0) {
+    return `${m} ${m === 1 ? "Month" : "Months"} (${weeksCount} Weeks)`;
+  }
+  return `${weeksCount} Weeks (~${m} ${m === 1 ? "Month" : "Months"})`;
+}
+
 export function generateDashboardPlan(
   assessmentId: string = "local",
   options: PlanGeneratorOptions = {}
 ): PlanDashboardData {
-  const weeksCount = options.weeksCount || 8;
+  const monthsCount =
+    options.monthsCount ||
+    (options.weeksCount ? Math.max(1, Math.round(options.weeksCount / 4)) : 2);
+  const weeksCount = options.weeksCount || (monthsCount * 4);
   const goal: FitnessGoal = options.goal || "fat-loss";
   const status: PlanStatus = options.status || "active";
   const customerName = options.customerName || "Fit Pioneer";
@@ -216,6 +243,7 @@ export function generateDashboardPlan(
     assessmentId,
     customerName,
     weeksCount,
+    monthsCount,
     status,
     goal,
     goalDisplay: goalDisplayMap[goal] || "Fat Loss",
@@ -237,34 +265,69 @@ export function generateDashboardPlan(
     coachNotes:
       options.coachNotes ||
       "Stay consistent with 3.5L daily water hydration and aim for 8,000 steps daily in addition to these workouts.",
+    medicalSummary:
+      options.medicalSummary ||
+      (options.medicalAssessment
+        ? {
+            hasDisease: options.medicalAssessment.hasDisease,
+            diseases: options.medicalAssessment.diseases,
+            customDiseaseDescription: options.medicalAssessment.customDiseaseDescription,
+            medications: options.medicalAssessment.medications,
+            documentsCount: options.medicalAssessment.documents?.length || 0,
+          }
+        : undefined),
   };
 }
 
-const STORAGE_KEY_PREFIX = "bmyfit_task_logs_";
+// In-memory runtime cache synchronized with Firebase Firestore (no localStorage)
+const inMemoryTaskLogs = new Map<string, TaskLogState>();
 
 export function getStoredTaskLogs(planId: string): TaskLogState {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${planId}`);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+  return inMemoryTaskLogs.get(planId) || {};
 }
 
 export function saveStoredTaskLog(planId: string, taskKey: string, completed: boolean): TaskLogState {
+  const current = getStoredTaskLogs(planId);
+  const updated: TaskLogState = {
+    ...current,
+    [taskKey]: completed,
+  };
+  inMemoryTaskLogs.set(planId, updated);
+
+  if (typeof window !== "undefined") {
+    try {
+      const logRef = doc(db, "user_logs", planId);
+      void setDoc(
+        logRef,
+        { ...updated, updatedAt: new Date().toISOString() },
+        { merge: true }
+      ).catch((err) => {
+        console.warn("Firebase task log sync notice:", err);
+      });
+    } catch (e) {
+      console.warn("Failed to dispatch task log to Firebase:", e);
+    }
+  }
+
+  return updated;
+}
+
+export async function fetchFirebaseTaskLogs(planId: string): Promise<TaskLogState> {
+  const cached = inMemoryTaskLogs.get(planId);
+  if (cached && Object.keys(cached).length > 0) return cached;
+
   if (typeof window === "undefined") return {};
   try {
-    const current = getStoredTaskLogs(planId);
-    const updated: TaskLogState = {
-      ...current,
-      [taskKey]: completed,
-    };
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}${planId}`, JSON.stringify(updated));
-    return updated;
-  } catch {
-    return {};
+    const snap = await getDoc(doc(db, "user_logs", planId));
+    if (snap.exists()) {
+      const data = snap.data() as TaskLogState;
+      inMemoryTaskLogs.set(planId, data);
+      return data;
+    }
+  } catch (err) {
+    console.warn("Firebase fetch task logs error:", err);
   }
+  return {};
 }
 
 export function calculateWeekProgress(
@@ -291,6 +354,129 @@ export function calculateWeekProgress(
 
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
   return { total, completed, percent };
+}
+
+export interface AdherenceSummary {
+  percent: number;
+  overallPercent: number;
+  totalTasks: number;
+  completedTasks: number;
+  mealPercent: number;
+  workoutPercent: number;
+  habitPercent: number;
+  completedMeals: number;
+  totalMeals: number;
+  completedWorkouts: number;
+  totalWorkouts: number;
+  completedHabits: number;
+  totalHabits: number;
+  nutrition: {
+    total: number;
+    completed: number;
+    percent: number;
+  };
+  workouts: {
+    total: number;
+    completed: number;
+    percent: number;
+  };
+  habits: {
+    total: number;
+    completed: number;
+    percent: number;
+  };
+  statusLabel: string;
+  statusColor: "emerald" | "amber" | "rose" | "gray";
+}
+
+export function calculateDetailedAdherence(
+  plan: PlanDashboardData,
+  logs: TaskLogState = {}
+): AdherenceSummary {
+  let totalTasks = 0;
+  let completedTasks = 0;
+  let mealsTotal = 0;
+  let mealsCompleted = 0;
+  let workoutsTotal = 0;
+  let workoutsCompleted = 0;
+  let habitsTotal = 0;
+  let habitsCompleted = 0;
+
+  plan.weeks.forEach((w) => {
+    // Nutrition meals
+    w.nutrition.meals.forEach((m) => {
+      mealsTotal++;
+      totalTasks++;
+      if (logs[`w${w.weekNumber}_meal_${m.id}`]) {
+        mealsCompleted++;
+        completedTasks++;
+      }
+    });
+
+    // Workouts
+    w.workouts.days.forEach((d) => {
+      workoutsTotal++;
+      totalTasks++;
+      if (logs[`w${w.weekNumber}_workout_${d.id}`]) {
+        workoutsCompleted++;
+        completedTasks++;
+      }
+    });
+
+    // Habits
+    habitsTotal += 2;
+    totalTasks += 2;
+    if (logs[`w${w.weekNumber}_habit_water`]) {
+      habitsCompleted++;
+      completedTasks++;
+    }
+    if (logs[`w${w.weekNumber}_habit_steps`]) {
+      habitsCompleted++;
+      completedTasks++;
+    }
+  });
+
+  const overallPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  const mealsPercent = mealsTotal > 0 ? Math.round((mealsCompleted / mealsTotal) * 100) : 0;
+  const workoutsPercent = workoutsTotal > 0 ? Math.round((workoutsCompleted / workoutsTotal) * 100) : 0;
+  const habitsPercent = habitsTotal > 0 ? Math.round((habitsCompleted / habitsTotal) * 100) : 0;
+
+  let statusLabel = "Not Started";
+  let statusColor: "emerald" | "amber" | "rose" | "gray" = "gray";
+
+  if (completedTasks > 0) {
+    if (overallPercent >= 75) {
+      statusLabel = "High Adherence (On Track)";
+      statusColor = "emerald";
+    } else if (overallPercent >= 45) {
+      statusLabel = "Moderate (Needs Follow-up)";
+      statusColor = "amber";
+    } else {
+      statusLabel = "Off Track (Needs Intervention)";
+      statusColor = "rose";
+    }
+  }
+
+  return {
+    percent: overallPercent,
+    overallPercent,
+    totalTasks,
+    completedTasks,
+    mealPercent: mealsPercent,
+    workoutPercent: workoutsPercent,
+    habitPercent: habitsPercent,
+    completedMeals: mealsCompleted,
+    totalMeals: mealsTotal,
+    completedWorkouts: workoutsCompleted,
+    totalWorkouts: workoutsTotal,
+    completedHabits: habitsCompleted,
+    totalHabits: habitsTotal,
+    nutrition: { total: mealsTotal, completed: mealsCompleted, percent: mealsPercent },
+    workouts: { total: workoutsTotal, completed: workoutsCompleted, percent: workoutsPercent },
+    habits: { total: habitsTotal, completed: habitsCompleted, percent: habitsPercent },
+    statusLabel,
+    statusColor,
+  };
 }
 
 export function calculateOverallProgress(

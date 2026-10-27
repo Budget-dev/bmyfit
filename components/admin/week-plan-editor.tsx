@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Utensils,
   Dumbbell,
   Plus,
   Trash2,
   CheckCircle2,
+  Circle,
   Save,
   Rocket,
   ExternalLink,
@@ -16,19 +17,38 @@ import {
   ArrowRight,
   ChevronDown,
   ChevronUp,
+  X,
+  Activity,
+  Target,
+  TrendingUp,
+  Flame,
+  Check,
+  Edit3,
+  BarChart2,
 } from "@/components/ui/icons";
-import type { AdminUserRecord } from "@/types/admin";
+import type { AdminUserRecord, MedicalDocument } from "@/types/admin";
 import type {
   PlanDashboardData,
   WeekPlanData,
   MealSlotItem,
   WorkoutDayItem,
   PlanStatus,
+  TaskLogState,
 } from "@/types/plan-dashboard";
-import { generateDashboardPlan } from "@/features/plan/dashboard-data";
+import {
+  formatPlanDuration,
+  calculateDetailedAdherence,
+  calculateWeekProgress,
+  getStoredTaskLogs,
+  saveStoredTaskLog,
+  fetchFirebaseTaskLogs,
+} from "@/features/plan/dashboard-data";
+import { saveStoredPlan, upsertStoredAdminUser } from "@/lib/storage/mock-storage";
+import { db, doc, onSnapshot } from "@/lib/firebase/client";
 
 interface WeekPlanEditorProps {
   user: AdminUserRecord;
+  initialMode?: "customize" | "progress";
   onSavePlan: (updatedPlan: PlanDashboardData) => Promise<void>;
   onPushToUser: (user: AdminUserRecord) => void;
   onBackToDirectory?: () => void;
@@ -145,41 +165,118 @@ const PRESET_MEALS: Array<Omit<MealSlotItem, "id">> = [
 
 export function WeekPlanEditor({
   user,
+  initialMode = "customize",
   onSavePlan,
   onPushToUser,
   onBackToDirectory,
 }: WeekPlanEditorProps) {
   const [plan, setPlan] = useState<PlanDashboardData>(user.plan);
   const [selectedWeekNum, setSelectedWeekNum] = useState<number>(1);
+  const [editorMode, setEditorMode] = useState<"customize" | "progress">(initialMode);
+  const [taskLogs, setTaskLogs] = useState<TaskLogState>(user.taskLogs || {});
   const [saving, setSaving] = useState<boolean>(false);
   const [saveBanner, setSaveBanner] = useState<string | null>(null);
   const [showPresetDropdown, setShowPresetDropdown] = useState<number | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<MedicalDocument | null>(null);
+  const [isCustomDuration, setIsCustomDuration] = useState<boolean>(false);
+  const [customMonths, setCustomMonths] = useState<string>(
+    String(plan.monthsCount || Math.max(1, Math.round(plan.weeksCount / 4)))
+  );
+
+  // Subscribe to real-time Firebase task completion logs
+  useEffect(() => {
+    let active = true;
+    const initial = user.taskLogs || getStoredTaskLogs(plan.id);
+    if (initial && Object.keys(initial).length > 0) {
+      setTaskLogs(initial);
+    }
+
+    void fetchFirebaseTaskLogs(plan.id).then((firebaseLogs) => {
+      if (active && firebaseLogs && Object.keys(firebaseLogs).length > 0) {
+        setTaskLogs(firebaseLogs);
+      }
+    });
+
+    try {
+      const unsubscribe = onSnapshot(doc(db, "user_logs", plan.id), (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data() as TaskLogState;
+          if (active) setTaskLogs(data);
+        }
+      });
+      return () => {
+        active = false;
+        unsubscribe();
+      };
+    } catch {
+      return () => {
+        active = false;
+      };
+    }
+  }, [plan.id, user.taskLogs]);
+
+  const adherence = calculateDetailedAdherence(plan, taskLogs);
 
   const selectedWeek =
     plan.weeks.find((w) => w.weekNumber === selectedWeekNum) || plan.weeks[0];
 
+  const selectedWeekAdherence = selectedWeek
+    ? calculateWeekProgress(selectedWeek.weekNumber, selectedWeek, taskLogs)
+    : { total: 0, completed: 0, percent: 0 };
+
+  const coachReviewMessage = selectedWeek
+    ? `Hi ${user.name}! 🌟 Coach review for Week ${selectedWeek.weekNumber}: Your adherence is at ${selectedWeekAdherence.percent}% (${selectedWeekAdherence.completed}/${selectedWeekAdherence.total} completed). Nutrition: ${selectedWeek.nutrition.meals.filter((m) => taskLogs[`w${selectedWeek.weekNumber}_meal_${m.id}`]).length}/${selectedWeek.nutrition.meals.length} meals logged. Keep pushing towards your ${user.goalDisplay} goal!`
+    : "";
+
+  // Modify total duration by months
+  const handleMonthsCountChange = (months: number) => {
+    const weeks = Math.max(1, months * 4);
+    handleWeeksCountChange(weeks, months);
+  };
+
   // Modify total weeks count
-  const handleWeeksCountChange = (newCount: number) => {
+  const handleWeeksCountChange = (newCount: number, months?: number) => {
     let currentWeeks = [...plan.weeks];
+    const targetMonths = months ?? Math.max(1, Math.round(newCount / 4));
+
     if (newCount > currentWeeks.length) {
-      // Append additional weeks
+      // Append additional weeks with progressive cycle phase titles
       for (let w = currentWeeks.length + 1; w <= newCount; w++) {
-        // Clone from week 1 with shifted title
+        const monthNum = Math.ceil(w / 4);
+        const weekInMonth = ((w - 1) % 4) + 1;
         const cloned: WeekPlanData = JSON.parse(JSON.stringify(currentWeeks[0]));
         cloned.weekNumber = w;
-        cloned.phaseTitle = `Week ${w}: Progressive Phase`;
-        cloned.phaseSubtitle = "Progressive overload & nutrient calibration";
+        
+        let phaseSubtitle = "Progressive overload & nutrient calibration";
+        if (weekInMonth === 1) {
+          cloned.phaseTitle = `Month ${monthNum} · W${w}: Microcycle Activation`;
+          phaseSubtitle = "Macro intake reset & biomechanical form tuning";
+        } else if (weekInMonth === 2) {
+          cloned.phaseTitle = `Month ${monthNum} · W${w}: Progressive Overload Peak`;
+          phaseSubtitle = "Volume scaling and metabolic energy enhancement";
+        } else if (weekInMonth === 3) {
+          cloned.phaseTitle = `Month ${monthNum} · W${w}: Intensity Specialization`;
+          phaseSubtitle = "Fat oxidation acceleration and targeted hypertrophy";
+        } else {
+          cloned.phaseTitle = `Month ${monthNum} · W${w}: Phase Consolidation & Deload`;
+          phaseSubtitle = "Active recovery, joint decompression & tape check";
+        }
+
         currentWeeks.push(cloned);
       }
     } else {
       currentWeeks = currentWeeks.slice(0, newCount);
     }
 
-    setPlan({
+    const updatedPlan: PlanDashboardData = {
       ...plan,
       weeksCount: newCount,
+      monthsCount: targetMonths,
       weeks: currentWeeks,
-    });
+    };
+
+    setPlan(updatedPlan);
+    setCustomMonths(String(targetMonths));
 
     if (selectedWeekNum > newCount) {
       setSelectedWeekNum(1);
@@ -213,25 +310,31 @@ export function WeekPlanEditor({
     setTimeout(() => setSaveBanner(null), 3000);
   };
 
-  // Save changes locally and to backend
+  // Save changes directly to Firebase Firestore and to backend
   const handleSave = async (statusOverride?: PlanStatus) => {
     try {
       setSaving(true);
+      const isApproved = statusOverride === "approved" || plan.status === "approved";
       const updated: PlanDashboardData = {
         ...plan,
         status: statusOverride || plan.status,
-        approvedAt:
-          statusOverride === "approved" || plan.status === "approved"
-            ? new Date().toISOString()
-            : plan.approvedAt,
+        approvedAt: isApproved ? (plan.approvedAt || new Date().toISOString()) : undefined,
       };
+
+      // Persist directly to Firebase Firestore
+      saveStoredPlan(updated);
+      upsertStoredAdminUser({
+        ...user,
+        plan: updated,
+        needsPlanReview: updated.status === "pending_review",
+      });
 
       await onSavePlan(updated);
       setPlan(updated);
       setSaveBanner(
-        statusOverride === "approved"
-          ? "Plan Approved & Pushed Live to User Dashboard!"
-          : "Plan changes saved successfully."
+        isApproved
+          ? "✓ Live week plan updated! Changes are now live on the client's dashboard."
+          : "✓ Plan draft saved successfully."
       );
       setTimeout(() => setSaveBanner(null), 3500);
     } catch (err) {
@@ -364,6 +467,71 @@ export function WeekPlanEditor({
     setPlan({ ...plan, weeks: updatedWeeks });
   };
 
+  // Add Workout Day
+  const handleAddWorkoutDay = () => {
+    const updatedWeeks = [...plan.weeks];
+    const targetW = updatedWeeks.find((w) => w.weekNumber === selectedWeek.weekNumber);
+    if (!targetW) return;
+    const nextDayNum = targetW.workouts.days.length + 1;
+    targetW.workouts.days.push({
+      id: `d${nextDayNum}_${Date.now().toString().slice(-4)}`,
+      day: `Day ${nextDayNum}`,
+      title: `Day ${nextDayNum} - Custom Training Focus`,
+      focus: "Hypertrophy & Core Conditioning",
+      image: "/images/workout-push.jpg",
+      durationMinutes: 45,
+      exercises: [
+        {
+          name: "Primary Movement",
+          sets: "3-4 sets",
+          reps: "10-12 reps",
+          rest: "60 sec",
+          tips: "Controlled cadence and strict posture.",
+        },
+        {
+          name: "Secondary Accessory",
+          sets: "3 sets",
+          reps: "12-15 reps",
+          rest: "45 sec",
+          tips: "Peak contraction at top.",
+        },
+      ],
+    });
+    targetW.workouts.daysPerWeek = targetW.workouts.days.length;
+    setPlan({ ...plan, weeks: updatedWeeks });
+    setSaveBanner(`Added Day ${nextDayNum} to Week ${selectedWeek.weekNumber}!`);
+    setTimeout(() => setSaveBanner(null), 3000);
+  };
+
+  // Remove Workout Day
+  const handleRemoveWorkoutDay = (dayIndex: number) => {
+    const updatedWeeks = [...plan.weeks];
+    const targetW = updatedWeeks.find((w) => w.weekNumber === selectedWeek.weekNumber);
+    if (!targetW || targetW.workouts.days.length <= 1) {
+      alert("At least 1 workout day must remain in the schedule.");
+      return;
+    }
+    const removedName = targetW.workouts.days[dayIndex].day;
+    targetW.workouts.days.splice(dayIndex, 1);
+    targetW.workouts.daysPerWeek = targetW.workouts.days.length;
+    setPlan({ ...plan, weeks: updatedWeeks });
+    setSaveBanner(`Removed ${removedName} from Week ${selectedWeek.weekNumber}`);
+    setTimeout(() => setSaveBanner(null), 3000);
+  };
+
+  // Toggle user task marking (coach override / offline confirmation)
+  const handleToggleTask = (taskKey: string, taskTitle: string) => {
+    const current = Boolean(taskLogs[taskKey]);
+    const updated = saveStoredTaskLog(plan.id, taskKey, !current);
+    setTaskLogs({ ...updated });
+    setSaveBanner(
+      !current
+        ? `✓ Marked "${taskTitle}" as completed on behalf of ${user.name}`
+        : `Reset "${taskTitle}" status to pending`
+    );
+    setTimeout(() => setSaveBanner(null), 3500);
+  };
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -441,52 +609,210 @@ export function WeekPlanEditor({
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
 
-            <button
-              type="button"
-              onClick={() => handleSave()}
-              disabled={saving}
-              className="px-4 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>{saving ? "Saving..." : "Save Draft"}</span>
-            </button>
+            {plan.status === "approved" || plan.status === "active" ? (
+              <>
+                <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-black">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Live on Client Dashboard</span>
+                </span>
 
-            <button
-              type="button"
-              onClick={() => onPushToUser(user)}
-              className="px-5 py-2 rounded-xl bg-[#00c853] hover:bg-[#00b047] text-white text-xs font-black shadow-md flex items-center gap-2 transition"
-            >
-              <Rocket className="w-4 h-4" />
-              <span>Push Plan Live</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => handleSave("approved")}
+                  disabled={saving}
+                  className="px-5 py-2 rounded-xl bg-[#00c853] hover:bg-[#00b047] text-white text-xs font-black shadow-md flex items-center gap-1.5 transition cursor-pointer"
+                  title="Save changes and immediately update the live plan on client dashboard"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{saving ? "Updating Live Plan..." : "Update Live Plan"}</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleSave()}
+                  disabled={saving}
+                  className="px-4 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{saving ? "Saving..." : "Save Draft"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await handleSave("approved");
+                    onPushToUser({
+                      ...user,
+                      plan: { ...plan, status: "approved", approvedAt: new Date().toISOString() },
+                      needsPlanReview: false,
+                    });
+                  }}
+                  className="px-5 py-2 rounded-xl bg-[#00c853] hover:bg-[#00b047] text-white text-xs font-black shadow-md flex items-center gap-2 transition cursor-pointer"
+                >
+                  <Rocket className="w-4 h-4" />
+                  <span>Push Plan Live</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
 
+        {/* Clinical Health Dossier & Medical Reports Review Banner */}
+        {user.medicalAssessment && (
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-emerald-50/60 to-teal-50 border border-emerald-200/80 space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🩺</span>
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-950">
+                  Client Medical Assessment &amp; Health Reports
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    user.medicalAssessment.hasDisease
+                      ? "bg-amber-100 text-amber-900 border border-amber-300"
+                      : "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                  }`}
+                >
+                  {user.medicalAssessment.hasDisease
+                    ? "Action Needed: Medical Adjustments"
+                    : "No Chronic Conditions"}
+                </span>
+              </div>
+              <span className="text-[11px] font-semibold text-emerald-800">
+                Adjust nutrition &amp; workout intensity accordingly
+              </span>
+            </div>
+
+            {/* Diseases and medications */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div className="p-3 bg-white/80 rounded-xl border border-emerald-100 space-y-1">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block">
+                  Reported Conditions
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {user.medicalAssessment.diseases && user.medicalAssessment.diseases.length > 0 ? (
+                    user.medicalAssessment.diseases.map((d, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200 text-[11px] font-bold"
+                      >
+                        {d}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-gray-500 italic">None reported</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-3 bg-white/80 rounded-xl border border-emerald-100 space-y-1">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block">
+                  Symptoms &amp; Doctor Notes
+                </span>
+                <p className="text-gray-900 line-clamp-2">
+                  {user.medicalAssessment.customDiseaseDescription || "No additional notes provided."}
+                </p>
+                {user.medicalAssessment.medications && (
+                  <p className="text-[10px] text-gray-500 font-mono">
+                    Rx: {user.medicalAssessment.medications}
+                  </p>
+                )}
+              </div>
+
+              <div className="p-3 bg-white/80 rounded-xl border border-emerald-100 space-y-1.5">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block">
+                  Uploaded Reports ({user.medicalAssessment.documents?.length || 0})
+                </span>
+                {user.medicalAssessment.documents && user.medicalAssessment.documents.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {user.medicalAssessment.documents.map((doc) => (
+                      <button
+                        key={doc.id}
+                        type="button"
+                        onClick={() => setPreviewDoc(doc)}
+                        className="px-2 py-1 rounded-lg bg-emerald-100/70 hover:bg-emerald-200 text-emerald-950 text-[11px] font-bold border border-emerald-300 flex items-center gap-1 transition"
+                      >
+                        <span>{doc.type === "pdf" ? "📑" : "🖼️"}</span>
+                        <span className="truncate max-w-[120px]">{doc.name}</span>
+                        <span className="text-[9px] text-emerald-700 underline ml-0.5">View</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-gray-400 italic text-[11px]">No documents attached</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Global Targets & Parameters Row */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
-          {/* Duration in Weeks */}
-          <div>
-            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-              Plan Duration
-            </label>
-            <select
-              value={plan.weeksCount}
-              onChange={(e) => handleWeeksCountChange(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-black text-gray-900 bg-gray-50/70 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value={4}>4 Weeks</option>
-              <option value={6}>6 Weeks</option>
-              <option value={8}>8 Weeks (Standard)</option>
-              <option value={10}>10 Weeks</option>
-              <option value={12}>12 Weeks (Transformation)</option>
-              <option value={16}>16 Weeks (Advanced)</option>
-            </select>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3.5">
+          {/* Duration in Months & Weeks */}
+          <div className="col-span-2 md:col-span-1">
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                Plan Duration
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsCustomDuration(!isCustomDuration)}
+                className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 underline"
+              >
+                {isCustomDuration ? "Presets" : "Custom Months"}
+              </button>
+            </div>
+
+            {!isCustomDuration ? (
+              <select
+                value={plan.weeksCount}
+                onChange={(e) => {
+                  const weeks = Number(e.target.value);
+                  const months = Math.max(1, Math.round(weeks / 4));
+                  handleWeeksCountChange(weeks, months);
+                }}
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-black text-gray-900 bg-gray-50/70 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value={4}>1 Month (4 Weeks)</option>
+                <option value={8}>2 Months (8 Weeks)</option>
+                <option value={12}>3 Months (12 Weeks - Transformation)</option>
+                <option value={16}>4 Months (16 Weeks)</option>
+                <option value={20}>5 Months (20 Weeks)</option>
+                <option value={24}>6 Months (24 Weeks - High Impact)</option>
+                <option value={36}>9 Months (36 Weeks)</option>
+                <option value={48}>12 Months (48 Weeks - 1 Year)</option>
+              </select>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={1}
+                  max={24}
+                  value={customMonths}
+                  onChange={(e) => {
+                    setCustomMonths(e.target.value);
+                    const m = Number(e.target.value);
+                    if (m > 0) handleMonthsCountChange(m);
+                  }}
+                  placeholder="Months"
+                  className="w-full px-2.5 py-2 rounded-xl border border-emerald-300 text-xs font-black text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span className="text-[10px] font-bold text-gray-500 whitespace-nowrap">
+                  = {plan.weeksCount}W
+                </span>
+              </div>
+            )}
+            <p className="text-[10px] text-gray-400 font-medium mt-1">
+              Active: {formatPlanDuration(plan.weeksCount, plan.monthsCount)}
+            </p>
           </div>
 
           {/* Daily Calories */}
           <div>
             <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-              Daily Calories (kcal)
+              Calories (kcal)
             </label>
             <input
               type="number"
@@ -499,7 +825,7 @@ export function WeekPlanEditor({
           {/* Daily Protein Target */}
           <div>
             <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-              Daily Protein (g)
+              Protein (g)
             </label>
             <input
               type="number"
@@ -509,10 +835,38 @@ export function WeekPlanEditor({
             />
           </div>
 
+          {/* Water Intake */}
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+              Water (Litres)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={plan.waterLitres ?? user.biometrics.waterLitres ?? 3.5}
+              onChange={(e) => setPlan({ ...plan, waterLitres: Number(e.target.value) })}
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-black text-gray-900 bg-gray-50/70 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+
+          {/* Steps Goal */}
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+              Daily Steps Goal
+            </label>
+            <input
+              type="number"
+              step="500"
+              value={plan.dailyStepGoal ?? user.biometrics.dailyStepGoal ?? 10000}
+              onChange={(e) => setPlan({ ...plan, dailyStepGoal: Number(e.target.value) })}
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-black text-gray-900 bg-gray-50/70 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+
           {/* Workout Days */}
           <div>
             <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-              Workout Days/Week
+              Training Days
             </label>
             <select
               value={plan.workoutDaysPerWeek}
@@ -529,7 +883,7 @@ export function WeekPlanEditor({
           {/* Status Switcher */}
           <div>
             <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-              Dashboard Visibility
+              Dashboard Status
             </label>
             <select
               value={plan.status}
@@ -537,7 +891,7 @@ export function WeekPlanEditor({
               className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-black text-gray-900 bg-gray-50/70 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="pending_review">Hidden (Under Review)</option>
-              <option value="approved">Approved & Live</option>
+              <option value="approved">Approved &amp; Live</option>
             </select>
           </div>
         </div>
@@ -557,7 +911,63 @@ export function WeekPlanEditor({
         </div>
       </section>
 
-      {/* Week-by-Week Navigation Bar */}
+      {/* Studio Mode Switcher: Plan Customizer vs Client Live Progress & Marking Monitor */}
+      <section className="bg-white rounded-2xl p-2.5 border border-gray-200/90 shadow-xs flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-xl">
+          <button
+            type="button"
+            onClick={() => setEditorMode("customize")}
+            className={`px-4 py-2 rounded-lg text-xs font-black transition flex items-center gap-2 ${
+              editorMode === "customize"
+                ? "bg-[#032e1c] text-white shadow-xs"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/70"
+            }`}
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+            <span>Plan Customizer (Meals & Workouts)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setEditorMode("progress")}
+            className={`px-4 py-2 rounded-lg text-xs font-black transition flex items-center gap-2 ${
+              editorMode === "progress"
+                ? "bg-[#00c853] text-white shadow-xs"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/70"
+            }`}
+          >
+            <BarChart2 className="w-3.5 h-3.5" />
+            <span>Client Live Progress &amp; Checklist Monitor</span>
+            <span
+              className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                editorMode === "progress"
+                  ? "bg-white/20 text-white"
+                  : adherence.percent >= 70
+                  ? "bg-emerald-100 text-emerald-800"
+                  : "bg-amber-100 text-amber-800"
+              }`}
+            >
+              {adherence.percent}% Done
+            </span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 px-3 text-xs text-gray-500 font-medium">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <strong className="text-gray-900 font-bold">Firebase Live Sync</strong>
+          </span>
+          <span className="text-gray-300">|</span>
+          <span>
+            {adherence.completedTasks} / {adherence.totalTasks} Total Tasks Completed
+          </span>
+        </div>
+      </section>
+
+      {/* ================= MODE 1: PLAN CUSTOMIZER ================= */}
+      {editorMode === "customize" && (
+        <>
+          {/* Week-by-Week Navigation Bar */}
       <section className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-xs flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="text-xs font-black text-gray-400 uppercase tracking-wider mr-2">
@@ -841,6 +1251,15 @@ export function WeekPlanEditor({
                   </p>
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={handleAddWorkoutDay}
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Workout Day</span>
+              </button>
             </div>
 
             {/* Days Grid */}
@@ -888,6 +1307,15 @@ export function WeekPlanEditor({
                       >
                         <Plus className="w-3 h-3" />
                         <span>Add Exercise</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveWorkoutDay(dIdx)}
+                        className="p-1.5 rounded-lg border border-red-200 hover:bg-red-50 text-red-500 hover:text-red-700 transition"
+                        title="Remove Workout Day"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -994,26 +1422,699 @@ export function WeekPlanEditor({
 
           {/* Bottom Dock */}
           <div className="pt-6 border-t border-gray-100 flex items-center justify-between flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => handleSave()}
-              disabled={saving}
-              className="px-5 py-2.5 rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-bold text-xs flex items-center gap-2 transition"
-            >
-              <Save className="w-4 h-4" />
-              <span>{saving ? "Saving..." : "Save Draft Changes"}</span>
-            </button>
+            {plan.status === "approved" || plan.status === "active" ? (
+              <>
+                <p className="text-xs text-gray-500 font-medium">
+                  🔒 <strong className="text-gray-900">Live Client Plan:</strong> Once assigned to a client, this week plan is editable only by coach admins. Clients have view & checklist access only.
+                </p>
 
-            <button
-              type="button"
-              onClick={() => onPushToUser(user)}
-              className="px-6 py-2.5 rounded-xl bg-[#00c853] hover:bg-[#00b047] text-white font-black text-sm shadow-md flex items-center gap-2 transition"
-            >
-              <Rocket className="w-4 h-4" />
-              <span>Push Plan to User Dashboard</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => handleSave("approved")}
+                  disabled={saving}
+                  className="px-6 py-2.5 rounded-xl bg-[#00c853] hover:bg-[#00b047] text-white font-black text-sm shadow-md flex items-center gap-2 transition cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{saving ? "Updating Live Plan..." : "Update Live Plan on Client Dashboard"}</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleSave()}
+                  disabled={saving}
+                  className="px-5 py-2.5 rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{saving ? "Saving..." : "Save Draft Changes"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onPushToUser(user)}
+                  className="px-6 py-2.5 rounded-xl bg-[#00c853] hover:bg-[#00b047] text-white font-black text-sm shadow-md flex items-center gap-2 transition cursor-pointer"
+                >
+                  <Rocket className="w-4 h-4" />
+                  <span>Push Plan to User Dashboard</span>
+                </button>
+              </>
+            )}
           </div>
         </section>
+      )}
+        </>
+      )}
+
+      {/* ================= MODE 2: CLIENT LIVE PROGRESS & MARKING MONITOR ================= */}
+      {editorMode === "progress" && (
+        <div className="space-y-6">
+          {/* 4 Adherence KPI Cards */}
+          <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Total Overall Adherence */}
+            <div className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  Overall Compliance
+                </span>
+                <div
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                    adherence.percent >= 70
+                      ? "bg-emerald-100 text-emerald-800"
+                      : adherence.percent >= 40
+                      ? "bg-amber-100 text-amber-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  <BarChart2 className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-gray-950">{adherence.percent}%</span>
+                <span className="text-xs text-gray-400 font-medium">
+                  ({adherence.completedTasks}/{adherence.totalTasks} tasks)
+                </span>
+              </div>
+              <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    adherence.percent >= 70
+                      ? "bg-[#00c853]"
+                      : adherence.percent >= 40
+                      ? "bg-amber-500"
+                      : "bg-red-500"
+                  }`}
+                  style={{ width: `${adherence.percent}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-gray-500 font-semibold block">
+                {adherence.percent >= 75
+                  ? "🔥 High commitment - following protocol"
+                  : adherence.percent >= 40
+                  ? "⚡ Moderate pace - needs check-in"
+                  : "⚠️ Low tracking - prompt coach follow-up"}
+              </span>
+            </div>
+
+            {/* Nutrition Adherence */}
+            <div className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  Meals Eaten
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                  <Utensils className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-gray-950">{adherence.mealPercent}%</span>
+                <span className="text-xs text-gray-400 font-medium">
+                  ({adherence.completedMeals}/{adherence.totalMeals} meals)
+                </span>
+              </div>
+              <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-600 rounded-full transition-all duration-500"
+                  style={{ width: `${adherence.mealPercent}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-gray-500 font-semibold block">
+                {plan.calorieTarget} kcal &bull; {plan.proteinTargetGrams}g Protein target
+              </span>
+            </div>
+
+            {/* Workout Adherence */}
+            <div className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  Workouts Finished
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-teal-100 text-teal-800 flex items-center justify-center">
+                  <Dumbbell className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-gray-950">{adherence.workoutPercent}%</span>
+                <span className="text-xs text-gray-400 font-medium">
+                  ({adherence.completedWorkouts}/{adherence.totalWorkouts} sessions)
+                </span>
+              </div>
+              <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-teal-600 rounded-full transition-all duration-500"
+                  style={{ width: `${adherence.workoutPercent}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-gray-500 font-semibold block">
+                {plan.workoutDaysPerWeek} sessions scheduled per week
+              </span>
+            </div>
+
+            {/* Daily Habits (Hydration & Steps) */}
+            <div className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  Habits Logged
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-purple-100 text-purple-800 flex items-center justify-center">
+                  <Activity className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-gray-950">{adherence.habitPercent}%</span>
+                <span className="text-xs text-gray-400 font-medium">
+                  ({adherence.completedHabits}/{adherence.totalHabits} targets)
+                </span>
+              </div>
+              <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-purple-600 rounded-full transition-all duration-500"
+                  style={{ width: `${adherence.habitPercent}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-gray-500 font-semibold block">
+                {plan.waterLitres || 3.5}L water &bull; {plan.dailyStepGoal || 10000} steps goal
+              </span>
+            </div>
+          </section>
+
+          {/* Week-by-Week Navigation Ribbon with Individual Week Compliance Badges */}
+          <section className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-xs flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-xs font-black text-gray-400 uppercase tracking-wider mr-2">
+                Week Progress:
+              </span>
+              {plan.weeks.map((w) => {
+                const wProg = calculateWeekProgress(w.weekNumber, w, taskLogs);
+                const isSelected = selectedWeekNum === w.weekNumber;
+                return (
+                  <button
+                    key={w.weekNumber}
+                    type="button"
+                    onClick={() => setSelectedWeekNum(w.weekNumber)}
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 ${
+                      isSelected
+                        ? "bg-[#032e1c] text-white shadow-sm"
+                        : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                    }`}
+                  >
+                    <span>Week {w.weekNumber}</span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        isSelected
+                          ? "bg-white/20 text-white"
+                          : wProg.percent >= 70
+                          ? "bg-emerald-100 text-emerald-800"
+                          : wProg.percent > 0
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-gray-200 text-gray-500"
+                      }`}
+                    >
+                      {wProg.percent}% ({wProg.completed}/{wProg.total})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setEditorMode("customize")}
+                className="px-3.5 py-1.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold text-xs flex items-center gap-1.5 transition"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Switch to Edit Week {selectedWeek.weekNumber}</span>
+              </button>
+            </div>
+          </section>
+
+          {/* Detailed Week Progress & Interactive Marking Console */}
+          {selectedWeek && (
+            <section className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-xs space-y-6">
+              {/* Selected Week Adherence Header */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-100 pb-5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">
+                      Week {selectedWeek.weekNumber} Live Checklist Audit
+                    </span>
+                    <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300">
+                      {selectedWeekAdherence.percent}% Completed
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-black text-gray-950 mt-1">
+                    {selectedWeek.phaseTitle || `Week ${selectedWeek.weekNumber} Schedule`}
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium">
+                    {selectedWeekAdherence.completed} of {selectedWeekAdherence.total} protocol items completed by {user.name}.
+                    Click any task status to toggle coach verification or offline confirmation.
+                  </p>
+                </div>
+
+                <div className="w-full sm:w-56 bg-gray-50 p-3 rounded-2xl border border-gray-200/70 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-gray-700">
+                    <span>Week {selectedWeek.weekNumber} Compliance</span>
+                    <span>{selectedWeekAdherence.percent}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        selectedWeekAdherence.percent >= 70
+                          ? "bg-[#00c853]"
+                          : selectedWeekAdherence.percent >= 40
+                          ? "bg-amber-500"
+                          : "bg-red-400"
+                      }`}
+                      style={{ width: `${selectedWeekAdherence.percent}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-gray-400 block text-right font-medium">
+                    {selectedWeekAdherence.completed}/{selectedWeekAdherence.total} checked off
+                  </span>
+                </div>
+              </div>
+
+              {/* 1. Nutrition Meal Adherence Checklist */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                      <Utensils className="w-4 h-4" />
+                    </div>
+                    <h4 className="font-black text-sm text-gray-950">
+                      Nutrition Logged (Meals Eaten vs Skipped)
+                    </h4>
+                  </div>
+                  <span className="text-xs font-bold text-gray-500">
+                    {
+                      selectedWeek.nutrition.meals.filter(
+                        (m) => taskLogs[`w${selectedWeek.weekNumber}_meal_${m.id}`]
+                      ).length
+                    }{" "}
+                    / {selectedWeek.nutrition.meals.length} meals eaten
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {selectedWeek.nutrition.meals.map((meal) => {
+                    const taskKey = `w${selectedWeek.weekNumber}_meal_${meal.id}`;
+                    const isCompleted = Boolean(taskLogs[taskKey]);
+                    return (
+                      <div
+                        key={meal.id}
+                        className={`p-4 rounded-2xl border transition flex items-start justify-between gap-3 ${
+                          isCompleted
+                            ? "bg-emerald-50/60 border-emerald-200/80"
+                            : "bg-gray-50/70 border-gray-200/80 hover:bg-gray-100/50"
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                isCompleted
+                                  ? "bg-emerald-200 text-emerald-900"
+                                  : "bg-gray-200 text-gray-700"
+                              }`}
+                            >
+                              {meal.slot}
+                            </span>
+                            <h5 className="font-bold text-xs text-gray-900">{meal.name}</h5>
+                          </div>
+                          <p className="text-[11px] text-gray-500 line-clamp-1">{meal.portion}</p>
+                          <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
+                            <span>{meal.calories} kcal</span>
+                            <span>&bull;</span>
+                            <span>P: {meal.proteinGrams}g</span>
+                            <span>&bull;</span>
+                            <span>C: {meal.carbsGrams}g</span>
+                            <span>&bull;</span>
+                            <span>F: {meal.fatsGrams}g</span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTask(taskKey, `${meal.slot}: ${meal.name}`)}
+                          className={`flex-shrink-0 px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1.5 transition ${
+                            isCompleted
+                              ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                              : "bg-white hover:bg-gray-100 text-gray-600 border border-gray-200"
+                          }`}
+                          title="Click to toggle meal completion status on Firestore"
+                        >
+                          {isCompleted ? (
+                            <>
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Eaten ✓</span>
+                            </>
+                          ) : (
+                            <>
+                              <Circle className="w-3.5 h-3.5 text-gray-400" />
+                              <span>Mark Eaten</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 2. Workout Sessions Checklist */}
+              <div className="space-y-3 pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-teal-100 text-teal-800 flex items-center justify-center">
+                      <Dumbbell className="w-4 h-4" />
+                    </div>
+                    <h4 className="font-black text-sm text-gray-950">
+                      Workout Split Sessions Logged
+                    </h4>
+                  </div>
+                  <span className="text-xs font-bold text-gray-500">
+                    {
+                      selectedWeek.workouts.days.filter(
+                        (d) => taskLogs[`w${selectedWeek.weekNumber}_workout_${d.id}`]
+                      ).length
+                    }{" "}
+                    / {selectedWeek.workouts.days.length} workouts finished
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {selectedWeek.workouts.days.map((day) => {
+                    const taskKey = `w${selectedWeek.weekNumber}_workout_${day.id}`;
+                    const isCompleted = Boolean(taskLogs[taskKey]);
+                    return (
+                      <div
+                        key={day.id}
+                        className={`p-4 rounded-2xl border transition flex items-start justify-between gap-3 ${
+                          isCompleted
+                            ? "bg-teal-50/60 border-teal-200/80"
+                            : "bg-gray-50/70 border-gray-200/80 hover:bg-gray-100/50"
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                isCompleted
+                                  ? "bg-teal-200 text-teal-900"
+                                  : "bg-gray-200 text-gray-700"
+                              }`}
+                            >
+                              {day.day}
+                            </span>
+                            <h5 className="font-bold text-xs text-gray-950">{day.title}</h5>
+                          </div>
+                          <p className="text-[11px] text-gray-600 font-medium">Focus: {day.focus}</p>
+                          <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
+                            <span>{day.durationMinutes} mins</span>
+                            <span>&bull;</span>
+                            <span>{day.exercises.length} prescribed exercises</span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTask(taskKey, `${day.day} - ${day.title}`)}
+                          className={`flex-shrink-0 px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1.5 transition ${
+                            isCompleted
+                              ? "bg-teal-700 hover:bg-teal-800 text-white shadow-xs"
+                              : "bg-white hover:bg-gray-100 text-gray-600 border border-gray-200"
+                          }`}
+                          title="Click to toggle workout completion status on Firestore"
+                        >
+                          {isCompleted ? (
+                            <>
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Done ✓</span>
+                            </>
+                          ) : (
+                            <>
+                              <Circle className="w-3.5 h-3.5 text-gray-400" />
+                              <span>Mark Done</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. Daily Hydration & Steps Habits */}
+              <div className="space-y-3 pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-purple-100 text-purple-800 flex items-center justify-center">
+                      <Activity className="w-4 h-4" />
+                    </div>
+                    <h4 className="font-black text-sm text-gray-950">
+                      Daily Hydration &amp; Movement Targets
+                    </h4>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Water habit */}
+                  {(() => {
+                    const taskKey = `w${selectedWeek.weekNumber}_habit_water`;
+                    const isCompleted = Boolean(taskLogs[taskKey]);
+                    return (
+                      <div
+                        className={`p-4 rounded-2xl border transition flex items-center justify-between gap-3 ${
+                          isCompleted
+                            ? "bg-blue-50/60 border-blue-200/80"
+                            : "bg-gray-50/70 border-gray-200/80"
+                        }`}
+                      >
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">💧</span>
+                            <h5 className="font-bold text-xs text-gray-950">
+                              Daily Hydration Goal: {plan.waterLitres || 3.5} Litres
+                            </h5>
+                          </div>
+                          <p className="text-[11px] text-gray-500">
+                            Adequate hydration sustains metabolic rate and cellular electrolyte balance.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTask(taskKey, "Daily Hydration Target")}
+                          className={`flex-shrink-0 px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1.5 transition ${
+                            isCompleted
+                              ? "bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+                              : "bg-white hover:bg-gray-100 text-gray-600 border border-gray-200"
+                          }`}
+                        >
+                          {isCompleted ? (
+                            <>
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Hit Goal ✓</span>
+                            </>
+                          ) : (
+                            <>
+                              <Circle className="w-3.5 h-3.5 text-gray-400" />
+                              <span>Mark Met</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Step count habit */}
+                  {(() => {
+                    const taskKey = `w${selectedWeek.weekNumber}_habit_steps`;
+                    const isCompleted = Boolean(taskLogs[taskKey]);
+                    return (
+                      <div
+                        className={`p-4 rounded-2xl border transition flex items-center justify-between gap-3 ${
+                          isCompleted
+                            ? "bg-purple-50/60 border-purple-200/80"
+                            : "bg-gray-50/70 border-gray-200/80"
+                        }`}
+                      >
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">👟</span>
+                            <h5 className="font-bold text-xs text-gray-950">
+                              Daily Step Goal: {(plan.dailyStepGoal || 10000).toLocaleString()} Steps
+                            </h5>
+                          </div>
+                          <p className="text-[11px] text-gray-500">
+                            NEAT energy expenditure baseline to maintain caloric deficit.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTask(taskKey, "Daily Steps Target")}
+                          className={`flex-shrink-0 px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1.5 transition ${
+                            isCompleted
+                              ? "bg-purple-600 hover:bg-purple-700 text-white shadow-xs"
+                              : "bg-white hover:bg-gray-100 text-gray-600 border border-gray-200"
+                          }`}
+                        >
+                          {isCompleted ? (
+                            <>
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Hit Goal ✓</span>
+                            </>
+                          ) : (
+                            <>
+                              <Circle className="w-3.5 h-3.5 text-gray-400" />
+                              <span>Mark Met</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* 4. Head Coach Check-in & WhatsApp Dispatch Card */}
+              <div className="pt-5 border-t border-gray-100 p-5 rounded-2xl bg-gradient-to-r from-emerald-950 to-gray-900 text-white space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-emerald-400" />
+                    <h4 className="font-black text-xs uppercase tracking-wider text-emerald-300">
+                      Head Coach Client Feedback Generator
+                    </h4>
+                  </div>
+                  <span className="text-[11px] text-gray-400 font-medium">
+                    Phone: {user.phone || "Not provided"}
+                  </span>
+                </div>
+
+                <p className="text-xs text-gray-300 leading-relaxed font-mono bg-black/40 p-3 rounded-xl border border-white/10">
+                  &ldquo;{coachReviewMessage}&rdquo;
+                </p>
+
+                <div className="flex items-center justify-end gap-2.5 flex-wrap pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(coachReviewMessage);
+                      setSaveBanner("✓ Copied progress review note to clipboard!");
+                      setTimeout(() => setSaveBanner(null), 3000);
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition flex items-center gap-1.5"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy Review Note</span>
+                  </button>
+
+                  {user.phone && (
+                    <a
+                      href={`https://wa.me/${user.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                        coachReviewMessage
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-4 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-white text-xs font-black transition flex items-center gap-1.5 shadow-xs"
+                    >
+                      <span>Send WhatsApp Check-in</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+        </div>
+      )}
+
+      {/* Document Preview Inspector Modal */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3.5 bg-gray-900 text-white">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{previewDoc.type === "pdf" ? "📑" : "🖼️"}</span>
+                <div>
+                  <h5 className="font-bold text-sm truncate max-w-md">{previewDoc.name}</h5>
+                  <p className="text-[10px] text-gray-400">
+                    {previewDoc.sizeFormatted} &bull; {previewDoc.category || "Clinical Document"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewDoc(null)}
+                className="p-1 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[70vh] overflow-y-auto bg-gray-50 flex flex-col items-center justify-center">
+              {previewDoc.fileUrl?.startsWith("data:image") ? (
+                <img
+                  src={previewDoc.fileUrl}
+                  alt={previewDoc.name}
+                  className="max-h-[60vh] max-w-full rounded-lg shadow-md object-contain"
+                />
+              ) : (
+                <div className="w-full bg-white rounded-xl p-6 border border-gray-200 shadow-xs space-y-4 text-left">
+                  <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
+                      Medical File Verification
+                    </span>
+                    <span className="text-xs font-mono text-gray-400">Status: Verified</span>
+                  </div>
+                  <div className="space-y-2 text-sm text-gray-700">
+                    <p>
+                      <strong>Document Title:</strong> {previewDoc.name}
+                    </p>
+                    <p>
+                      <strong>Uploaded At:</strong>{" "}
+                      {previewDoc.uploadedAt
+                        ? new Date(previewDoc.uploadedAt).toLocaleString()
+                        : "Today"}
+                    </p>
+                    <p>
+                      <strong>Category:</strong> {previewDoc.category || "Medical / Lab Report"}
+                    </p>
+                    <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-xs text-amber-900">
+                      <strong>Clinical Assessment Note:</strong>
+                      <p className="mt-1">
+                        Use this document to adjust carbohydrate tolerance, anti-inflammatory food
+                        choices, and avoid high shear stresses on vulnerable joints.
+                      </p>
+                    </div>
+                  </div>
+                  {previewDoc.fileUrl && (
+                    <a
+                      href={previewDoc.fileUrl}
+                      download={previewDoc.name}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition"
+                    >
+                      <span>Open / Download Full Document</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end p-3 bg-gray-100 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => setPreviewDoc(null)}
+                className="px-4 py-1.5 bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold rounded-lg"
+              >
+                Close Document
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -5,6 +5,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { AppError } from "@/lib/errors";
 import type { Assessment, AssessmentInput, DetailedPlan } from "@/types/fitness";
 import type { PlanDashboardData, PlanStatus, TaskLogState } from "@/types/plan-dashboard";
+import type { UserSubscription } from "@/types/admin";
 
 export interface PaymentOrderRecord { id: string; uid: string; assessmentId: string; amountPaise: number; currency: "INR"; status: "created" | "paid" | "failed" | "refunded"; razorpayOrderId?: string; razorpayPaymentId?: string; idempotencyKey: string; }
 
@@ -413,6 +414,50 @@ export async function getUserTaskLogsFromDb(uid: string, planId: string): Promis
   } catch (err) {
     console.warn("Firestore getUserTaskLogsFromDb error:", err);
     return {};
+  }
+}
+
+export async function createOrUpdateSubscription(subscription: UserSubscription): Promise<void> {
+  const subId = subscription.id || `sub_${subscription.userId}`;
+  try {
+    await adminDb.collection("subscriptions").doc(subId).set(
+      {
+        ...subscription,
+        id: subId,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn("Firestore createOrUpdateSubscription error:", err);
+  }
+}
+
+export async function getSubscriptionByUserId(userId: string): Promise<UserSubscription | null> {
+  try {
+    const directDoc = await adminDb.collection("subscriptions").doc(`sub_${userId}`).get();
+    if (directDoc.exists) return directDoc.data() as UserSubscription;
+
+    const snap = await adminDb.collection("subscriptions").where("userId", "==", userId).limit(1).get();
+    if (!snap.empty) {
+      return snap.docs[0].data() as UserSubscription;
+    }
+  } catch (err) {
+    console.warn("Firestore getSubscriptionByUserId error:", err);
+  }
+  return null;
+}
+
+export async function listAllSubscriptions(): Promise<UserSubscription[]> {
+  try {
+    const snap = await adminDb.collection("subscriptions").get();
+    return snap.docs.map((doc) => {
+      const data = doc.data() as UserSubscription;
+      return { ...data, id: doc.id };
+    });
+  } catch (err) {
+    console.warn("Firestore listAllSubscriptions error:", err);
+    return [];
   }
 }
 

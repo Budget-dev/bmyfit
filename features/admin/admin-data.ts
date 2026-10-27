@@ -1,5 +1,13 @@
-import type { AdminUserRecord, AdminStats, UserBiometrics, UserPurchaseOrder } from "@/types/admin";
-import type { PlanDashboardData, PlanStatus, WeekPlanData } from "@/types/plan-dashboard";
+import type {
+  AdminUserRecord,
+  AdminStats,
+  UserBiometrics,
+  UserPurchaseOrder,
+  UserSubscription,
+  MedicalAssessment,
+  MedicalDocument,
+} from "@/types/admin";
+import type { PlanDashboardData, PlanStatus, WeekPlanData, TaskLogState } from "@/types/plan-dashboard";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
@@ -28,6 +36,32 @@ export const INITIAL_ADMIN_USERS: AdminUserRecord[] = [
     membershipTitle: "8-Week Custom Fat Loss Transformation",
     goal: "fat-loss",
     goalDisplay: "Fat Loss & Metabolic Reset",
+    needsPlanReview: true,
+    medicalAssessment: {
+      hasDisease: true,
+      diseases: ["Lower Back / Spine Pain", "Mild Hypertension"],
+      customDiseaseDescription: "Desk job with lower back stiffness after 30 mins sitting. Doctor advised avoiding heavy axial loading and high-impact jumps.",
+      medications: "Occasional muscle relaxant as needed",
+      documents: [
+        {
+          id: "doc_rahul_spine",
+          name: "Lumbar_Spine_MRI_Summary.pdf",
+          type: "pdf",
+          sizeFormatted: "340 KB",
+          uploadedAt: "2026-10-24T10:22:00Z",
+          category: "prescription",
+        },
+        {
+          id: "doc_rahul_blood",
+          name: "Annual_Health_Check_Blood_Report.pdf",
+          type: "pdf",
+          sizeFormatted: "512 KB",
+          uploadedAt: "2026-10-24T10:23:00Z",
+          category: "blood_test",
+        },
+      ],
+      submittedAt: "2026-10-24T10:25:00Z",
+    },
     biometrics: {
       gender: "male",
       age: 32,
@@ -48,7 +82,7 @@ export const INITIAL_ADMIN_USERS: AdminUserRecord[] = [
       activityLevel: "sedentary",
       dietPreference: "non-vegetarian",
       allergies: "None reported",
-      medicalConditions: "Mild lower back stiffness from desk work; avoid heavy spinal axial loading",
+      medicalConditions: "Lower Back / Spine Pain; Mild Hypertension",
       waterLitres: 3.5,
       dailyStepGoal: 9000,
       whr: 0.93,
@@ -56,11 +90,11 @@ export const INITIAL_ADMIN_USERS: AdminUserRecord[] = [
     order: {
       orderId: "ord_bmyfit_88291",
       razorpayPaymentId: "pay_Qe9102Klm12",
-      amountPaise: 99900,
-      amountFormatted: "₹999",
+      amountPaise: 9900,
+      amountFormatted: "₹99",
       currency: "INR",
       status: "paid",
-      packageTitle: "8-Week Personalized Nutrition & Workout Plan",
+      packageTitle: "2-Month (8 Weeks) Custom Plan · Medical Review",
       durationWeeks: 8,
       purchasedAt: "2026-10-24T10:20:00Z",
     },
@@ -74,8 +108,25 @@ export const INITIAL_ADMIN_USERS: AdminUserRecord[] = [
       calorieTarget: 1850,
       proteinTargetGrams: 135,
       workoutDaysPerWeek: 4,
-      coachNotes: "Awaiting Coach Customization: Emphasize 135g protein target and replace high-GI snacks with roasted chana and boiled eggs. Back-safe exercise split selected.",
+      coachNotes: "Awaiting Coach Customization: Review uploaded Lumbar Spine MRI and blood report before finalizing split. Emphasize lower-back-safe movements.",
+      medicalSummary: {
+        hasDisease: true,
+        diseases: ["Lower Back / Spine Pain", "Mild Hypertension"],
+        customDiseaseDescription: "Desk job with lower back stiffness after 30 mins sitting. Doctor advised avoiding heavy axial loading.",
+        documentsCount: 2,
+      },
     }),
+    taskLogs: {
+      w1_meal_m1: true,
+      w1_meal_m2: true,
+      w1_meal_m3: true,
+      w1_workout_d1: true,
+      w1_workout_d2: true,
+      w1_habit_water: true,
+      w1_habit_steps: true,
+      w2_meal_m1: true,
+      w2_habit_water: true,
+    },
   },
   {
     id: "user_purchased_02",
@@ -204,6 +255,22 @@ export const INITIAL_ADMIN_USERS: AdminUserRecord[] = [
       p.approvedAt = "2026-10-21T09:00:00Z";
       return p;
     })(),
+    taskLogs: {
+      w1_meal_m1: true,
+      w1_meal_m2: true,
+      w1_meal_m3: true,
+      w1_meal_m4: true,
+      w1_workout_d1: true,
+      w1_workout_d2: true,
+      w1_workout_d3: true,
+      w1_workout_d4: true,
+      w1_habit_water: true,
+      w1_habit_steps: true,
+      w2_meal_m1: true,
+      w2_meal_m2: true,
+      w2_workout_d1: true,
+      w2_habit_water: true,
+    },
   },
   {
     id: "user_purchased_04",
@@ -633,7 +700,70 @@ function ensureMemoryStore() {
 export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; stats: AdminStats }> {
   ensureMemoryStore();
 
-  // Try fetching live plans from Firestore
+  // 1. Fetch real registered users from Firestore "users" collection
+  try {
+    const usersSnap = await adminDb.collection("users").get();
+    if (!usersSnap.empty) {
+      for (const doc of usersSnap.docs) {
+        const userData = doc.data();
+        const existing = memoryStore.get(doc.id);
+        if (existing) {
+          if (userData.name) existing.name = userData.name;
+          if (userData.email) existing.email = userData.email;
+          if (userData.phone) existing.phone = userData.phone;
+          if (userData.avatarUrl) existing.avatar = userData.avatarUrl;
+          if (userData.membershipCategory) existing.membershipCategory = userData.membershipCategory;
+          if (userData.plan) existing.plan = { ...existing.plan, ...userData.plan };
+        } else {
+          memoryStore.set(doc.id, {
+            id: doc.id,
+            name: userData.name || "BMYFIT Member",
+            email: userData.email || `${doc.id}@client.bmyfit.in`,
+            phone: userData.phone || "+91 98000 00000",
+            city: userData.city || "Online Client",
+            avatar: userData.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
+            joinedAt: userData.createdAt || new Date().toISOString(),
+            lastActive: "Active Today",
+            membershipCategory: userData.membershipCategory || "free",
+            membershipTitle: userData.membershipTitle || (userData.membershipCategory === "purchased" ? "Purchased Client Plan" : "Free Registered Member"),
+            goal: userData.goal || "fat-loss",
+            goalDisplay: userData.goalDisplay || "Fat Loss & Conditioning",
+            needsPlanReview: userData.needsPlanReview ?? false,
+            biometrics: userData.biometrics || {
+              gender: "male",
+              age: userData.age || 28,
+              heightCm: 175,
+              weightKg: 78,
+              targetWeightKg: 70,
+              waistIn: 34,
+              neckIn: 15.5,
+              bmi: 24.5,
+              bmiCategory: "normal",
+              bodyFatPercent: 21.0,
+              bodyFatCategory: "average",
+              bmr: 1700,
+              tdee: 2350,
+              caloricTarget: 1800,
+              proteinTargetGrams: 120,
+              activityLevel: "moderately-active",
+              dietPreference: "vegetarian",
+              waterLitres: 3.5,
+              dailyStepGoal: 10000,
+            },
+            plan: userData.plan || generateDashboardPlan(doc.id, {
+              customerName: userData.name || "BMYFIT Member",
+              status: userData.membershipCategory === "purchased" ? "pending_review" : "active",
+              weeksCount: 8,
+            }),
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Firestore users collection fetch notice:", err);
+  }
+
+  // 2. Fetch live plans from Firestore "plans" collection
   try {
     const plansSnap = await adminDb.collection("plans").get();
     if (!plansSnap.empty) {
@@ -643,7 +773,6 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
         if (existing) {
           existing.plan = { ...existing.plan, ...planData };
         } else if (planData.customerName) {
-          // Add dynamically created assessment plan
           memoryStore.set(doc.id, {
             id: doc.id,
             name: planData.customerName,
@@ -684,8 +813,46 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
       }
     }
   } catch (err) {
-    // Firestore might be unconfigured in dev/demo mode; gracefully proceed with memoryStore
-    console.warn("Firestore fetchAllAdminUsers fallback to local store:", err);
+    console.warn("Firestore plans collection fetch notice:", err);
+  }
+
+  // 3. Fetch live subscriptions from Firestore "subscriptions" collection
+  try {
+    const subsSnap = await adminDb.collection("subscriptions").get();
+    if (!subsSnap.empty) {
+      for (const doc of subsSnap.docs) {
+        const subData = doc.data() as UserSubscription;
+        const targetId = subData.userId || doc.id;
+        const user = memoryStore.get(targetId) || memoryStore.get(subData.planId);
+        if (user) {
+          user.subscription = { ...subData, id: doc.id };
+          user.membershipCategory = "purchased";
+          if (subData.packageTitle) user.membershipTitle = subData.packageTitle;
+          if (user.plan && subData.status === "pending_review") {
+            user.needsPlanReview = true;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Firestore subscriptions collection fetch notice:", err);
+  }
+
+  // 4. Fetch live task completion logs from Firestore "user_logs" collection
+  try {
+    const logsSnap = await adminDb.collection("user_logs").get();
+    if (!logsSnap.empty) {
+      for (const doc of logsSnap.docs) {
+        const logData = doc.data() as TaskLogState;
+        const targetId = doc.id.includes("_") ? doc.id.split("_")[0] : doc.id;
+        const user = memoryStore.get(targetId) || memoryStore.get(doc.id);
+        if (user) {
+          user.taskLogs = { ...(user.taskLogs || {}), ...logData };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Firestore user_logs collection fetch notice:", err);
   }
 
   const users = Array.from(memoryStore.values());
@@ -732,13 +899,24 @@ export async function updateAdminUserPlan(
   }
 
   user.plan = updatedPlan;
+  if (updatedPlan.status === "approved" || updatedPlan.status === "active") {
+    user.needsPlanReview = false;
+  }
   memoryStore.set(userId, user);
 
-  // Sync to Firestore
+  // Sync to Firestore 'plans' and 'users' collections
   try {
     await adminDb.collection("plans").doc(userId).set(
       {
         ...updatedPlan,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    await adminDb.collection("users").doc(userId).set(
+      {
+        plan: updatedPlan,
+        needsPlanReview: updatedPlan.status === "pending_review",
         updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true }
@@ -774,9 +952,10 @@ export async function pushPlanToUserDashboard(
   };
 
   user.plan = updatedPlan;
+  user.needsPlanReview = false;
   memoryStore.set(userId, user);
 
-  // Write to Firestore plans collection so user dashboard immediately receives it
+  // Write to Firestore plans and users collection so user dashboard immediately receives it
   try {
     await adminDb.collection("plans").doc(userId).set(
       {
@@ -787,6 +966,23 @@ export async function pushPlanToUserDashboard(
       },
       { merge: true }
     );
+    await adminDb.collection("users").doc(userId).set(
+      {
+        plan: updatedPlan,
+        needsPlanReview: false,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    if (user.subscription) {
+      await adminDb.collection("subscriptions").doc(user.subscription.id).set(
+        {
+          status: "active",
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
   } catch (err) {
     console.warn("Firestore pushPlanToUserDashboard error:", err);
   }
@@ -807,6 +1003,47 @@ export interface RegisterPurchasedClientParams {
   biometrics?: Partial<UserBiometrics>;
   goal?: "fat-loss" | "weight-loss" | "muscle-gain" | "weight-gain";
   goalDisplay?: string;
+  medicalAssessment?: MedicalAssessment;
+  durationMonths?: number;
+  durationWeeks?: number;
+}
+
+export async function updateAdminUserMedicalAssessment(
+  userIdOrAssessmentId: string,
+  medical: MedicalAssessment
+): Promise<AdminUserRecord | null> {
+  ensureMemoryStore();
+  const existing =
+    memoryStore.get(userIdOrAssessmentId) ||
+    Array.from(memoryStore.values()).find(
+      (u) =>
+        u.id === userIdOrAssessmentId ||
+        u.plan?.assessmentId === userIdOrAssessmentId ||
+        u.plan?.id === userIdOrAssessmentId
+    );
+
+  if (!existing) return null;
+
+  existing.medicalAssessment = medical;
+  existing.needsPlanReview = true;
+  existing.plan.status = "pending_review";
+  existing.plan.medicalSummary = {
+    hasDisease: medical.hasDisease,
+    diseases: medical.diseases,
+    customDiseaseDescription: medical.customDiseaseDescription,
+    medications: medical.medications,
+    documentsCount: medical.documents.length,
+  };
+
+  if (medical.diseases.length > 0) {
+    existing.biometrics.medicalConditions = medical.diseases.join(", ");
+    if (medical.customDiseaseDescription) {
+      existing.biometrics.medicalConditions += ` (${medical.customDiseaseDescription})`;
+    }
+  }
+
+  memoryStore.set(existing.id, existing);
+  return existing;
 }
 
 export async function registerPurchasedClient(
@@ -815,9 +1052,37 @@ export async function registerPurchasedClient(
   ensureMemoryStore();
   const existing = memoryStore.get(params.userId) || memoryStore.get(params.assessmentId);
   const now = new Date().toISOString();
+  const durationWeeks = params.durationWeeks || (params.durationMonths ? params.durationMonths * 4 : 8);
+  const durationMonths = params.durationMonths || Math.max(1, Math.round(durationWeeks / 4));
+  const subId = `sub_${params.userId || params.assessmentId || Date.now()}`;
+
+  const subscription: UserSubscription = {
+    id: subId,
+    userId: params.userId || params.assessmentId || (existing?.id || `user_${Date.now()}`),
+    planId: params.assessmentId || (existing?.plan?.id || `plan_${Date.now()}`),
+    customerName: params.customerName || (existing ? existing.name : "Fit Member"),
+    customerEmail: params.customerEmail || (existing ? existing.email : undefined),
+    customerPhone: params.customerPhone || (existing ? existing.phone : undefined),
+    packageTitle: `${durationMonths}-Month (${durationWeeks} Weeks) Custom Transformation Plan`,
+    durationWeeks,
+    durationMonths,
+    status: "pending_review",
+    amountPaise: params.amountPaise,
+    amountFormatted: `₹${Math.round(params.amountPaise / 100)}`,
+    currency: "INR",
+    orderId: params.razorpayOrderId,
+    paymentId: params.razorpayPaymentId,
+    startDate: now,
+    endDate: new Date(Date.now() + durationWeeks * 7 * 24 * 3600 * 1000).toISOString(),
+    createdAt: now,
+    updatedAt: now,
+  };
 
   if (existing) {
     existing.membershipCategory = "purchased";
+    existing.membershipTitle = subscription.packageTitle;
+    existing.needsPlanReview = true;
+    existing.subscription = subscription;
     existing.order = {
       orderId: params.razorpayOrderId,
       razorpayPaymentId: params.razorpayPaymentId,
@@ -825,19 +1090,90 @@ export async function registerPurchasedClient(
       amountFormatted: `₹${Math.round(params.amountPaise / 100)}`,
       currency: "INR",
       status: "paid",
-      packageTitle: "8-Week Personalized Nutrition & Workout Plan",
-      durationWeeks: 8,
+      packageTitle: subscription.packageTitle,
+      durationWeeks,
       purchasedAt: now,
     };
     existing.plan.status = "pending_review";
+    existing.plan.weeksCount = durationWeeks;
+    existing.plan.monthsCount = durationMonths;
     if (params.customerName) existing.name = params.customerName;
     if (params.customerEmail) existing.email = params.customerEmail;
     if (params.customerPhone) existing.phone = params.customerPhone;
+    if (params.medicalAssessment) {
+      existing.medicalAssessment = params.medicalAssessment;
+      existing.plan.medicalSummary = {
+        hasDisease: params.medicalAssessment.hasDisease,
+        diseases: params.medicalAssessment.diseases,
+        customDiseaseDescription: params.medicalAssessment.customDiseaseDescription,
+        medications: params.medicalAssessment.medications,
+        documentsCount: params.medicalAssessment.documents.length,
+      };
+      if (params.medicalAssessment.diseases.length > 0) {
+        existing.biometrics.medicalConditions = params.medicalAssessment.diseases.join(", ");
+      }
+    }
     memoryStore.set(existing.id, existing);
+
+    // Sync to Firestore 'subscriptions', 'users', 'plans'
+    try {
+      await adminDb.collection("subscriptions").doc(subId).set(
+        {
+          ...subscription,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      await adminDb.collection("users").doc(existing.id).set(
+        {
+          membershipCategory: "purchased",
+          membershipTitle: subscription.packageTitle,
+          subscription,
+          plan: existing.plan,
+          needsPlanReview: true,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      await adminDb.collection("plans").doc(existing.plan.id || params.assessmentId || existing.id).set(
+        {
+          ...existing.plan,
+          status: "pending_review",
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.warn("Firestore sync registerPurchasedClient existing error:", err);
+    }
+
     return existing;
   }
 
   const id = params.userId || params.assessmentId || `user_${Date.now()}`;
+  const plan = generateDashboardPlan(params.assessmentId || id, {
+    customerName: params.customerName || "Fit Member",
+    goal: params.goal || "fat-loss",
+    weeksCount: durationWeeks,
+    monthsCount: durationMonths,
+    status: "pending_review",
+    bmi: params.biometrics?.bmi || 25.5,
+    bodyFatPercent: params.biometrics?.bodyFatPercent || 22.0,
+    calorieTarget: params.biometrics?.caloricTarget || 1850,
+    proteinTargetGrams: params.biometrics?.proteinTargetGrams || 130,
+    workoutDaysPerWeek: 4,
+    coachNotes: "NEW PURCHASE (₹99 Paid + Medical Assessment Submitted): Review health profile and medical docs to customize monthly training & nutrition.",
+    medicalSummary: params.medicalAssessment
+      ? {
+          hasDisease: params.medicalAssessment.hasDisease,
+          diseases: params.medicalAssessment.diseases,
+          customDiseaseDescription: params.medicalAssessment.customDiseaseDescription,
+          medications: params.medicalAssessment.medications,
+          documentsCount: params.medicalAssessment.documents.length,
+        }
+      : undefined,
+  });
+
   const newRecord: AdminUserRecord = {
     id,
     name: params.customerName || "Fit Member",
@@ -848,9 +1184,12 @@ export async function registerPurchasedClient(
     joinedAt: now,
     lastActive: "Active Now",
     membershipCategory: "purchased",
-    membershipTitle: "8-Week Personalized Nutrition & Workout Plan",
+    membershipTitle: subscription.packageTitle,
     goal: params.goal || "fat-loss",
-    goalDisplay: params.goalDisplay || "8-Week Custom Plan",
+    goalDisplay: params.goalDisplay || "Custom Tailored Plan",
+    needsPlanReview: true,
+    medicalAssessment: params.medicalAssessment,
+    subscription,
     biometrics: {
       gender: params.biometrics?.gender || "male",
       age: params.biometrics?.age || 28,
@@ -870,6 +1209,7 @@ export async function registerPurchasedClient(
       proteinTargetGrams: params.biometrics?.proteinTargetGrams || 130,
       activityLevel: params.biometrics?.activityLevel || "moderately-active",
       dietPreference: params.biometrics?.dietPreference || "vegetarian",
+      medicalConditions: params.medicalAssessment?.diseases.join(", ") || undefined,
       waterLitres: params.biometrics?.waterLitres || 3.5,
       dailyStepGoal: params.biometrics?.dailyStepGoal || 10000,
     },
@@ -880,31 +1220,45 @@ export async function registerPurchasedClient(
       amountFormatted: `₹${Math.round(params.amountPaise / 100)}`,
       currency: "INR",
       status: "paid",
-      packageTitle: "8-Week Personalized Nutrition & Workout Plan",
-      durationWeeks: 8,
+      packageTitle: subscription.packageTitle,
+      durationWeeks,
       purchasedAt: now,
     },
-    plan: generateDashboardPlan(params.assessmentId || id, {
-      customerName: params.customerName || "Fit Member",
-      goal: params.goal || "fat-loss",
-      weeksCount: 8,
-      status: "pending_review",
-      bmi: params.biometrics?.bmi || 25.5,
-      bodyFatPercent: params.biometrics?.bodyFatPercent || 22.0,
-      calorieTarget: params.biometrics?.caloricTarget || 1850,
-      proteinTargetGrams: params.biometrics?.proteinTargetGrams || 130,
-      workoutDaysPerWeek: 4,
-      coachNotes: "NEW PURCHASE (Verified via Razorpay): 8-Week plan generated in pending review status. Customize meal and workout split before pushing to client dashboard.",
-    }),
+    plan,
   };
 
   memoryStore.set(id, newRecord);
 
-  // Sync to Firestore if available
+  // Sync to Firestore collections: 'subscriptions', 'users', 'plans'
   try {
+    await adminDb.collection("subscriptions").doc(subId).set(
+      {
+        ...subscription,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    await adminDb.collection("users").doc(id).set(
+      {
+        uid: id,
+        id,
+        name: newRecord.name,
+        email: newRecord.email,
+        phone: newRecord.phone,
+        membershipCategory: "purchased",
+        membershipTitle: subscription.packageTitle,
+        subscription,
+        plan,
+        needsPlanReview: true,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
     await adminDb.collection("plans").doc(params.assessmentId || id).set(
       {
-        ...newRecord.plan,
+        ...plan,
         updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true }

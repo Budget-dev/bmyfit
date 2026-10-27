@@ -88,7 +88,7 @@ export default function AboutPage() {
                   Certified Fitness Coach &amp; Sports Nutritionist · Multi-Gym Founder
                 </p>
                 <p className="text-xs sm:text-sm text-ink-muted dark:text-surface-300 leading-relaxed">
-                  "Sustainable fitness isn't about starving or spending hours in the gym. It's about scientifically aligning your authentic Indian diet, structured progressive overload, and consistent daily habits."
+                  &ldquo;Sustainable fitness isn&apos;t about starving or spending hours in the gym. It&apos;s about scientifically aligning your authentic Indian diet, structured progressive overload, and consistent daily habits.&rdquo;
                 </p>
               </div>
             </div>

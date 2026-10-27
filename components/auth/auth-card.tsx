@@ -218,12 +218,12 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
 
   return (
     <div
-      className={`relative w-full max-w-md mx-auto bg-white/95 backdrop-blur-xl rounded-3xl border border-gray-100 shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-6 sm:p-8 text-left ${className}`}
+      className={`relative w-full max-w-md mx-auto bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-gray-100 shadow-[0_15px_40px_rgba(0,0,0,0.06)] p-4 sm:p-5 text-left ${className}`}
     >
       {/* Top Brand Header */}
-      <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#00c853]/20 via-[#00e676]/30 to-emerald-100 text-[#00c853] mb-3 shadow-inner">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+      <div className="text-center mb-3">
+        <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-tr from-[#00c853]/20 via-[#00e676]/30 to-emerald-100 text-[#00c853] mb-1 shadow-inner">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -231,18 +231,18 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
             />
           </svg>
         </div>
-        <h2 className="text-xl sm:text-2xl font-black text-gray-950 tracking-tight">
+        <h2 className="text-lg sm:text-xl font-black text-gray-950 tracking-tight leading-snug">
           {mode === "signup" ? "Create Your BMYFIT Account" : "Sign In to BMYFIT"}
         </h2>
-        <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
+        <p className="text-[11px] text-gray-500 mt-0.5 max-w-xs mx-auto line-clamp-1">
           {mode === "signup"
-            ? "Access your personalized nutrition & workout plan, tracked metrics & coach feedback."
+            ? "Access personalized nutrition, workout splits & coach check-ins."
             : "Continue your transformation and access your active weekly plan."}
         </p>
       </div>
 
       {/* Mode Switcher Tabs */}
-      <div className="grid grid-cols-2 p-1 bg-gray-100/90 rounded-2xl mb-6">
+      <div className="grid grid-cols-2 p-0.5 bg-gray-100/90 rounded-xl mb-3">
         <button
           type="button"
           onClick={() => {
@@ -250,9 +250,9 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
             setErrorMessage(null);
             setSuccessMessage(null);
           }}
-          className={`py-2 text-xs font-bold rounded-xl transition-all ${
+          className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
             mode === "signup"
-              ? "bg-white text-gray-950 shadow-sm"
+              ? "bg-white text-gray-950 shadow-xs"
               : "text-gray-500 hover:text-gray-900"
           }`}
         >
@@ -265,9 +265,9 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
             setErrorMessage(null);
             setSuccessMessage(null);
           }}
-          className={`py-2 text-xs font-bold rounded-xl transition-all ${
+          className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
             mode === "signin"
-              ? "bg-white text-gray-950 shadow-sm"
+              ? "bg-white text-gray-950 shadow-xs"
               : "text-gray-500 hover:text-gray-900"
           }`}
         >
@@ -277,20 +277,20 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
 
       {/* Alert Notices */}
       {errorMessage && (
-        <div className="mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-200/80 text-rose-800 text-xs flex items-start gap-2.5 animate-in fade-in duration-200">
-          <svg className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="mb-2.5 p-2 rounded-xl bg-rose-50 border border-rose-200/80 text-rose-800 text-xs flex items-start gap-2 animate-in fade-in duration-200">
+          <svg className="w-3.5 h-3.5 text-rose-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <div className="flex-1 font-medium">{errorMessage}</div>
+          <div className="flex-1 font-medium text-[11px]">{errorMessage}</div>
         </div>
       )}
 
       {successMessage && (
-        <div className="mb-4 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2.5 animate-in fade-in duration-200">
-          <svg className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="mb-2.5 p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2 animate-in fade-in duration-200">
+          <svg className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
           </svg>
-          <div className="flex-1 font-semibold">{successMessage}</div>
+          <div className="flex-1 font-semibold text-[11px]">{successMessage}</div>
         </div>
       )}
 
@@ -299,13 +299,13 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
         type="button"
         onClick={handleGoogleSignIn}
         disabled={googleLoading || loading}
-        className="w-full py-3 px-4 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-800 font-bold text-xs sm:text-sm rounded-2xl border border-gray-200/90 shadow-sm hover:shadow transition-all flex items-center justify-center gap-3 relative focus:outline-none focus:ring-2 focus:ring-[#00e676]/40 mb-4 disabled:opacity-60"
+        className="w-full py-2 px-3.5 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-800 font-bold text-xs rounded-xl border border-gray-200 shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-2.5 relative focus:outline-none mb-2.5 disabled:opacity-60 cursor-pointer"
         aria-label="Continue with Google"
       >
         {googleLoading ? (
-          <div className="w-4 h-4 border-2 border-gray-400 border-t-gray-800 rounded-full animate-spin" />
+          <div className="w-3.5 h-3.5 border-2 border-gray-400 border-t-gray-800 rounded-full animate-spin" />
         ) : (
-          <svg className="w-4 h-4" viewBox="0 0 24 24">
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
             <path
               fill="#4285F4"
               d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"
@@ -328,25 +328,25 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
       </button>
 
       {/* Divider */}
-      <div className="relative flex items-center justify-center my-4">
+      <div className="relative flex items-center justify-center my-2">
         <div className="border-t border-gray-200 w-full" />
-        <span className="bg-white px-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider relative">
+        <span className="bg-white px-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider relative">
           or with email
         </span>
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-3.5">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {mode === "signup" && (
           <>
             {/* Full Name Field */}
             <div>
-              <label htmlFor={nameId} className="block text-xs font-bold text-gray-800 mb-1">
+              <label htmlFor={nameId} className="block text-[11px] font-bold text-gray-800 mb-0.5">
                 Full Name <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -362,21 +362,20 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Rohit Sharma"
-                  className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#00e676] focus:ring-2 focus:ring-[#00e676]/20 transition-all font-medium"
+                  className="w-full pl-8 pr-3 py-1.5 sm:py-2 text-xs rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#00e676] focus:ring-1 focus:ring-[#00e676]/30 transition-all font-medium"
                 />
               </div>
             </div>
 
             {/* Phone & Age Side-by-Side */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <div className="grid grid-cols-12 gap-2">
               {/* Phone Field (7 cols) */}
-              <div className="sm:col-span-7">
-                <label htmlFor={phoneId} className="block text-xs font-bold text-gray-800 mb-1">
+              <div className="col-span-7">
+                <label htmlFor={phoneId} className="block text-[11px] font-bold text-gray-800 mb-0.5">
                   WhatsApp / Phone <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative flex items-center">
-                  <span className="absolute left-2.5 text-xs font-semibold text-gray-500 select-none flex items-center gap-1 bg-gray-200/60 px-1.5 py-0.5 rounded-md">
-                    <span>🇮🇳</span>
+                  <span className="absolute left-2 text-[10px] font-bold text-gray-500 select-none flex items-center gap-0.5 bg-gray-200/70 px-1 py-0.5 rounded">
                     <span>+91</span>
                   </span>
                   <input
@@ -387,27 +386,17 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="98201 44821"
                     maxLength={14}
-                    className="w-full pl-[4.5rem] pr-3 py-2.5 text-xs sm:text-sm rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#00e676] focus:ring-2 focus:ring-[#00e676]/20 transition-all font-medium"
+                    className="w-full pl-12 pr-2 py-1.5 sm:py-2 text-xs rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#00e676] focus:ring-1 focus:ring-[#00e676]/30 transition-all font-medium"
                   />
                 </div>
               </div>
 
               {/* Age Field (5 cols) */}
-              <div className="sm:col-span-5">
-                <label htmlFor={ageId} className="block text-xs font-bold text-gray-800 mb-1">
+              <div className="col-span-5">
+                <label htmlFor={ageId} className="block text-[11px] font-bold text-gray-800 mb-0.5">
                   Age <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
-                  </span>
                   <input
                     id={ageId}
                     type="number"
@@ -417,7 +406,7 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
                     placeholder="26"
-                    className="w-full pl-9 pr-2 py-2.5 text-xs sm:text-sm rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#00e676] focus:ring-2 focus:ring-[#00e676]/20 transition-all font-medium"
+                    className="w-full px-2.5 py-1.5 sm:py-2 text-xs rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#00e676] focus:ring-1 focus:ring-[#00e676]/30 transition-all font-medium text-center"
                   />
                 </div>
               </div>
@@ -427,12 +416,12 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
 
         {/* Email Field */}
         <div>
-          <label htmlFor={emailId} className="block text-xs font-bold text-gray-800 mb-1">
+          <label htmlFor={emailId} className="block text-[11px] font-bold text-gray-800 mb-0.5">
             Email Address <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -449,15 +438,15 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
               onChange={(e) => setEmail(e.target.value)}
               placeholder="client@bmyfit.in"
               autoComplete="email"
-              className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#00e676] focus:ring-2 focus:ring-[#00e676]/20 transition-all font-medium"
+              className="w-full pl-8 pr-3 py-1.5 sm:py-2 text-xs rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#00e676] focus:ring-1 focus:ring-[#00e676]/30 transition-all font-medium"
             />
           </div>
         </div>
 
         {/* Password Field */}
         <div>
-          <div className="flex items-center justify-between mb-1">
-            <label htmlFor={passwordId} className="block text-xs font-bold text-gray-800">
+          <div className="flex items-center justify-between mb-0.5">
+            <label htmlFor={passwordId} className="block text-[11px] font-bold text-gray-800">
               Password <span className="text-rose-500">*</span>
             </label>
             {mode === "signin" && (
@@ -467,15 +456,15 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
                   setResetEmail(email);
                   setIsResetOpen(true);
                 }}
-                className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 hover:underline"
+                className="text-[10px] font-semibold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
               >
-                Forgot password?
+                Forgot?
               </button>
             )}
           </div>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -492,17 +481,17 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
               onChange={(e) => setPassword(e.target.value)}
               placeholder={mode === "signup" ? "Create a secure password (min 6 chars)" : "••••••••"}
               autoComplete={mode === "signup" ? "new-password" : "current-password"}
-              className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#00e676] focus:ring-2 focus:ring-[#00e676]/20 transition-all font-medium"
+              className="w-full pl-8 pr-8 py-1.5 sm:py-2 text-xs rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#00e676] focus:ring-1 focus:ring-[#00e676]/30 transition-all font-medium"
             />
             {/* Show / Hide Toggle */}
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+              className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -511,7 +500,7 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
                   />
                 </svg>
               ) : (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -531,32 +520,32 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
 
           {/* Password Strength bar for signup */}
           {mode === "signup" && password && (
-            <div className="mt-1.5 flex items-center gap-2">
-              <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+            <div className="mt-1 flex items-center gap-1.5">
+              <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
                 <div
                   className={`h-full ${passwordStrength.color} transition-all duration-300`}
                   style={{ width: `${(passwordStrength.score / 3) * 100}%` }}
                 />
               </div>
-              <span className="text-[10px] font-semibold text-gray-500">{passwordStrength.label}</span>
+              <span className="text-[9px] font-semibold text-gray-500">{passwordStrength.label}</span>
             </div>
           )}
         </div>
 
         {/* Remember me & Terms */}
-        <div className="flex items-center justify-between text-xs pt-1">
-          <label className="flex items-center gap-2 cursor-pointer select-none text-gray-600">
+        <div className="flex items-center justify-between text-[11px] pt-0.5">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none text-gray-600">
             <input
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-3.5 h-3.5 text-[#00c853] rounded border-gray-300 focus:ring-[#00e676]"
+              className="w-3 h-3 text-[#00c853] rounded border-gray-300 focus:ring-[#00e676]"
             />
             <span>Remember me</span>
           </label>
           {mode === "signup" && (
             <span className="text-[10px] text-gray-400">
-              By joining, you agree to our{" "}
+              Agree to{" "}
               <Link href="/terms" className="underline hover:text-gray-700">
                 Terms
               </Link>
@@ -568,35 +557,35 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
         <button
           type="submit"
           disabled={loading || googleLoading}
-          className="w-full py-3.5 px-6 bg-gradient-to-r from-[#00e676] via-[#00c853] to-[#057a44] hover:from-[#00c864] hover:to-[#04683a] active:scale-[0.99] text-gray-950 font-black text-sm rounded-2xl shadow-[0_10px_25px_rgba(0,200,83,0.3)] transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full py-2.5 px-4 bg-gradient-to-r from-[#00e676] via-[#00c853] to-[#057a44] hover:from-[#00c864] hover:to-[#04683a] active:scale-[0.99] text-gray-950 font-black text-xs sm:text-sm rounded-xl shadow-[0_8px_20px_rgba(0,200,83,0.25)] transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
         >
           {loading ? (
             <div className="flex items-center gap-2 text-gray-950 font-bold">
-              <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
+              <div className="w-3.5 h-3.5 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
               <span>{mode === "signup" ? "Creating Account..." : "Signing In..."}</span>
             </div>
           ) : (
             <>
               <span>{mode === "signup" ? "Create BMYFIT Account" : "Sign In to BMYFIT"}</span>
-              <span className="text-base font-bold">→</span>
+              <span className="text-sm font-bold">→</span>
             </>
           )}
         </button>
       </form>
 
       {/* Dev Testing Sandbox Shortcut Button */}
-      <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+      <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between">
         <button
           type="button"
           onClick={handleSandboxDemoLogin}
-          className="text-[11px] font-semibold text-gray-500 hover:text-emerald-700 flex items-center gap-1.5 transition-colors"
+          className="text-[10px] font-semibold text-gray-500 hover:text-emerald-700 flex items-center gap-1 transition-colors cursor-pointer"
           title="Instant mock sign-in for testing without filling the form"
         >
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Quick Demo Sign-In (Local Testing)</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Quick Demo Sign-In</span>
         </button>
 
-        <span className="text-[10px] text-gray-400">SSL 256-Bit</span>
+        <span className="text-[9px] text-gray-400">SSL 256-Bit</span>
       </div>
 
       {/* Forgot Password Modal */}

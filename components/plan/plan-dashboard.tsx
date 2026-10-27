@@ -37,6 +37,7 @@ import type {
 import {
   getStoredTaskLogs,
   saveStoredTaskLog,
+  fetchFirebaseTaskLogs,
   calculateWeekProgress,
   calculateOverallProgress,
 } from "@/features/plan/dashboard-data";
@@ -68,12 +69,21 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
     initialPlan.status === "pending_review" && !isDevPreview
   );
 
-  // Load task completion state from localStorage
+  // Load task completion state from Firebase Firestore
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = getStoredTaskLogs(plan.id);
+    let active = true;
+    const stored = getStoredTaskLogs(plan.id);
+    if (Object.keys(stored).length > 0) {
       setTaskLogs(stored);
     }
+    void fetchFirebaseTaskLogs(plan.id).then((firebaseLogs) => {
+      if (active && Object.keys(firebaseLogs).length > 0) {
+        setTaskLogs(firebaseLogs);
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, [plan.id]);
 
   const selectedWeek: WeekPlanData =
@@ -183,27 +193,51 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
 
       {/* Coach Pending Review Banner (if plan is pending approval) */}
       {activeReviewMode && (
-        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white px-4 py-3 shadow-md">
+        <div className="bg-gradient-to-r from-amber-600 via-emerald-800 to-teal-900 text-white px-4 py-3.5 shadow-md border-b border-white/10">
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs sm:text-sm">
-            <div className="flex items-center gap-2.5 font-medium">
-              <Clock className="w-5 h-5 flex-shrink-0 animate-pulse text-amber-100" />
-              <span>
-                <strong>Coach Review in Progress:</strong> Head Coach {plan.coach?.name || "Coach Naveen (Blaze Gym Owner)"} is customizing your week-by-week meals and workout load.
-              </span>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 font-black">
+                <Clock className="w-5 h-5 flex-shrink-0 animate-pulse text-amber-300" />
+                <span>Clinical &amp; Coaching Review in Progress</span>
+                <span className="text-[10px] bg-amber-400/30 text-amber-100 px-2 py-0.5 rounded-full border border-amber-300/40">
+                  ₹99 Package Confirmed
+                </span>
+              </div>
+              <p className="text-xs text-white/90">
+                Coach Naveen &amp; clinical team are reviewing your submitted health conditions and medical reports
+                to calibrate nutrition &amp; progressive volume.
+              </p>
+              {plan.medicalSummary?.diseases && plan.medicalSummary.diseases.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-[11px]">
+                  <span className="text-white/70">Submitted Dossier:</span>
+                  {plan.medicalSummary.diseases.map((d, i) => (
+                    <span key={i} className="px-1.5 py-0.5 rounded bg-black/30 text-white font-bold">
+                      🩺 {d}
+                    </span>
+                  ))}
+                  {Boolean(
+                    plan.medicalSummary.documentsCount && plan.medicalSummary.documentsCount > 0
+                  ) && (
+                    <span className="px-1.5 py-0.5 rounded bg-white/20 text-white font-bold">
+                      📎 {plan.medicalSummary.documentsCount} Report(s) attached
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveReviewMode(false)}
-                className="bg-white text-gray-900 font-bold px-3 py-1.5 rounded-lg text-xs shadow-sm hover:bg-amber-50 transition"
+                className="bg-white text-gray-950 font-black px-3.5 py-2 rounded-xl text-xs shadow-sm hover:bg-emerald-50 transition"
               >
-                👉 Preview Active Dashboard
+                View Draft Schedule
               </button>
               <Link
-                href={`/admin/plans/${plan.id}`}
-                className="bg-amber-900/40 hover:bg-amber-900/60 text-white font-semibold px-3 py-1.5 rounded-lg text-xs transition"
+                href="/admin"
+                className="bg-emerald-400 hover:bg-emerald-300 text-gray-950 font-black px-3.5 py-2 rounded-xl text-xs transition"
               >
-                Admin Review & Approve
+                Admin Review &amp; Push
               </Link>
             </div>
           </div>
@@ -219,12 +253,15 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
             <div className="md:col-span-7 space-y-4">
               <div>
                 <h1 className="text-3xl sm:text-4xl lg:text-[42px] font-black tracking-tight leading-[1.1] text-gray-950">
-                  Your {plan.weeksCount}-Week
+                  Your{" "}
+                  {plan.monthsCount
+                    ? `${plan.monthsCount}-Month (${plan.weeksCount}-W)`
+                    : `${plan.weeksCount}-Week`}
                   <br />
                   <span className="text-[#00c853]">Personalized Plan</span>
                 </h1>
                 <p className="text-gray-500 text-sm mt-2.5 font-medium leading-relaxed max-w-md">
-                  Built around your body data and goal to help you get real results.
+                  Built around your body data and clinical health profile to help you achieve sustainable results.
                 </p>
               </div>
 

@@ -6,7 +6,7 @@ import type {
   BodyFatCategory,
   FitnessGoal,
 } from "./fitness";
-import type { PlanDashboardData, PlanStatus } from "./plan-dashboard";
+import type { PlanDashboardData, PlanStatus, TaskLogState } from "./plan-dashboard";
 
 export type MembershipCategory = "free" | "membership" | "purchased";
 
@@ -48,8 +48,51 @@ export interface UserPurchaseOrder {
   purchasedAt: string;
 }
 
+export interface UserSubscription {
+  id: string;
+  userId: string;
+  planId: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  packageTitle: string;
+  durationWeeks: number;
+  durationMonths: number;
+  status: "active" | "pending_review" | "expired" | "cancelled";
+  amountPaise: number;
+  amountFormatted: string;
+  currency: "INR";
+  orderId?: string;
+  paymentId?: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MedicalDocument {
+  id: string;
+  name: string;
+  type: string; // "pdf" | "image" | "doc"
+  sizeFormatted: string;
+  dataUrl?: string; // base64 representation or URL
+  fileUrl?: string; // interchangeable alias for document URL
+  uploadedAt: string;
+  category?: "blood_test" | "prescription" | "scans" | "other";
+}
+
+export interface MedicalAssessment {
+  hasDisease: boolean;
+  diseases: string[];
+  customDiseaseDescription?: string;
+  medications?: string;
+  documents: MedicalDocument[];
+  submittedAt: string;
+}
+
 export interface AdminUserRecord {
   id: string;
+  assessmentId?: string;
   name: string;
   email: string;
   phone: string;
@@ -63,7 +106,11 @@ export interface AdminUserRecord {
   goalDisplay: string;
   biometrics: UserBiometrics;
   order?: UserPurchaseOrder;
+  subscription?: UserSubscription;
   plan: PlanDashboardData;
+  medicalAssessment?: MedicalAssessment;
+  needsPlanReview?: boolean;
+  taskLogs?: TaskLogState;
 }
 
 export interface AdminStats {
@@ -73,5 +120,6 @@ export interface AdminStats {
   purchasedPlansCount: number;
   pendingReviewCount: number;
   approvedCount: number;
+  liveApprovedCount?: number;
   totalRevenueINR: number;
 }

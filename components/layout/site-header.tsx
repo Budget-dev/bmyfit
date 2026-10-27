@@ -328,28 +328,28 @@ export function SiteHeader() {
                     >
                       Home
                     </Link>
-                    <a
+                    <Link
                       href="/#calculator-card"
                       onClick={() => setIsMenuOpen(false)}
                       className="px-3 py-2 rounded-xl text-gray-800 hover:bg-emerald-50 hover:text-emerald-700 font-semibold transition-colors flex items-center justify-between"
                     >
                       <span>Body Calculator</span>
                       <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">FREE</span>
-                    </a>
-                    <a
+                    </Link>
+                    <Link
                       href="/#goals-section"
                       onClick={() => setIsMenuOpen(false)}
                       className="px-3 py-2 rounded-xl text-gray-800 hover:bg-emerald-50 hover:text-emerald-700 font-semibold transition-colors"
                     >
                       Fitness Goals
-                    </a>
-                    <a
+                    </Link>
+                    <Link
                       href="/#coach-section"
                       onClick={() => setIsMenuOpen(false)}
                       className="px-3 py-2 rounded-xl text-gray-800 hover:bg-emerald-50 hover:text-emerald-700 font-semibold transition-colors"
                     >
                       Meet Your Coach
-                    </a>
+                    </Link>
                     <Link
                       href="/about"
                       onClick={() => setIsMenuOpen(false)}

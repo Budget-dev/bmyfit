@@ -6,9 +6,15 @@ import type { AssessmentInput, FitnessGoal } from "@/types/fitness";
 import type { PlanDashboardData } from "@/types/plan-dashboard";
 import { PlanDashboard } from "@/components/plan/plan-dashboard";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
+import {
+  getStoredPlan,
+  fetchFirebasePlan,
+  getStoredAdminUsers,
+  getStoredMedicalConsultation,
+} from "@/lib/storage/mock-storage";
 
 export function PlanClient({ id }: { id: string }) {
-  const { getIdToken } = useAuth();
+  const { getIdToken, userProfile } = useAuth();
   const [dashboardPlan, setDashboardPlan] = useState<PlanDashboardData | null>(null);
   const [fetching, setFetching] = useState<boolean>(true);
 
@@ -16,7 +22,43 @@ export function PlanClient({ id }: { id: string }) {
     let isMounted = true;
 
     async function loadPlanData() {
-      // 1. Try local assessment from sessionStorage
+      // 0. If user is authenticated, check their UID first if looking at default / local plan
+      const targetPlanId = (id === "local" || id === "demo") && userProfile?.uid ? userProfile.uid : id;
+
+      // 1. First priority: Check Firebase Firestore direct plan
+      const storedDirectPlan =
+        getStoredPlan(targetPlanId) ||
+        (await fetchFirebasePlan(targetPlanId)) ||
+        (userProfile?.uid && targetPlanId !== userProfile.uid
+          ? getStoredPlan(userProfile.uid) || (await fetchFirebasePlan(userProfile.uid))
+          : null);
+
+      if (storedDirectPlan) {
+        if (isMounted) {
+          setDashboardPlan(storedDirectPlan);
+          setFetching(false);
+          return;
+        }
+      }
+
+      // Check stored admin users list (covers newly purchased users with customized months)
+      const storedAdminUsers = getStoredAdminUsers();
+      const matchedUser = storedAdminUsers.find(
+        (u) =>
+          u.id === targetPlanId ||
+          u.assessmentId === targetPlanId ||
+          (userProfile?.uid && (u.id === userProfile.uid || u.email === userProfile.email)) ||
+          (id === "local" && u.membershipCategory === "purchased")
+      );
+      if (matchedUser?.plan) {
+        if (isMounted) {
+          setDashboardPlan(matchedUser.plan);
+          setFetching(false);
+          return;
+        }
+      }
+
+      // 2. Try local assessment from sessionStorage
       let localAssessment: AssessmentInput | null = null;
       let isPaidLocal = false;
       let calculatedBmi = 24.2;
@@ -40,16 +82,20 @@ export function PlanClient({ id }: { id: string }) {
         console.warn("Local storage parse error:", err);
       }
 
+      const medicalData = getStoredMedicalConsultation(id);
+
       // If id is "local" or locally marked paid
       if (id === "local" || isPaidLocal) {
         const goal: FitnessGoal = localAssessment?.goal || "fat-loss";
         const generated = generateDashboardPlan(id || "local", {
-          status: "active",
+          status: isPaidLocal ? "pending_review" : "active",
           goal,
           bmi: calculatedBmi,
           bodyFatPercent: calculatedBodyFat,
           weeksCount: 8,
+          monthsCount: 2,
           customerName: "Fit Member",
+          medicalAssessment: medicalData || undefined,
         });
         if (isMounted) {
           setDashboardPlan(generated);
@@ -103,7 +149,7 @@ export function PlanClient({ id }: { id: string }) {
     return () => {
       isMounted = false;
     };
-  }, [id, getIdToken]);
+  }, [id, getIdToken, userProfile?.uid]);
 
   if (fetching || !dashboardPlan) {
     return (

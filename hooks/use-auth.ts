@@ -8,6 +8,7 @@ import type { UserProfile, SignupData, SigninData } from "@/types/auth";
 import {
   getStoredProfile,
   saveStoredProfile,
+  fetchFirebaseProfile,
   signInWithGoogle as authSignInWithGoogle,
   loginWithEmail as authLoginWithEmail,
   signupWithEmail as authSignupWithEmail,
@@ -45,19 +46,24 @@ export function useAuth() {
           const currentProfile = getStoredProfile();
           if (currentProfile) {
             setUserProfile(currentProfile);
-          } else if (!currentUser.isAnonymous) {
-            const newProfile: UserProfile = {
-              uid: currentUser.uid,
-              name: currentUser.displayName || "BMYFIT Athlete",
-              email: currentUser.email || "",
-              phone: currentUser.phoneNumber || "",
-              age: 28,
-              avatarUrl: currentUser.photoURL || undefined,
-              provider: currentUser.providerData[0]?.providerId === "google.com" ? "google" : "password",
-              createdAt: new Date().toISOString(),
-            };
-            saveStoredProfile(newProfile);
-            setUserProfile(newProfile);
+          } else {
+            const remoteProfile = await fetchFirebaseProfile(currentUser.uid);
+            if (remoteProfile && isMounted) {
+              setUserProfile(remoteProfile);
+            } else if (!currentUser.isAnonymous && isMounted) {
+              const newProfile: UserProfile = {
+                uid: currentUser.uid,
+                name: currentUser.displayName || "BMYFIT Athlete",
+                email: currentUser.email || "",
+                phone: currentUser.phoneNumber || "",
+                age: 28,
+                avatarUrl: currentUser.photoURL || undefined,
+                provider: currentUser.providerData[0]?.providerId === "google.com" ? "google" : "password",
+                createdAt: new Date().toISOString(),
+              };
+              saveStoredProfile(newProfile);
+              setUserProfile(newProfile);
+            }
           }
           setLoading(false);
         } else {

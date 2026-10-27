@@ -54,6 +54,7 @@ export interface PlanDashboardData {
   assessmentId: string;
   customerName: string;
   weeksCount: number; // e.g. 8 (dynamic: can be 4, 8, 12, 16 etc.)
+  monthsCount?: number; // e.g. 1, 2, 3, 6, 12 months
   status: PlanStatus;
   goal: FitnessGoal;
   goalDisplay: string; // e.g. "Fat Loss"
@@ -73,6 +74,15 @@ export interface PlanDashboardData {
   createdAt: string;
   approvedAt?: string;
   coachNotes?: string;
+  waterLitres?: number;
+  dailyStepGoal?: number;
+  medicalSummary?: {
+    hasDisease: boolean;
+    diseases: string[];
+    customDiseaseDescription?: string;
+    medications?: string;
+    documentsCount?: number;
+  };
 }
 
 export interface TaskLogState {

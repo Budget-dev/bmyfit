@@ -6,14 +6,36 @@ import { useRouter } from "next/navigation";
 import { SiteHeader } from "@/components/layout/site-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { useAuth } from "@/hooks/use-auth";
+import { getStoredProfile } from "@/features/auth/auth-service";
 import { useRazorpay } from "@/hooks/use-razorpay";
 import { APP_CONFIG } from "@/lib/config";
 import type { VerifyPaymentRequest } from "@/types/payment";
+import type { MedicalDocument, MedicalAssessment, AdminUserRecord } from "@/types/admin";
+import {
+  saveStoredMedicalConsultation,
+  upsertStoredAdminUser,
+  SAMPLE_MEDICAL_DOCS,
+} from "@/lib/storage/mock-storage";
+import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 
 export interface CheckoutClientProps {
   id?: string;
   assessmentId?: string;
 }
+
+const DISEASE_OPTIONS = [
+  { id: "diabetes", label: "Diabetes (Type 1 / 2)", icon: "🩺" },
+  { id: "bp", label: "Hypertension / High BP", icon: "💓" },
+  { id: "thyroid", label: "Thyroid (Hypo / Hyper)", icon: "🦋" },
+  { id: "pcod", label: "PCOD / PCOS", icon: "🌸" },
+  { id: "asthma", label: "Asthma / Respiratory", icon: "🫁" },
+  { id: "back", label: "Lower Back / Spine issue", icon: "🦴" },
+  { id: "joints", label: "Knee / Joint Pain", icon: "🦵" },
+  { id: "heart", label: "Heart / Cardio issue", icon: "🫀" },
+  { id: "liver", label: "Fatty Liver / Cholesterol", icon: "🧪" },
+  { id: "allergies", label: "Food Allergies / Celiac", icon: "🌾" },
+  { id: "none", label: "None / Completely Healthy", icon: "✅" },
+];
 
 export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutClientProps) {
   const router = useRouter();
@@ -21,10 +43,20 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
   const { getIdToken } = useAuth();
   const { openCheckout } = useRazorpay();
 
+  const [funnelStep, setFunnelStep] = useState<"payment" | "medical_questionnaire" | "medical_submitted">("payment");
   const [selectedMethod, setSelectedMethod] = useState<"upi" | "card" | "netbanking">("upi");
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "creating" | "verifying" | "failed">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+
+  // Post-payment Medical Dossier & Documents State
+  const [hasDisease, setHasDisease] = useState<boolean | null>(null);
+  const [selectedDiseases, setSelectedDiseases] = useState<string[]>([]);
+  const [customDiseaseDescription, setCustomDiseaseDescription] = useState<string>("");
+  const [medications, setMedications] = useState<string>("");
+  const [uploadedDocuments, setUploadedDocuments] = useState<MedicalDocument[]>([]);
+  const [previewDoc, setPreviewDoc] = useState<MedicalDocument | null>(null);
+  const [isSubmittingMedical, setIsSubmittingMedical] = useState<boolean>(false);
 
   // Customer contact state for receipt & coach connection
   const [customerDetails, setCustomerDetails] = useState({
@@ -45,19 +77,14 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
 
   useEffect(() => {
     try {
-      const rawUser =
-        (typeof window !== "undefined" && localStorage.getItem("bmyfit_user_profile")) ||
-        sessionStorage.getItem("bmyfit_user_profile");
-      if (rawUser) {
-        const u = JSON.parse(rawUser);
-        if (u.name) {
-          setCustomerDetails((prev) => ({
-            ...prev,
-            name: u.name || prev.name,
-            email: u.email || prev.email,
-            phone: u.phone || prev.phone,
-          }));
-        }
+      const u = getStoredProfile();
+      if (u && u.name) {
+        setCustomerDetails((prev) => ({
+          ...prev,
+          name: u.name || prev.name,
+          email: u.email || prev.email,
+          phone: u.phone || prev.phone,
+        }));
       }
 
       const raw = sessionStorage.getItem("bmyfit_local_assessment");
@@ -72,8 +99,243 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
           }));
         }
       }
-    } catch {}
+    } catch (e) {
+      console.warn("Could not load stored user profile", e);
+    }
   }, []);
+
+  const handlePaymentSuccessPostProcess = (paymentId?: string, orderId?: string) => {
+    sessionStorage.setItem("bmyfit_local_paid", "true");
+    try {
+      const raw = sessionStorage.getItem("bmyfit_local_assessment");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        parsed.isPaid = true;
+        sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(parsed));
+      }
+    } catch {}
+
+    const now = new Date().toISOString();
+    const initialRecord: AdminUserRecord = {
+      id: assessmentId,
+      name: customerDetails.name,
+      email: customerDetails.email,
+      phone: customerDetails.phone,
+      city: "Online Client",
+      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
+      joinedAt: now,
+      lastActive: "Active Now",
+      membershipCategory: "purchased",
+      membershipTitle: "2-Month (8 Weeks) Custom Plan",
+      goal: "fat-loss",
+      goalDisplay: "Fat Loss & Metabolic Reset",
+      needsPlanReview: true,
+      biometrics: {
+        gender: "male",
+        age: 28,
+        heightCm: 175,
+        weightKg: 78,
+        targetWeightKg: 70,
+        waistIn: 34,
+        neckIn: 15.5,
+        bmi: 25.5,
+        bmiCategory: "overweight",
+        bodyFatPercent: 22.0,
+        bodyFatCategory: "average",
+        bmr: 1720,
+        tdee: 2380,
+        caloricTarget: 1850,
+        proteinTargetGrams: 130,
+        activityLevel: "moderately-active",
+        dietPreference: "vegetarian",
+        waterLitres: 3.5,
+        dailyStepGoal: 10000,
+      },
+      order: {
+        orderId: orderId || `ord_${Date.now()}`,
+        razorpayPaymentId: paymentId || `pay_${Date.now()}`,
+        amountPaise: 9900,
+        amountFormatted: "₹99",
+        currency: "INR",
+        status: "paid",
+        packageTitle: "Custom Plan (₹99 Assessment)",
+        durationWeeks: 8,
+        purchasedAt: now,
+      },
+      plan: generateDashboardPlan(assessmentId, {
+        customerName: customerDetails.name,
+        weeksCount: 8,
+        monthsCount: 2,
+        status: "pending_review",
+        coachNotes: "NEW ₹99 PURCHASE: Client submitted payment. Awaiting health dossier.",
+      }),
+    };
+    upsertStoredAdminUser(initialRecord);
+    setFunnelStep("medical_questionnaire");
+  };
+
+  const handleToggleDisease = (diseaseLabel: string) => {
+    if (diseaseLabel.includes("None")) {
+      setSelectedDiseases(["None / Completely Healthy"]);
+      setHasDisease(false);
+      return;
+    }
+    setHasDisease(true);
+    setSelectedDiseases((prev) => {
+      const filtered = prev.filter((d) => !d.includes("None"));
+      if (filtered.includes(diseaseLabel)) {
+        return filtered.filter((d) => d !== diseaseLabel);
+      }
+      return [...filtered, diseaseLabel];
+    });
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        const newDoc: MedicalDocument = {
+          id: `doc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          name: file.name,
+          type: file.type.includes("pdf") ? "pdf" : "image",
+          sizeFormatted: `${Math.max(1, Math.round(file.size / 1024))} KB`,
+          dataUrl,
+          uploadedAt: new Date().toISOString(),
+          category: file.name.toLowerCase().includes("blood")
+            ? "blood_test"
+            : file.name.toLowerCase().includes("rx") || file.name.toLowerCase().includes("prescription")
+            ? "prescription"
+            : "other",
+        };
+        setUploadedDocuments((prev) => [...prev, newDoc]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleAddSampleDoc = (sample: (typeof SAMPLE_MEDICAL_DOCS)[0]) => {
+    const newDoc: MedicalDocument = {
+      ...sample,
+      id: `doc_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+      uploadedAt: new Date().toISOString(),
+    };
+    setUploadedDocuments((prev) => [...prev, newDoc]);
+  };
+
+  const handleRemoveDoc = (docId: string) => {
+    setUploadedDocuments((prev) => prev.filter((d) => d.id !== docId));
+  };
+
+  const handleSubmitMedical = async () => {
+    try {
+      setIsSubmittingMedical(true);
+      const isHealthy = hasDisease === false || selectedDiseases.some((d) => d.includes("None"));
+      const diseases = isHealthy ? [] : selectedDiseases;
+
+      const medicalData: MedicalAssessment = {
+        hasDisease: !isHealthy && diseases.length > 0,
+        diseases: isHealthy ? ["None / Completely Healthy"] : diseases,
+        customDiseaseDescription: customDiseaseDescription.trim() || undefined,
+        medications: medications.trim() || undefined,
+        documents: uploadedDocuments,
+        submittedAt: new Date().toISOString(),
+      };
+
+      // 1. Store directly in Firebase Firestore
+      saveStoredMedicalConsultation(assessmentId, medicalData);
+
+      // 2. Sync to Firebase user record
+      const now = new Date().toISOString();
+      const updatedRecord: AdminUserRecord = {
+        id: assessmentId,
+        name: customerDetails.name,
+        email: customerDetails.email,
+        phone: customerDetails.phone,
+        city: "Online Client",
+        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
+        joinedAt: now,
+        lastActive: "Active Now",
+        membershipCategory: "purchased",
+        membershipTitle: "Custom Transformation Plan",
+        goal: "fat-loss",
+        goalDisplay: "Fat Loss & Metabolic Reset",
+        needsPlanReview: true,
+        medicalAssessment: medicalData,
+        biometrics: {
+          gender: "male",
+          age: 28,
+          heightCm: 175,
+          weightKg: 78,
+          targetWeightKg: 70,
+          waistIn: 34,
+          neckIn: 15.5,
+          bmi: 25.5,
+          bmiCategory: "overweight",
+          bodyFatPercent: 22.0,
+          bodyFatCategory: "average",
+          bmr: 1720,
+          tdee: 2380,
+          caloricTarget: 1850,
+          proteinTargetGrams: 130,
+          activityLevel: "moderately-active",
+          dietPreference: "vegetarian",
+          medicalConditions: diseases.length > 0 ? diseases.join(", ") : "None reported",
+          waterLitres: 3.5,
+          dailyStepGoal: 10000,
+        },
+        order: {
+          orderId: `ord_${Date.now()}`,
+          razorpayPaymentId: `pay_${Date.now()}`,
+          amountPaise: 9900,
+          amountFormatted: "₹99",
+          currency: "INR",
+          status: "paid",
+          packageTitle: "Custom Plan (₹99 Assessment)",
+          durationWeeks: 8,
+          purchasedAt: now,
+        },
+        plan: generateDashboardPlan(assessmentId, {
+          customerName: customerDetails.name,
+          weeksCount: 8,
+          monthsCount: 2,
+          status: "pending_review",
+          coachNotes: "NEW ₹99 PURCHASE: Client submitted health dossier and medical reports. Review documents before pushing plan.",
+          medicalSummary: {
+            hasDisease: medicalData.hasDisease,
+            diseases: medicalData.diseases,
+            customDiseaseDescription: medicalData.customDiseaseDescription,
+            medications: medicalData.medications,
+            documentsCount: medicalData.documents.length,
+          },
+        }),
+      };
+      upsertStoredAdminUser(updatedRecord);
+
+      // 3. Post to backend API
+      await fetch("/api/assessment/medical-consultation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assessmentId,
+          hasDisease: medicalData.hasDisease,
+          diseases: medicalData.diseases,
+          customDiseaseDescription: medicalData.customDiseaseDescription,
+          medications: medicalData.medications,
+          documents: medicalData.documents,
+        }),
+      }).catch((err) => console.warn("Medical API sync warning (offline ok):", err));
+
+      setFunnelStep("medical_submitted");
+    } catch (err) {
+      console.error("Submit medical error:", err);
+    } finally {
+      setIsSubmittingMedical(false);
+    }
+  };
 
   const handlePay = async () => {
     try {
@@ -162,17 +424,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
               );
             }
 
-            sessionStorage.setItem("bmyfit_local_paid", "true");
-            try {
-              const raw = sessionStorage.getItem("bmyfit_local_assessment");
-              if (raw) {
-                const parsed = JSON.parse(raw);
-                parsed.isPaid = true;
-                sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(parsed));
-              }
-            } catch {}
-
-            router.push(`/plan/${assessmentId}`);
+            handlePaymentSuccessPostProcess(response.razorpay_payment_id, response.razorpay_order_id);
           } catch (verifyErr) {
             setPaymentStatus("failed");
             setErrorMessage(
@@ -233,18 +485,8 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         throw new Error(verifyErr.error?.message || "Server verification failed.");
       }
 
-      sessionStorage.setItem("bmyfit_local_paid", "true");
-      try {
-        const raw = sessionStorage.getItem("bmyfit_local_assessment");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          parsed.isPaid = true;
-          sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(parsed));
-        }
-      } catch {}
-
       setSandboxOrder(null);
-      router.push(`/plan/${assessmentId}`);
+      handlePaymentSuccessPostProcess(paymentId, sandboxOrder.orderId);
     } catch (err) {
       setPaymentStatus("failed");
       setErrorMessage(err instanceof Error ? err.message : "Sandbox verification error");
@@ -290,6 +532,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-md mx-auto w-full px-3 pt-1 pb-16 flex flex-col justify-between">
+        {funnelStep === "payment" && (
         <div>
           {/* Subtitle & 4-Step Stepper Bar */}
           <div className="flex items-center justify-between gap-1 pt-0.5 pb-1">
@@ -807,7 +1050,326 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
             </div>
           </div>
         </div>
+        )}
+
+        {/* Medical & Clinical Questionnaire Step (After ₹99 Payment) */}
+        {funnelStep === "medical_questionnaire" && (
+          <div className="space-y-4 pt-1 animate-fade-in">
+            {/* Header & Status Indicator */}
+            <div className="flex items-center justify-between gap-1 pb-1">
+              <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-[#00c853]">
+                STEP 5: MEDICAL ASSESSMENT
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black text-[9px]">
+                ✓ ₹99 PAID (RECEIPT #BMY99)
+              </span>
+            </div>
+
+            {/* Title Banner */}
+            <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/80 rounded-2xl p-3.5 space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🩺</span>
+                <h1 className="text-sm font-black text-gray-900 leading-tight">
+                  Medical &amp; Clinical Health Dossier
+                </h1>
+              </div>
+              <p className="text-[10px] text-gray-600 leading-relaxed">
+                Before Coach Naveen and our clinical nutritionist design your customized transformation plan, please let us know if you have any existing diseases or injuries, and upload your lab reports.
+              </p>
+            </div>
+
+            {/* Section 1: Diseases / Medical Conditions */}
+            <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black text-gray-900 flex items-center gap-1.5">
+                  <span>1. Do you have any existing diseases or health conditions?</span>
+                </label>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Required</span>
+              </div>
+
+              {/* Disease Chips Grid */}
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                {DISEASE_OPTIONS.map((item) => {
+                  const isSelected = selectedDiseases.includes(item.label);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleToggleDisease(item.label)}
+                      className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all flex items-center gap-2 ${
+                        isSelected
+                          ? "bg-emerald-600 text-white border-emerald-600 shadow-xs scale-[1.01]"
+                          : "bg-gray-50/80 hover:bg-gray-100 border-gray-200 text-gray-800"
+                      }`}
+                    >
+                      <span className="text-base">{item.icon}</span>
+                      <span className="text-[11px] leading-tight">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Specific notes or medications input */}
+              <div className="pt-2 space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-700 block">
+                  Describe symptoms, doctor advice, or ongoing medications (Optional):
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Taking Thyronorm 50mcg daily morning; mild lower back pain on heavy squats; avoid high sodium..."
+                  value={customDiseaseDescription}
+                  onChange={(e) => setCustomDiseaseDescription(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50/40"
+                />
+              </div>
+            </div>
+
+            {/* Section 2: Upload Medical Documents & Lab Reports */}
+            <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-black text-gray-900 flex items-center gap-1.5">
+                    <span>2. Upload Medical Reports &amp; Doctor Notes</span>
+                  </h3>
+                  <p className="text-[10px] text-gray-500">
+                    Blood tests, Thyroid profile, Prescription, Spine/MRI scan (PDF or Images)
+                  </p>
+                </div>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                  {uploadedDocuments.length} Attached
+                </span>
+              </div>
+
+              {/* Upload Dropzone */}
+              <label className="border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-gray-50/60 hover:bg-emerald-50/30 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors text-center group">
+                <div className="w-10 h-10 rounded-full bg-white shadow-xs flex items-center justify-center text-emerald-600 mb-2 group-hover:scale-105 transition-transform text-xl">
+                  📁
+                </div>
+                <span className="text-xs font-black text-gray-900">
+                  Tap to upload medical reports &amp; prescriptions
+                </span>
+                <span className="text-[10px] text-gray-400 mt-0.5">
+                  Supports PDF, PNG, JPG (Synced securely with Firebase)
+                </span>
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,image/*,.doc,.docx"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+
+              {/* Quick sample test documents for instant testing */}
+              <div className="pt-1 space-y-1.5">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
+                  Quick Testing Presets (1-Click Sample Reports):
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleAddSampleDoc(SAMPLE_MEDICAL_DOCS[0])}
+                    className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200 transition"
+                  >
+                    + Blood Test (Lipid/CBC)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddSampleDoc(SAMPLE_MEDICAL_DOCS[1])}
+                    className="px-2.5 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 text-[10px] font-bold border border-teal-200 transition"
+                  >
+                    + Thyroid Report (TSH)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddSampleDoc(SAMPLE_MEDICAL_DOCS[2])}
+                    className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 text-[10px] font-bold border border-blue-200 transition"
+                  >
+                    + Spine Clearance Note
+                  </button>
+                </div>
+              </div>
+
+              {/* Uploaded Documents List */}
+              {uploadedDocuments.length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-gray-100">
+                  <span className="text-[11px] font-bold text-gray-700 block">
+                    Attached Documents ({uploadedDocuments.length}):
+                  </span>
+                  <div className="space-y-1.5">
+                    {uploadedDocuments.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs"
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <span className="text-base">{doc.type === "pdf" ? "📑" : "🖼️"}</span>
+                          <div className="truncate">
+                            <p className="font-bold text-gray-900 truncate text-[11px]">{doc.name}</p>
+                            <p className="text-[9.5px] text-gray-400">{doc.sizeFormatted} · Uploaded</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {doc.dataUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewDoc(doc)}
+                              className="px-2 py-1 rounded-md bg-white border border-gray-200 text-[10px] font-bold text-gray-700 hover:bg-gray-100"
+                            >
+                              Preview
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDoc(doc.id)}
+                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md text-[11px]"
+                            title="Remove document"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Submit Action */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleSubmitMedical}
+                disabled={isSubmittingMedical || selectedDiseases.length === 0}
+                className="w-full py-3 px-4 rounded-xl bg-[#00c853] hover:bg-[#00b047] active:bg-[#00963d] disabled:opacity-50 text-white font-black text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+              >
+                {isSubmittingMedical ? (
+                  <span>Registering Dossier &amp; Notifying Coach...</span>
+                ) : (
+                  <span>✓ Submit Health Dossier to Head Coach</span>
+                )}
+              </button>
+              <p className="text-[9.5px] text-center text-gray-400 mt-2">
+                🔒 Stored securely in your private dossier. Head Coach will review these medical inputs before assigning your custom plan.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Medical Submitted Confirmation Screen */}
+        {funnelStep === "medical_submitted" && (
+          <div className="space-y-5 pt-3 text-center animate-fade-in">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner text-3xl">
+              🩺
+            </div>
+
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+                MEDICAL DOSSIER REGISTERED · COACH NOTIFIED
+              </span>
+              <h2 className="text-xl font-black text-gray-950 mt-2">
+                Health Assessment Submitted!
+              </h2>
+              <p className="text-xs text-gray-600 max-w-sm mx-auto mt-1 leading-relaxed">
+                Thank you, <strong>{customerDetails.name}</strong>! Your medical assessment and {uploadedDocuments.length} uploaded report(s) are now with Head Coach Naveen &amp; our clinical team.
+              </p>
+            </div>
+
+            {/* Summary Card */}
+            <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200 text-left space-y-2 max-w-sm mx-auto text-xs">
+              <div className="flex items-center justify-between pb-1.5 border-b border-gray-200">
+                <span className="text-gray-500 font-bold">Status:</span>
+                <span className="font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md text-[10px]">
+                  Pending Coach Plan Review
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-gray-100">
+                <span className="text-gray-500">Reported Condition(s):</span>
+                <span className="font-bold text-gray-900">
+                  {selectedDiseases.join(", ") || "None / Healthy"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-gray-100">
+                <span className="text-gray-500">Attached Reports:</span>
+                <span className="font-bold text-emerald-700">
+                  {uploadedDocuments.length} Document(s) Uploaded
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-gray-500">Assigned Head Coach:</span>
+                <span className="font-bold text-gray-900">Coach Naveen (Blaze Gym)</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                onClick={() => router.push(`/plan/${assessmentId}`)}
+                className="w-full py-3 px-4 rounded-xl bg-[#00c853] hover:bg-[#00b047] text-white font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>View My Plan Dashboard</span>
+                <span>→</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => router.push("/admin")}
+                className="w-full py-2.5 px-3 rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-bold text-xs transition cursor-pointer"
+              >
+                Switch to Coach Admin Console (Review &amp; Push Plan)
+              </button>
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* Document Full Preview Modal */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/70 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+              <div className="truncate">
+                <h4 className="font-bold text-gray-900 text-sm truncate">{previewDoc.name}</h4>
+                <p className="text-[10px] text-gray-400">
+                  {previewDoc.sizeFormatted} &bull; {previewDoc.category || "Medical Report"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewDoc(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {previewDoc.type === "image" && previewDoc.dataUrl ? (
+              <img
+                src={previewDoc.dataUrl}
+                alt={previewDoc.name}
+                className="w-full rounded-xl max-h-96 object-contain bg-gray-50 border border-gray-100"
+              />
+            ) : (
+              <div className="p-8 rounded-xl bg-emerald-50/70 border border-emerald-200 text-center space-y-2">
+                <span className="text-4xl block">📑</span>
+                <p className="font-bold text-xs text-gray-900">PDF Medical Document</p>
+                <p className="text-[11px] text-gray-500 font-mono">{previewDoc.name}</p>
+                <p className="text-[10px] text-emerald-800 font-semibold">
+                  Saved securely to local storage &bull; Ready for Clinical Review
+                </p>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setPreviewDoc(null)}
+              className="w-full py-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold transition cursor-pointer"
+            >
+              Close Preview
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Razorpay Development Sandbox Modal for Local Offline Testing */}
       {sandboxOrder && (

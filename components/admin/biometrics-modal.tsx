@@ -16,7 +16,7 @@ import {
   ShieldCheck,
   CreditCard,
 } from "@/components/ui/icons";
-import type { AdminUserRecord } from "@/types/admin";
+import type { AdminUserRecord, MedicalDocument } from "@/types/admin";
 
 interface BiometricsModalProps {
   user: AdminUserRecord | null;
@@ -31,9 +31,11 @@ export function BiometricsModal({
   onOpenPlanStudio,
   onPushToUser,
 }: BiometricsModalProps) {
+  const [previewDoc, setPreviewDoc] = React.useState<MedicalDocument | null>(null);
+
   if (!user) return null;
 
-  const { biometrics, order, plan } = user;
+  const { biometrics, order, plan, medicalAssessment } = user;
   const isPending = plan.status === "pending_review";
   const weightDelta = (biometrics.weightKg - biometrics.targetWeightKg).toFixed(1);
 
@@ -303,6 +305,112 @@ export function BiometricsModal({
             )}
           </div>
 
+          {/* Section: Clinical Health Dossier & Uploaded Medical Documents */}
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/60 border border-emerald-200/80 space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center gap-2">
+                <span className="text-base">🩺</span>
+                <span>Clinical Health Dossier &amp; Medical Reports</span>
+              </h4>
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  medicalAssessment?.hasDisease
+                    ? "bg-amber-100 text-amber-900 border border-amber-200"
+                    : "bg-emerald-100 text-emerald-900 border border-emerald-200"
+                }`}
+              >
+                {medicalAssessment?.hasDisease
+                  ? "⚠️ Medical Conditions Reported"
+                  : "✓ No Pre-Existing Disease"}
+              </span>
+            </div>
+
+            {/* Reported Diseases Chips */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-gray-700 block">
+                Reported Medical Conditions / Diseases:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {medicalAssessment?.diseases && medicalAssessment.diseases.length > 0 ? (
+                  medicalAssessment.diseases.map((dis, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2.5 py-1 rounded-lg bg-white border border-emerald-300 text-emerald-900 text-xs font-bold shadow-2xs flex items-center gap-1"
+                    >
+                      <span>•</span>
+                      <span>{dis}</span>
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-gray-500 italic">None reported</span>
+                )}
+              </div>
+            </div>
+
+            {/* Doctor notes or medications */}
+            {(medicalAssessment?.customDiseaseDescription || medicalAssessment?.medications) && (
+              <div className="p-3.5 rounded-xl bg-white/90 border border-gray-200/80 space-y-2 text-xs">
+                {medicalAssessment.customDiseaseDescription && (
+                  <div>
+                    <span className="font-bold text-gray-500 text-[10px] uppercase block">
+                      Client Symptoms &amp; Doctor Advice:
+                    </span>
+                    <p className="text-gray-900 mt-0.5">{medicalAssessment.customDiseaseDescription}</p>
+                  </div>
+                )}
+                {medicalAssessment.medications && (
+                  <div className="pt-1 border-t border-gray-100">
+                    <span className="font-bold text-gray-500 text-[10px] uppercase block">
+                      Active Medications:
+                    </span>
+                    <p className="text-gray-900 mt-0.5 font-mono text-[11px]">{medicalAssessment.medications}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Attached Medical Documents Gallery */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-gray-700">
+                  Attached Medical Documents ({medicalAssessment?.documents?.length || 0}):
+                </span>
+                <span className="text-[10px] text-gray-400">Click to view &amp; inspect</span>
+              </div>
+
+              {medicalAssessment?.documents && medicalAssessment.documents.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {medicalAssessment.documents.map((doc) => (
+                    <div
+                      key={doc.id}
+                      onClick={() => setPreviewDoc(doc)}
+                      className="p-3 rounded-xl bg-white border border-gray-200 hover:border-emerald-500 hover:shadow-xs transition cursor-pointer flex items-center justify-between gap-2"
+                    >
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center text-sm shrink-0">
+                          {doc.type === "pdf" ? "📑" : "🖼️"}
+                        </div>
+                        <div className="truncate">
+                          <p className="font-bold text-gray-900 text-xs truncate">{doc.name}</p>
+                          <p className="text-[10px] text-gray-400">
+                            {doc.sizeFormatted} &bull; {doc.category || "Lab Report"}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded shrink-0">
+                        View
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-gray-50/80 border border-gray-200 text-center text-xs text-gray-400">
+                  No medical reports attached yet for this client.
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Section: Purchase & Order Info (if available) */}
           {order && (
             <div className="p-5 rounded-2xl bg-gray-50 border border-gray-200/80 space-y-2">
@@ -374,6 +482,94 @@ export function BiometricsModal({
             )}
           </div>
         </div>
+        {/* Document Preview Inspector Modal */}
+        {previewDoc && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+            <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3.5 bg-gray-900 text-white">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{previewDoc.type === "pdf" ? "📑" : "🖼️"}</span>
+                  <div>
+                    <h5 className="font-bold text-sm truncate max-w-md">{previewDoc.name}</h5>
+                    <p className="text-[10px] text-gray-400">
+                      {previewDoc.sizeFormatted} &bull; {previewDoc.category || "Clinical Document"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDoc(null)}
+                  className="p-1 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 max-h-[70vh] overflow-y-auto bg-gray-50 flex flex-col items-center justify-center">
+                {previewDoc.fileUrl?.startsWith("data:image") ? (
+                  <img
+                    src={previewDoc.fileUrl}
+                    alt={previewDoc.name}
+                    className="max-h-[60vh] max-w-full rounded-lg shadow-md object-contain"
+                  />
+                ) : (
+                  <div className="w-full bg-white rounded-xl p-6 border border-gray-200 shadow-xs space-y-4 text-left">
+                    <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                      <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
+                        Medical File Verification
+                      </span>
+                      <span className="text-xs font-mono text-gray-400">Status: Verified</span>
+                    </div>
+                    <div className="space-y-2 text-sm text-gray-700">
+                      <p>
+                        <strong>Document Title:</strong> {previewDoc.name}
+                      </p>
+                      <p>
+                        <strong>Uploaded At:</strong>{" "}
+                        {previewDoc.uploadedAt
+                          ? new Date(previewDoc.uploadedAt).toLocaleString()
+                          : "Today"}
+                      </p>
+                      <p>
+                        <strong>Category:</strong> {previewDoc.category || "Medical / Lab Report"}
+                      </p>
+                      <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-xs text-amber-900">
+                        <strong>Clinical Assessment Note:</strong>
+                        <p className="mt-1">
+                          Our clinical and sports nutrition team uses this document to adjust
+                          macronutrients, avoid inflamed joint stress, and calibrate exercise
+                          selection safely.
+                        </p>
+                      </div>
+                    </div>
+                    {previewDoc.fileUrl && (
+                      <a
+                        href={previewDoc.fileUrl}
+                        download={previewDoc.name}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition"
+                      >
+                        <span>Open / Download Full Document</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end p-3 bg-gray-100 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setPreviewDoc(null)}
+                  className="px-4 py-1.5 bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold rounded-lg"
+                >
+                  Close Document
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
