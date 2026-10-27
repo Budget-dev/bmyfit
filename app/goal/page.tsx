@@ -107,8 +107,8 @@ export default function GoalPage() {
         experienceLevel === "beginner"
           ? "lightly-active"
           : experienceLevel === "intermediate"
-          ? "moderately-active"
-          : "very-active",
+            ? "moderately-active"
+            : "very-active",
     });
 
     router.push("/details");
@@ -166,9 +166,8 @@ export default function GoalPage() {
                 return (
                   <div
                     key={key}
-                    className={`absolute inset-0 transition-opacity duration-300 ease-out ${
-                      isActive ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
-                    }`}
+                    className={`absolute inset-0 transition-opacity duration-300 ease-out ${isActive ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+                      }`}
                   >
                     <Image
                       src={card.image}
@@ -200,11 +199,10 @@ export default function GoalPage() {
                 {/* 1. Lose body fat */}
                 <div
                   onClick={() => setSelectedFocus("lose-fat")}
-                  className={`p-3 md:p-4 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${
-                    selectedFocus === "lose-fat"
+                  className={`p-3 md:p-4 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${selectedFocus === "lose-fat"
                       ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
                       : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 pr-1">
                     <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
@@ -220,9 +218,8 @@ export default function GoalPage() {
                     </div>
                   </div>
                   <div
-                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${
-                      selectedFocus === "lose-fat" ? "border-2 border-[#00c853] bg-transparent" : "border border-gray-300 bg-white"
-                    }`}
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${selectedFocus === "lose-fat" ? "border-2 border-[#00c853] bg-transparent" : "border border-gray-300 bg-white"
+                      }`}
                   >
                     {selectedFocus === "lose-fat" && <div className="w-2 h-2 rounded-full bg-[#00c853]" />}
                   </div>
@@ -231,11 +228,10 @@ export default function GoalPage() {
                 {/* 2. Build strength */}
                 <div
                   onClick={() => setSelectedFocus("build-strength")}
-                  className={`p-3 md:p-4 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${
-                    selectedFocus === "build-strength"
+                  className={`p-3 md:p-4 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${selectedFocus === "build-strength"
                       ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
                       : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 pr-1">
                     <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-gray-800">
@@ -255,9 +251,8 @@ export default function GoalPage() {
                     </div>
                   </div>
                   <div
-                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${
-                      selectedFocus === "build-strength" ? "border-2 border-[#00c853] bg-transparent" : "border border-gray-300 bg-white"
-                    }`}
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${selectedFocus === "build-strength" ? "border-2 border-[#00c853] bg-transparent" : "border border-gray-300 bg-white"
+                      }`}
                   >
                     {selectedFocus === "build-strength" && <div className="w-2 h-2 rounded-full bg-[#00c853]" />}
                   </div>
@@ -266,11 +261,10 @@ export default function GoalPage() {
                 {/* 3. Improve fitness */}
                 <div
                   onClick={() => setSelectedFocus("improve-fitness")}
-                  className={`p-3 md:p-4 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${
-                    selectedFocus === "improve-fitness"
+                  className={`p-3 md:p-4 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${selectedFocus === "improve-fitness"
                       ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
                       : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 pr-1">
                     <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 text-[#057a44]">
@@ -288,9 +282,8 @@ export default function GoalPage() {
                     </div>
                   </div>
                   <div
-                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${
-                      selectedFocus === "improve-fitness" ? "border-2 border-[#00c853] bg-transparent" : "border border-gray-300 bg-white"
-                    }`}
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${selectedFocus === "improve-fitness" ? "border-2 border-[#00c853] bg-transparent" : "border border-gray-300 bg-white"
+                      }`}
                   >
                     {selectedFocus === "improve-fitness" && <div className="w-2 h-2 rounded-full bg-[#00c853]" />}
                   </div>
@@ -299,11 +292,10 @@ export default function GoalPage() {
                 {/* 4. Build consistency */}
                 <div
                   onClick={() => setSelectedFocus("build-consistency")}
-                  className={`p-3 md:p-4 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${
-                    selectedFocus === "build-consistency"
+                  className={`p-3 md:p-4 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${selectedFocus === "build-consistency"
                       ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
                       : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 pr-1">
                     <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 text-[#057a44]">
@@ -321,9 +313,8 @@ export default function GoalPage() {
                     </div>
                   </div>
                   <div
-                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${
-                      selectedFocus === "build-consistency" ? "border-2 border-[#00c853] bg-transparent" : "border border-gray-300 bg-white"
-                    }`}
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${selectedFocus === "build-consistency" ? "border-2 border-[#00c853] bg-transparent" : "border border-gray-300 bg-white"
+                      }`}
                   >
                     {selectedFocus === "build-consistency" && <div className="w-2 h-2 rounded-full bg-[#00c853]" />}
                   </div>
@@ -345,11 +336,10 @@ export default function GoalPage() {
                 {/* Beginner */}
                 <div
                   onClick={() => setExperienceLevel("beginner")}
-                  className={`p-3 md:p-4 rounded-2xl border flex flex-col justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${
-                    experienceLevel === "beginner"
+                  className={`p-3 md:p-4 rounded-2xl border flex flex-col justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${experienceLevel === "beginner"
                       ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
                       : "bg-white border-gray-200 hover:border-gray-300"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="w-7 h-7 rounded-full bg-emerald-100/70 text-[#057a44] flex items-center justify-center">
@@ -359,9 +349,8 @@ export default function GoalPage() {
                       </svg>
                     </div>
                     <div
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${
-                        experienceLevel === "beginner" ? "border-2 border-[#00c853] bg-transparent" : "border border-gray-300 bg-white"
-                      }`}
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${experienceLevel === "beginner" ? "border-2 border-[#00c853] bg-transparent" : "border border-gray-300 bg-white"
+                        }`}
                     >
                       {experienceLevel === "beginner" && <div className="w-2 h-2 rounded-full bg-[#00c853]" />}
                     </div>
@@ -375,11 +364,10 @@ export default function GoalPage() {
                 {/* Intermediate */}
                 <div
                   onClick={() => setExperienceLevel("intermediate")}
-                  className={`p-3 md:p-4 rounded-2xl border flex flex-col justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${
-                    experienceLevel === "intermediate"
+                  className={`p-3 md:p-4 rounded-2xl border flex flex-col justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${experienceLevel === "intermediate"
                       ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
                       : "bg-white border-gray-200 hover:border-gray-300"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="w-7 h-7 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center">
@@ -390,9 +378,8 @@ export default function GoalPage() {
                       </svg>
                     </div>
                     <div
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${
-                        experienceLevel === "intermediate" ? "border-2 border-[#00c853] bg-transparent" : "border border-gray-300 bg-white"
-                      }`}
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${experienceLevel === "intermediate" ? "border-2 border-[#00c853] bg-transparent" : "border border-gray-300 bg-white"
+                        }`}
                     >
                       {experienceLevel === "intermediate" && <div className="w-2 h-2 rounded-full bg-[#00c853]" />}
                     </div>
@@ -406,11 +393,10 @@ export default function GoalPage() {
                 {/* Advanced */}
                 <div
                   onClick={() => setExperienceLevel("advanced")}
-                  className={`p-3 md:p-4 rounded-2xl border flex flex-col justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${
-                    experienceLevel === "advanced"
+                  className={`p-3 md:p-4 rounded-2xl border flex flex-col justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${experienceLevel === "advanced"
                       ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
                       : "bg-white border-gray-200 hover:border-gray-300"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="w-7 h-7 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center">
@@ -419,9 +405,8 @@ export default function GoalPage() {
                       </svg>
                     </div>
                     <div
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${
-                        experienceLevel === "advanced" ? "border-2 border-[#00c853] bg-transparent" : "border border-gray-300 bg-white"
-                      }`}
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${experienceLevel === "advanced" ? "border-2 border-[#00c853] bg-transparent" : "border border-gray-300 bg-white"
+                        }`}
                     >
                       {experienceLevel === "advanced" && <div className="w-2 h-2 rounded-full bg-[#00c853]" />}
                     </div>

@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { PlanDashboardData } from "@/types/plan-dashboard";
 import { db, doc, onSnapshot } from "@/lib/firebase/client";
-import { fetchFirebasePlan, getStoredPlan } from "@/lib/storage/mock-storage";
+import { fetchFirebasePlan } from "@/lib/storage/mock-storage";
 import { ClientChatWidget } from "@/components/chat/client-chat-widget";
 
 interface PlanPendingScreenProps {
@@ -20,6 +20,14 @@ export function PlanPendingScreen({ plan, onPlanApproved }: PlanPendingScreenPro
   const [activeStepIndex, setActiveStepIndex] = useState(3); // Stage 3 & 4 active
   const [celebrating, setCelebrating] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+
+  const triggerPlanReady = useCallback((approvedPlan: PlanDashboardData) => {
+    setCelebrating(true);
+    setStatusMessage("🎉 Plan Approved & Live! Loading your customized weekly roadmap...");
+    setTimeout(() => {
+      onPlanApproved(approvedPlan);
+    }, 1200);
+  }, [onPlanApproved]);
 
   // 1. Real-time Firebase Firestore listener for instant push transition
   useEffect(() => {
@@ -67,15 +75,7 @@ export function PlanPendingScreen({ plan, onPlanApproved }: PlanPendingScreenPro
       unsubUser();
       clearInterval(stepInterval);
     };
-  }, [plan.id]);
-
-  const triggerPlanReady = (approvedPlan: PlanDashboardData) => {
-    setCelebrating(true);
-    setStatusMessage("🎉 Plan Approved & Live! Loading your customized weekly roadmap...");
-    setTimeout(() => {
-      onPlanApproved(approvedPlan);
-    }, 1200);
-  };
+  }, [plan.id, triggerPlanReady]);
 
   // 2. Manual Refresh Handler
   const handleCheckStatus = async () => {
@@ -199,7 +199,7 @@ export function PlanPendingScreen({ plan, onPlanApproved }: PlanPendingScreenPro
             </span>
             <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-[#00e676] animate-ping" />
-              <span>Step 4 of 5 in progress</span>
+              <span>Step {activeStepIndex} of 5 in progress</span>
             </span>
           </div>
 

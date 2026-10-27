@@ -1,21 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Image from "next/image";
 import {
   Users,
   TrendingUp,
-  TrendingDown,
   AlertTriangle,
-  CheckCircle2,
   BellRing,
   MessageCircle,
   Edit3,
-  Scale,
   Sparkles,
-  Flame,
   ShieldCheck,
-  Clock,
 } from "@/components/ui/icons";
 import type { AdminUserRecord } from "@/types/admin";
 import { calculateDetailedAdherence } from "@/features/plan/dashboard-data";
@@ -50,7 +45,6 @@ export function ClientHealthDashboard({
 
   const totalClients = users.length;
   const doingGoodClients = analyzedUsers.filter((a) => a.isDoingGood);
-  const moderateClients = analyzedUsers.filter((a) => a.isModerate);
   const fallingBehindClients = analyzedUsers.filter((a) => a.isFallingBehind);
   const medicalClients = analyzedUsers.filter((a) => a.hasMedical);
 

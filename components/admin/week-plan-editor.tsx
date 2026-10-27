@@ -12,17 +12,9 @@ import {
   Rocket,
   ExternalLink,
   Copy,
-  Clock,
   Sparkles,
-  ArrowRight,
-  ChevronDown,
-  ChevronUp,
   X,
   Activity,
-  Target,
-  TrendingUp,
-  Flame,
-  Check,
   Edit3,
   BarChart2,
 } from "@/components/ui/icons";
@@ -261,6 +253,7 @@ export function WeekPlanEditor({
           cloned.phaseTitle = `Month ${monthNum} · W${w}: Phase Consolidation & Deload`;
           phaseSubtitle = "Active recovery, joint decompression & tape check";
         }
+        cloned.phaseSubtitle = phaseSubtitle;
 
         currentWeeks.push(cloned);
       }

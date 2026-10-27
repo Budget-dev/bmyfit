@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useAuth } from "@/hooks/use-auth";
 import { saveStoredProfile, clearStoredProfile } from "@/features/auth/auth-service";
 import type { UserProfile } from "@/types/auth";

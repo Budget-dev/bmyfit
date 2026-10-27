@@ -42,7 +42,7 @@ import {
   calculateWeekProgress,
   calculateOverallProgress,
 } from "@/features/plan/dashboard-data";
-import { ShoppingBag, Sparkles } from "@/components/ui/supplement-icons";
+import { ShoppingBag } from "@/components/ui/supplement-icons";
 import { getRecommendedProductsForGoal } from "@/features/supplements/supplements-data";
 import { PlanPendingScreen } from "./plan-pending-screen";
 import { ClientChatWidget } from "@/components/chat/client-chat-widget";
@@ -78,19 +78,6 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
     initialPlan.status === "pending_review" && !isDevPreview
   );
 
-  // If plan is still pending coach review, show the animated pending preparation screen
-  if (plan.status === "pending_review" && !isDevPreview) {
-    return (
-      <PlanPendingScreen
-        plan={plan}
-        onPlanApproved={(approvedPlan) => {
-          setPlan(approvedPlan);
-          setActiveReviewMode(false);
-        }}
-      />
-    );
-  }
-
   // Load task completion state from Firebase Firestore
   useEffect(() => {
     let active = true;
@@ -107,6 +94,19 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
       active = false;
     };
   }, [plan.id]);
+
+  // If plan is still pending coach review, show the animated pending preparation screen
+  if (plan.status === "pending_review" && !isDevPreview) {
+    return (
+      <PlanPendingScreen
+        plan={plan}
+        onPlanApproved={(approvedPlan) => {
+          setPlan(approvedPlan);
+          setActiveReviewMode(false);
+        }}
+      />
+    );
+  }
 
   const selectedWeek: WeekPlanData =
     plan.weeks.find((w) => w.weekNumber === selectedWeekNum) || plan.weeks[0] || {

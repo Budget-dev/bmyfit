@@ -6,16 +6,10 @@ import {
   Search,
   Send,
   CheckCheck,
-  CheckCircle2,
-  Clock,
   Sparkles,
-  ExternalLink,
   Edit3,
   Scale,
-  Flame,
   MessageCircle,
-  Filter,
-  Users,
 } from "@/components/ui/icons";
 import type { AdminUserRecord } from "@/types/admin";
 import type { ChatMessage, ChatThread } from "@/types/chat";

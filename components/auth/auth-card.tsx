@@ -17,7 +17,7 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
   const searchParams = useSearchParams();
   const redirectTarget = searchParams?.get("redirect") || "/plan";
 
-  const { signInWithGoogle, loginWithEmail, signupWithEmail, userProfile, isAuthenticated } = useAuth();
+  const { signInWithGoogle, loginWithEmail, signupWithEmail } = useAuth();
 
   const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const [loading, setLoading] = useState(false);

@@ -149,7 +149,7 @@ export function PlanClient({ id }: { id: string }) {
     return () => {
       isMounted = false;
     };
-  }, [id, getIdToken, userProfile?.uid]);
+  }, [id, getIdToken, userProfile?.uid, userProfile?.email]);
 
   if (fetching || !dashboardPlan) {
     return (

@@ -6,13 +6,8 @@ import {
   MessageCircle,
   X,
   Send,
-  Smile,
-  Paperclip,
-  PhoneCall,
-  Video,
   CheckCheck,
   CheckCircle2,
-  Clock,
   Sparkles,
 } from "@/components/ui/icons";
 import type { ChatMessage } from "@/types/chat";
@@ -36,7 +31,6 @@ interface ClientChatWidgetProps {
 export function ClientChatWidget({
   userId,
   userName = "Valued Client",
-  userEmail = "",
   planGoal = "Personalized Transformation",
   className = "",
   initiallyOpen = false,

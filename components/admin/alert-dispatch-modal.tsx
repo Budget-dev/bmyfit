@@ -1,19 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
-import {
-  X,
-  Send,
-  AlertTriangle,
-  BellRing,
-  Sparkles,
-  CheckCircle2,
-  Clock,
-  Scale,
-  CreditCard,
-  Flame,
-} from "@/components/ui/icons";
+import { X, Send, BellRing } from "@/components/ui/icons";
 import type { AdminUserRecord } from "@/types/admin";
 import { sendChatMessage } from "@/lib/firestore/chat";
 

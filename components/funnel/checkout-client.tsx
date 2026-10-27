@@ -1175,13 +1175,25 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
                   {/* Specific notes or medications input */}
                   <div className="pt-2 space-y-1.5">
                     <label className="text-[11px] font-bold text-gray-700 block">
-                      Describe symptoms, doctor advice, or ongoing medications (Optional):
+                      Describe symptoms or doctor advice (Optional):
                     </label>
                     <textarea
                       rows={2}
-                      placeholder="e.g. Taking Thyronorm 50mcg daily morning; mild lower back pain on heavy squats; avoid high sodium..."
+                      placeholder="e.g. Mild lower back pain on heavy squats; avoid high sodium..."
                       value={customDiseaseDescription}
                       onChange={(e) => setCustomDiseaseDescription(e.target.value)}
+                      className="w-full p-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50/40"
+                    />
+                  </div>
+                  <div className="pt-1 space-y-1.5">
+                    <label className="text-[11px] font-bold text-gray-700 block">
+                      Ongoing medications (Optional):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Thyronorm 50mcg daily morning, Metformin 500mg..."
+                      value={medications}
+                      onChange={(e) => setMedications(e.target.value)}
                       className="w-full p-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50/40"
                     />
                   </div>

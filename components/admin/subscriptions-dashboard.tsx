@@ -6,14 +6,10 @@ import {
   CreditCard,
   Search,
   CheckCircle2,
-  AlertTriangle,
   Clock,
-  Sparkles,
-  ExternalLink,
   Edit3,
   MessageCircle,
   BellRing,
-  Filter,
   TrendingUp,
 } from "@/components/ui/icons";
 import type { AdminUserRecord } from "@/types/admin";

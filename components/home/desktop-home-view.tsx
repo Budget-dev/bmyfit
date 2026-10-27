@@ -5,22 +5,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Flame,
-  BarChart2,
-  Percent,
-  CheckCircle2,
-  Clock,
   ArrowRight,
   ChevronDown,
   ChevronUp,
-  Sparkles,
   Dumbbell,
   Utensils,
   Target,
-  ShieldCheck,
   Video,
   Send,
-  Users,
 } from "@/components/ui/icons";
 import { saveDraftDetails, saveDraftGoal } from "@/features/assessment/session-store";
 import type { Gender } from "@/types/fitness";
@@ -336,22 +328,20 @@ export function DesktopHomeView() {
                     <button
                       type="button"
                       onClick={() => setGender("male")}
-                      className={`py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 ${
-                        gender === "male"
+                      className={`py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 ${gender === "male"
                           ? "bg-gray-950 text-white shadow-xs"
                           : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                        }`}
                     >
                       <span>👨 Male</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setGender("female")}
-                      className={`py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 ${
-                        gender === "female"
+                      className={`py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 ${gender === "female"
                           ? "bg-gray-950 text-white shadow-xs"
                           : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                        }`}
                     >
                       <span>👩 Female</span>
                     </button>

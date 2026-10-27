@@ -5,15 +5,12 @@ import {
   X,
   Scale,
   Activity,
-  Flame,
   Utensils,
-  Dumbbell,
   CheckCircle2,
   Clock,
   ExternalLink,
   Edit3,
   Rocket,
-  ShieldCheck,
   CreditCard,
 } from "@/components/ui/icons";
 import type { AdminUserRecord, MedicalDocument } from "@/types/admin";

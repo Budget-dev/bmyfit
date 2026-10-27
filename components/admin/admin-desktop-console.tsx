@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -11,22 +11,13 @@ import {
   Clock,
   CheckCircle2,
   Rocket,
-  Scale,
-  Utensils,
-  Dumbbell,
   CreditCard,
   Eye,
-  Filter,
   Monitor,
-  AlertCircle,
   Activity,
-  Layers,
-  Calendar,
-  Sparkles,
   BarChart2,
   MessageCircle,
   BellRing,
-  AlertTriangle,
 } from "@/components/ui/icons";
 import type { AdminUserRecord, AdminStats, MembershipCategory } from "@/types/admin";
 import type { PlanDashboardData } from "@/types/plan-dashboard";
@@ -50,7 +41,7 @@ export function AdminDesktopConsole() {
   const [categoryFilter, setCategoryFilter] = useState<
     "all" | MembershipCategory | "pending" | "medical"
   >("all");
-  const [goalFilter, setGoalFilter] = useState<string>("all");
+  const [goalFilter] = useState<string>("all");
   const [adherenceFilter, setAdherenceFilter] = useState<"all" | "high" | "low">("all");
   const [studioInitialMode, setStudioInitialMode] = useState<"customize" | "progress">("customize");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -62,7 +53,7 @@ export function AdminDesktopConsole() {
   const [alertUser, setAlertUser] = useState<AdminUserRecord | null>(null);
   const [globalAlert, setGlobalAlert] = useState<string | null>(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       let serverUsers: AdminUserRecord[] = [];
@@ -124,22 +115,24 @@ export function AdminDesktopConsole() {
         totalRevenueINR,
       });
 
-      if (!selectedUser && mergedUsers.length > 0) {
-        setSelectedUser(mergedUsers[0]);
-      } else if (selectedUser) {
-        const updated = mergedUsers.find((u) => u.id === selectedUser.id);
-        if (updated) setSelectedUser(updated);
-      }
+      setSelectedUser((prev) => {
+        if (!prev && mergedUsers.length > 0) return mergedUsers[0];
+        if (prev) {
+          const updated = mergedUsers.find((u) => u.id === prev.id);
+          if (updated) return updated;
+        }
+        return prev;
+      });
     } catch (err) {
       console.error("Failed to load admin users:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
   // Filtered users list
   const filteredUsers = users.filter((u) => {

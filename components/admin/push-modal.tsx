@@ -5,11 +5,7 @@ import {
   X,
   Rocket,
   CheckCircle2,
-  Calendar,
   ExternalLink,
-  ShieldCheck,
-  Utensils,
-  Dumbbell,
 } from "@/components/ui/icons";
 import type { AdminUserRecord } from "@/types/admin";
 

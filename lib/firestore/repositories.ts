@@ -11,11 +11,8 @@ export interface PaymentOrderRecord { id: string; uid: string; assessmentId: str
 
 // Global in-memory storage fallback for local development or when Firestore credentials are not configured
 declare global {
-  // eslint-disable-next-line no-var
   var __bmyfit_orders_store__: Map<string, PaymentOrderRecord> | undefined;
-  // eslint-disable-next-line no-var
   var __bmyfit_assessments_store__: Map<string, Assessment> | undefined;
-  // eslint-disable-next-line no-var
   var __bmyfit_webhook_events__: Set<string> | undefined;
 }
 
