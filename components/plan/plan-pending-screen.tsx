@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { PlanDashboardData } from "@/types/plan-dashboard";
 import { db, doc, onSnapshot } from "@/lib/firebase/client";
 import { fetchFirebasePlan, getStoredPlan } from "@/lib/storage/mock-storage";
+import { ClientChatWidget } from "@/components/chat/client-chat-widget";
 
 interface PlanPendingScreenProps {
   plan: PlanDashboardData;
@@ -18,6 +19,7 @@ export function PlanPendingScreen({ plan, onPlanApproved }: PlanPendingScreenPro
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [activeStepIndex, setActiveStepIndex] = useState(3); // Stage 3 & 4 active
   const [celebrating, setCelebrating] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // 1. Real-time Firebase Firestore listener for instant push transition
   useEffect(() => {
@@ -110,11 +112,7 @@ export function PlanPendingScreen({ plan, onPlanApproved }: PlanPendingScreenPro
   };
 
   const handleWhatsApp = () => {
-    const coachNum = plan.coach?.whatsAppNumber?.replace(/[^0-9]/g, "") || "919820144821";
-    const msg = encodeURIComponent(
-      `Hello Coach Naveen! I just completed my ₹99 assessment (Plan ID: ${plan.id}). I'm awaiting my 8-week plan on the dashboard.`
-    );
-    window.open(`https://wa.me/${coachNum}?text=${msg}`, "_blank");
+    setIsChatOpen(true);
   };
 
   return (
@@ -349,6 +347,16 @@ export function PlanPendingScreen({ plan, onPlanApproved }: PlanPendingScreenPro
       <footer className="relative z-10 w-full px-4 py-3 text-center text-gray-500 text-[10px] border-t border-white/5">
         <p>© {new Date().getFullYear()} BMYFIT Health Technologies India &bull; 256-Bit SSL Encrypted Transformation Portal</p>
       </footer>
+
+      {/* Real-time In-App Coach Chat Widget */}
+      <ClientChatWidget
+        userId={plan.id}
+        userName={plan.customerName || "Valued Client"}
+        planGoal={plan.goalDisplay}
+        isOpenControlled={isChatOpen}
+        onOpenChange={setIsChatOpen}
+      />
     </div>
   );
 }
+

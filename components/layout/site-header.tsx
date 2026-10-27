@@ -144,6 +144,19 @@ export function SiteHeader() {
                         <span className="text-[#00c853]">→</span>
                       </Link>
                       <Link
+                        href="/plan#coach-chat"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-bold text-emerald-800 hover:bg-emerald-50 transition-colors"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span>💬</span>
+                          <span>Coach Chat</span>
+                        </span>
+                        <span className="text-[9px] font-black uppercase bg-[#25D366] text-black px-1.5 rounded-full">
+                          ONLINE
+                        </span>
+                      </Link>
+                      <Link
                         href="/admin"
                         onClick={() => setIsProfileOpen(false)}
                         className="flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
@@ -287,6 +300,13 @@ export function SiteHeader() {
                             className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg"
                           >
                             My Plan
+                          </Link>
+                          <Link
+                            href="/plan"
+                            onClick={() => setIsMenuOpen(false)}
+                            className="text-[11px] font-black text-white bg-[#075E54] px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-xs"
+                          >
+                            <span>💬 Coach</span>
                           </Link>
                           <button
                             type="button"

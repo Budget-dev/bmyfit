@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   Bell,
   Menu,
+  MessageCircle,
 } from "@/components/ui/icons";
 import type {
   PlanDashboardData,
@@ -44,6 +45,7 @@ import {
 import { ShoppingBag, Sparkles } from "@/components/ui/supplement-icons";
 import { getRecommendedProductsForGoal } from "@/features/supplements/supplements-data";
 import { PlanPendingScreen } from "./plan-pending-screen";
+import { ClientChatWidget } from "@/components/chat/client-chat-widget";
 
 interface PlanDashboardProps {
   initialPlan: PlanDashboardData;
@@ -71,6 +73,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
     { date: "Day 1 (Baseline)", weight: "74.0 kg", note: "Starting transformation" },
   ]);
   const [copiedShare, setCopiedShare] = useState<boolean>(false);
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
   const [activeReviewMode, setActiveReviewMode] = useState<boolean>(
     initialPlan.status === "pending_review" && !isDevPreview
   );
@@ -335,6 +338,41 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
               </div>
             </div>
           </div>
+        </section>
+
+        {/* ================= COACH DIRECT WHATSAPP CHAT BANNER ================= */}
+        <section className="bg-gradient-to-r from-[#075E54] via-[#0b7468] to-[#128C7E] rounded-3xl p-4 sm:p-5 text-white shadow-md flex flex-col sm:flex-row items-center justify-between gap-4 border border-emerald-400/40">
+          <div className="flex items-center gap-3.5">
+            <div className="relative w-12 h-12 rounded-full overflow-hidden bg-white/10 border-2 border-[#25D366] shrink-0 shadow-md">
+              <Image
+                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
+                alt="Coach Naveen"
+                fill
+                className="object-cover"
+              />
+              <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#25D366] rounded-full border-2 border-[#075E54] animate-pulse" />
+            </div>
+            <div className="text-left">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-black text-white">Chat with Coach Naveen</h3>
+                <span className="bg-[#25D366] text-black text-[9px] font-black uppercase px-2 py-0.2 rounded-full shadow-xs">
+                  ₹99 Included
+                </span>
+              </div>
+              <p className="text-xs text-emerald-100/90 font-medium mt-0.5">
+                Direct WhatsApp-style messaging for meal swaps, weight logs, and daily form advice.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsChatOpen(true)}
+            className="w-full sm:w-auto bg-[#25D366] hover:bg-[#1faa53] text-gray-950 font-black px-5 py-2.5 rounded-2xl text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2 active:scale-95 shrink-0"
+          >
+            <MessageCircle className="w-4 h-4 fill-gray-950" />
+            <span>Open Coach Chat</span>
+          </button>
         </section>
 
         {/* ================= ACTION BUTTONS ROW ================= */}
@@ -1288,7 +1326,21 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
             </span>
           </Link>
 
-          {/* 4. Results */}
+          {/* 4. Coach Chat (WhatsApp) */}
+          <button
+            type="button"
+            onClick={() => setIsChatOpen(true)}
+            className="flex flex-col items-center gap-1 text-emerald-800 hover:text-emerald-950 transition relative"
+            title="Chat with Coach Naveen"
+          >
+            <div className="relative">
+              <MessageCircle className="w-5 h-5 text-[#25D366]" />
+              <span className="w-2 h-2 rounded-full bg-[#25D366] absolute -top-0.5 -right-0.5 animate-pulse" />
+            </div>
+            <span className="text-[10px] font-black text-[#075E54]">Coach</span>
+          </button>
+
+          {/* 5. Results */}
           <button
             type="button"
             onClick={() => setShowProgressModal(true)}
@@ -1298,7 +1350,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
             <span className="text-[10px] font-bold">Results</span>
           </button>
 
-          {/* 5. Profile / Admin */}
+          {/* 6. Profile / Admin */}
           <Link
             href="/admin"
             className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-900 transition"
@@ -1310,6 +1362,15 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
           </Link>
         </div>
       </nav>
+
+      {/* Real-time WhatsApp In-App Coach Chat Widget */}
+      <ClientChatWidget
+        userId={plan.id}
+        userName={plan.customerName || "Valued Client"}
+        planGoal={plan.goalDisplay}
+        isOpenControlled={isChatOpen}
+        onOpenChange={setIsChatOpen}
+      />
     </div>
   );
 }

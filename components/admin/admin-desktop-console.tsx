@@ -24,6 +24,7 @@ import {
   Calendar,
   Sparkles,
   BarChart2,
+  MessageCircle,
 } from "@/components/ui/icons";
 import type { AdminUserRecord, AdminStats, MembershipCategory } from "@/types/admin";
 import type { PlanDashboardData } from "@/types/plan-dashboard";
@@ -32,14 +33,15 @@ import { formatPlanDuration, calculateDetailedAdherence } from "@/features/plan/
 import { BiometricsModal } from "./biometrics-modal";
 import { PushModal } from "./push-modal";
 import { WeekPlanEditor } from "./week-plan-editor";
+import { AdminChatView } from "./admin-chat-view";
 
 export function AdminDesktopConsole() {
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<"directory" | "dossier" | "studio" | "dispatch">(
-    "directory"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "directory" | "dossier" | "studio" | "dispatch" | "chats"
+  >("directory");
   const [categoryFilter, setCategoryFilter] = useState<
     "all" | MembershipCategory | "pending" | "medical"
   >("all");
@@ -333,6 +335,30 @@ export function AdminDesktopConsole() {
                   </span>
                 )}
               </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("chats")}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${
+                  activeTab === "chats"
+                    ? "bg-[#075E54] text-white shadow-xs"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <MessageCircle className="w-4 h-4 text-[#25D366]" />
+                  <span>WhatsApp Chats</span>
+                </div>
+                <span
+                  className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                    activeTab === "chats"
+                      ? "bg-emerald-400 text-gray-950"
+                      : "bg-[#25D366]/20 text-[#075E54]"
+                  }`}
+                >
+                  LIVE
+                </span>
+              </button>
             </nav>
 
             {/* Quick Segment Filter Shortcuts */}
@@ -463,9 +489,12 @@ export function AdminDesktopConsole() {
                   {activeTab === "studio" &&
                     `Week Plan Studio: ${selectedUser ? selectedUser.name : "Select Client"}`}
                   {activeTab === "dispatch" && "Plan Deployment & Push to User Console"}
+                  {activeTab === "chats" && "Client WhatsApp Messages · Coach Naveen"}
                 </h1>
                 <p className="text-xs text-gray-500 font-medium mt-0.5">
-                  Inspect comprehensive client biometrics, customize multi-week schedules, and push live to user dashboards.
+                  {activeTab === "chats"
+                    ? "Direct 1-on-1 real-time messaging with all ₹99 purchased transformation clients."
+                    : "Inspect comprehensive client biometrics, customize multi-week schedules, and push live to user dashboards."}
                 </p>
               </div>
 
@@ -909,6 +938,19 @@ export function AdminDesktopConsole() {
                                   <span>Edit Plan</span>
                                 </button>
 
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedUser(u);
+                                    setActiveTab("chats");
+                                  }}
+                                  className="px-2.5 py-1.5 rounded-lg border border-emerald-400/50 bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#075E54] font-black text-xs transition inline-flex items-center gap-1 shadow-2xs"
+                                  title="Open WhatsApp Chat with Client"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5 text-[#25D366]" />
+                                  <span>Chat</span>
+                                </button>
+
                                 {isPending ? (
                                   <button
                                     type="button"
@@ -1120,6 +1162,22 @@ export function AdminDesktopConsole() {
                     ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ================= CHATS TAB (WhatsApp Style Console) ================= */}
+          {activeTab === "chats" && (
+            <div className="p-4 lg:p-6 flex-1 flex flex-col">
+              <AdminChatView
+                users={users}
+                onOpenStudio={(u) => {
+                  setSelectedUser(u);
+                  setActiveTab("studio");
+                }}
+                onOpenBiometrics={(u) => {
+                  setInspectUser(u);
+                }}
+              />
             </div>
           )}
         </main>

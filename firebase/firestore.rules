@@ -1,52 +1,235 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
-    function owner(uid) { return signedIn() && request.auth.uid == uid; }
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users/{userId}
+    // Document ID: userId (matching request.auth.uid)
+    // Fields:
+    //   - id: string (optional, matching userId)
+    //   - name: string
+    //   - email: string (PII)
+    //   - phone: string (PII)
+    //   - age: number
+    //   - avatarUrl: string
+    //   - provider: string
+    //   - role: string ('admin' | 'client')
+    //   - membershipCategory: string ('free' | 'membership' | 'purchased')
+    //   - updatedAt: string / timestamp
+    //
+    // Collection: plans/{planId}
+    // Document ID: planId (plan identifier, assessment ID, or userId)
+    // Fields:
+    //   - id: string
+    //   - userId: string (or uid)
+    //   - assessmentId: string
+    //   - customerName: string
+    //   - status: string ('pending_review' | 'approved' | 'active')
+    //   - weeks: list
+    //   - coachNotes: string
+    //   - createdAt, updatedAt: string / timestamp
+    //
+    // Collection: user_logs/{logId}
+    // Document ID: logId ({userId}_{planId} or {planId})
+    // Fields:
+    //   - userId: string (optional if logId prefixed with userId)
+    //   - daily task checklists, adherence, and weigh-in progress
+    //   - updatedAt: string / timestamp
+    //
+    // Collection: subscriptions/{subscriptionId}
+    // Document ID: subscriptionId (e.g. sub_{userId})
+    // Fields:
+    //   - id: string
+    //   - userId: string
+    //   - planId: string
+    //   - status: string ('active' | 'pending_review' | 'expired' | 'cancelled')
+    //   - amountPaise: number
+    //   - currency: string ("INR")
+    //   - startDate, endDate: string / timestamp
+    //
+    // Collection: medical_consultations/{consultationId}
+    // Document ID: consultationId (consultation ID or assessment ID or userId)
+    // Fields:
+    //   - userId: string
+    //   - hasDisease: bool
+    //   - diseases: list of strings
+    //   - customDiseaseDescription: string
+    //   - medications: string
+    //   - documents: list of document metadata maps
+    //   - submittedAt: string / timestamp
+    //
+    // Collection: assessments/{assessmentId}
+    // Document ID: assessmentId
+    // Fields:
+    //   - id: string
+    //   - userId: string (or uid)
+    //   - gender, age, heightCm, weightKg, waistIn, neckIn, hipIn
+    //   - goal, activityLevel, dietPreference
+    //   - bmi, bmiCategory, bodyFatPercent, bodyFatCategory
+    //   - createdAt, updatedAt: string / timestamp
+    //
+    // Collection: orders/{orderId}
+    // Document ID: orderId
+    // Fields:
+    //   - id: string
+    //   - uid: string
+    //   - assessmentId: string
+    //   - amountPaise: number
+    //   - currency: string ("INR")
+    //   - status: string ("created" | "paid" | "failed" | "refunded")
+    //   - razorpayOrderId: string
+    //   - razorpayPaymentId: string
+    //   - idempotencyKey: string
+    //
+    // Collection: paymentWebhooks/{eventId}
+    // Document ID: eventId
+    // Fields:
+    //   - eventId: string
+    //   - createdAt: string / timestamp
+    //
+    // Collection: chats/{userId}
+    // Document ID: userId (client UID)
+    // Fields:
+    //   - userId: string
+    //   - clientName: string
+    //   - lastMessage: string
+    //   - lastMessageAt: string / timestamp
+    //   - unreadCount: number
+    //   - updatedAt: string / timestamp
+    //
+    // Subcollection: chats/{userId}/messages/{messageId}
+    // Document ID: messageId
+    // Fields:
+    //   - id: string
+    //   - userId: string (matching parent thread userId)
+    //   - senderRole: string ('client' | 'admin')
+    //   - senderUid: string
+    //   - text: string
+    //   - createdAt: string / timestamp
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && (
+        request.auth.token.email == 'bmyfitnesscoach@gmail.com' ||
+        request.auth.token.role == 'admin' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
 
     // User profile documents
     match /users/{userId} {
-      allow read: if true;
-      allow write: if true;
+      allow read: if isOwner(userId) || isAdmin();
+      allow create, update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     // Personalized fitness and diet plans
+    // Clients can view their own plan; EDITABLE ONLY by the admin!
     match /plans/{planId} {
-      allow read: if true;
-      allow write: if true;
+      allow read: if signedIn() && (
+        isOwner(planId) ||
+        (resource != null && resource.data.userId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow write: if isAdmin();
     }
 
-    // User daily task completion logs
+    // User daily task completion logs and weigh-in progress
     match /user_logs/{logId} {
-      allow read, write: if true;
-    }
-
-    // Health dossier & medical consultations
-    match /medical_consultations/{consultationId} {
-      allow read, write: if true;
-    }
-
-    // Fitness Assessments
-    match /assessments/{assessmentId} {
-      allow read, write: if true;
+      allow read: if signedIn() && (
+        isOwner(logId) ||
+        (resource != null && resource.data.userId == request.auth.uid) ||
+        logId.matches(request.auth.uid + '.*') ||
+        isAdmin()
+      );
+      allow write: if signedIn() && (
+        isOwner(logId) ||
+        (request.resource != null && request.resource.data.userId == request.auth.uid) ||
+        logId.matches(request.auth.uid + '.*') ||
+        isAdmin()
+      );
     }
 
     // User subscriptions and entitlement synchronization
     match /subscriptions/{subscriptionId} {
-      allow read: if true;
-      allow write: if true;
+      allow read: if signedIn() && (
+        (resource != null && resource.data.userId == request.auth.uid) ||
+        subscriptionId.matches('.*' + request.auth.uid + '.*') ||
+        isAdmin()
+      );
+      allow write: if isAdmin();
     }
 
-    // Payment orders and webhook receipts (server-restricted)
+    // Health dossier & medical consultations
+    match /medical_consultations/{consultationId} {
+      allow read: if isOwner(consultationId) ||
+        (resource != null && resource.data.userId == request.auth.uid) ||
+        isAdmin();
+      allow create, update: if isOwner(consultationId) ||
+        (request.resource != null && request.resource.data.userId == request.auth.uid) ||
+        isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Fitness Assessments (pre-login / anonymous funnel submissions permitted)
+    match /assessments/{assessmentId} {
+      allow read: if signedIn() && (
+        isOwner(assessmentId) ||
+        (resource != null && resource.data.userId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow create, update: if signedIn() || true;
+    }
+
+    // Payment orders (strictly server-managed writes)
     match /orders/{orderId} {
-      allow read: if signedIn();
+      allow read: if signedIn() && (
+        (resource != null && resource.data.uid == request.auth.uid) ||
+        isAdmin()
+      );
       allow write: if false;
     }
+
+    // Payment webhook event receipts (strictly server-managed idempotency)
     match /paymentWebhooks/{eventId} {
       allow read, write: if false;
     }
 
-    // Default fallback
+    // Real-time chat threads between clients and Coach Naveen (admin)
+    match /chats/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create, update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if (isOwner(userId) || isAdmin()) && request.resource.data.userId == userId;
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // Default fallback: deny all access to any unspecified collection
     match /{document=**} {
       allow read, write: if false;
     }
