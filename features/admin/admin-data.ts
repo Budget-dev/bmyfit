@@ -748,3 +748,4 @@ export async function registerOrUpdateAuthUser(params: {
 
   return newRecord;
 }
+

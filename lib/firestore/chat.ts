@@ -16,6 +16,12 @@ import {
 const inMemoryMessages = new Map<string, ChatMessage[]>();
 const inMemoryThreads = new Map<string, ChatThread>();
 
+function seedInitialChatData() {
+  // Real database mode: no fake chats seeded into memory
+}
+
+seedInitialChatData();
+
 // Custom Event bus for real-time local sync across components
 const CHAT_UPDATE_EVENT = "bmyfit_chat_updated";
 
