@@ -142,6 +142,18 @@ export function ClientHealthDashboard({
         </div>
       </div>
 
+      {totalClients === 0 && (
+        <div className="bg-emerald-50/60 border border-emerald-200 rounded-3xl p-8 text-center space-y-2">
+          <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xl font-bold">
+            🌱
+          </div>
+          <h3 className="text-sm font-black text-gray-900">Waiting for New Clients</h3>
+          <p className="text-xs text-gray-600 max-w-md mx-auto">
+            Live database connected. When a user completes the fitness assessment or purchases the ₹99 transformation plan, their profile, health metrics, and adherence logs will automatically appear here in real time.
+          </p>
+        </div>
+      )}
+
       {/* ================= SECTION 1: URGENT COACH ACTION (FALLING BEHIND CLIENTS) ================= */}
       <div className="bg-white rounded-3xl border border-rose-200 shadow-xs p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-rose-100 pb-3">
@@ -335,6 +347,12 @@ export function ClientHealthDashboard({
               </div>
             </div>
           ))}
+
+          {doingGoodClients.length === 0 && (
+            <div className="col-span-full py-8 text-center text-gray-500 text-xs font-medium bg-gray-50 rounded-2xl border border-gray-200">
+              No clients currently in high-compliance zone (≥65% adherence). Clients will appear here as they log meals and workouts.
+            </div>
+          )}
         </div>
       </div>
 
@@ -440,6 +458,12 @@ export function ClientHealthDashboard({
               </div>
             </div>
           ))}
+
+          {medicalClients.length === 0 && (
+            <div className="col-span-full py-8 text-center text-gray-500 text-xs font-medium bg-gray-50 rounded-2xl border border-gray-200">
+              No clients with medical conditions or lab reports currently flagged.
+            </div>
+          )}
         </div>
       </div>
     </div>

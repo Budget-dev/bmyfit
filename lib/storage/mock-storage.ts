@@ -11,32 +11,7 @@ import {
   onSnapshot,
 } from "@/lib/firebase/client";
 
-export const SAMPLE_MEDICAL_DOCS: MedicalDocument[] = [
-  {
-    id: "doc_sample_blood",
-    name: "Complete_Blood_Count_Lipid_Panel.pdf",
-    type: "pdf",
-    sizeFormatted: "248 KB",
-    uploadedAt: new Date(Date.now() - 3600000).toISOString(),
-    category: "blood_test",
-  },
-  {
-    id: "doc_sample_thyroid",
-    name: "Thyroid_T3_T4_TSH_Report.pdf",
-    type: "pdf",
-    sizeFormatted: "185 KB",
-    uploadedAt: new Date(Date.now() - 1800000).toISOString(),
-    category: "blood_test",
-  },
-  {
-    id: "doc_sample_spine",
-    name: "Doctor_Spine_Clearance_Note.jpg",
-    type: "image",
-    sizeFormatted: "412 KB",
-    uploadedAt: new Date(Date.now() - 900000).toISOString(),
-    category: "prescription",
-  },
-];
+export const SAMPLE_MEDICAL_DOCS: MedicalDocument[] = [];
 
 export function isClient(): boolean {
   return typeof window !== "undefined";

@@ -14,7 +14,6 @@ import type { MedicalDocument, MedicalAssessment, AdminUserRecord } from "@/type
 import {
   saveStoredMedicalConsultation,
   upsertStoredAdminUser,
-  SAMPLE_MEDICAL_DOCS,
 } from "@/lib/storage/mock-storage";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 
@@ -60,9 +59,9 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
 
   // Customer contact state for receipt & coach connection
   const [customerDetails, setCustomerDetails] = useState({
-    name: "Rahul Sharma",
-    email: "client@bmyfit.in",
-    phone: "+91 98201 44821",
+    name: "",
+    email: "",
+    phone: "",
   });
   const [showEditContact, setShowEditContact] = useState(false);
 
@@ -215,15 +214,6 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       };
       reader.readAsDataURL(file);
     });
-  };
-
-  const handleAddSampleDoc = (sample: (typeof SAMPLE_MEDICAL_DOCS)[0]) => {
-    const newDoc: MedicalDocument = {
-      ...sample,
-      id: `doc_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
-      uploadedAt: new Date().toISOString(),
-    };
-    setUploadedDocuments((prev) => [...prev, newDoc]);
   };
 
   const handleRemoveDoc = (docId: string) => {
@@ -1238,35 +1228,6 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
                     />
                   </label>
 
-                  {/* Quick sample test documents for instant testing */}
-                  <div className="pt-1 space-y-1.5">
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                      Quick Testing Presets (1-Click Sample Reports):
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => handleAddSampleDoc(SAMPLE_MEDICAL_DOCS[0])}
-                        className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200 transition"
-                      >
-                        + Blood Test (Lipid/CBC)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleAddSampleDoc(SAMPLE_MEDICAL_DOCS[1])}
-                        className="px-2.5 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 text-[10px] font-bold border border-teal-200 transition"
-                      >
-                        + Thyroid Report (TSH)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleAddSampleDoc(SAMPLE_MEDICAL_DOCS[2])}
-                        className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 text-[10px] font-bold border border-blue-200 transition"
-                      >
-                        + Spine Clearance Note
-                      </button>
-                    </div>
-                  </div>
 
                   {/* Uploaded Documents List */}
                   {uploadedDocuments.length > 0 && (

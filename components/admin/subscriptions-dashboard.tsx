@@ -70,8 +70,11 @@ export function SubscriptionsDashboard({
       return u.plan.status === "pending_review" || u.needsPlanReview;
     }
     if (statusFilter === "expiring") {
-      // Mock expiring criteria for demonstration
-      return u.id === "user_purchased_04" || u.id === "user_purchased_02";
+      if (u.subscription?.endDate) {
+        const daysLeft = (new Date(u.subscription.endDate).getTime() - Date.now()) / (1000 * 3600 * 24);
+        return daysLeft >= 0 && daysLeft <= 7;
+      }
+      return false;
     }
 
     return true;

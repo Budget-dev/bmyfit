@@ -224,7 +224,7 @@ export function AdminDesktopConsole() {
             <span>Server Live</span>
           </span>
           <Link
-            href="/plan/user_purchased_01"
+            href={selectedUser ? `/plan/${selectedUser.id}` : "/plan"}
             target="_blank"
             className="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1"
           >
