@@ -8,10 +8,32 @@ import { TransformationGuide } from "@/components/home/transformation-guide";
 import { DesktopHomeView } from "@/components/home/desktop-home-view";
 import { SiteFooter } from "@/components/layout/site-footer";
 
-export const metadata = {
-  title: "BMYFIT · Know your Body | Transform your Body",
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "BMYFIT — Train Smart. Get Results. Feel Unstoppable.",
   description:
-    "Free clinical BMI & US Navy Body Fat % calculator for Indian adults. Get an actionable 7-day Indian meal plan and personalized workout split for just Rs. 99.",
+    "India's #1 personalized fitness and nutrition platform for Indian bodies. Calibrated workout and diet plans by Coach Naveen for just ₹99.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "BMYFIT — Train Smart. Get Results. Feel Unstoppable.",
+    description:
+      "India's #1 personalized fitness and nutrition platform for Indian bodies. Calibrated workout and diet plans by Coach Naveen for just ₹99.",
+    url: "https://bmyfit.in",
+    siteName: "BMYFIT",
+    locale: "en_IN",
+    type: "website",
+    images: [
+      {
+        url: "/images/plan-triple-screens.jpg",
+        width: 1200,
+        height: 630,
+        alt: "BMYFIT - Train Smart. Get Results. Feel Unstoppable.",
+      },
+    ],
+  },
 };
 
 export default function HomePage() {

@@ -7,8 +7,26 @@ import { Button } from "@/components/ui/button";
 import { APP_CONFIG } from "@/lib/config";
 
 export const metadata: Metadata = {
-  title: "Frequently Asked Questions (FAQ) · BMYFIT",
-  description: "Find answers to commonly asked questions about BMYFIT body composition calculations, personalized plans, and delivery.",
+  title: "Frequently Asked Questions (FAQ) | BMYFIT Indian Fitness & Nutrition",
+  description:
+    "Find answers to common questions about Indian diet compatibility, US Navy body fat accuracy, the ₹99 plan deliverables, gym requirements, and Coach Naveen support.",
+  alternates: {
+    canonical: "/faq",
+  },
+  openGraph: {
+    title: "Frequently Asked Questions (FAQ) | BMYFIT Indian Fitness & Nutrition",
+    description:
+      "Find answers to common questions about Indian diet compatibility, US Navy body fat accuracy, the ₹99 plan deliverables, gym requirements, and Coach Naveen support.",
+    url: "https://bmyfit.in/faq",
+    images: [
+      {
+        url: "/images/plan-triple-screens.jpg",
+        width: 1200,
+        height: 630,
+        alt: "BMYFIT FAQ",
+      },
+    ],
+  },
 };
 
 const FAQS = [

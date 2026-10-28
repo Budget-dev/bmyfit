@@ -4,8 +4,18 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
-  title: "Contact Us - BMYFIT Support & Inquiries",
-  description: "Contact BMYFIT customer support for payment inquiries, plan delivery assistance, or general feedback.",
+  title: "Contact Athlete Support & Coach Naveen | BMYFIT",
+  description:
+    "Have questions about your ₹99 transformation plan, payment verification, or coaching support? Contact BMYFIT customer desk and Coach Naveen.",
+  alternates: {
+    canonical: "/contact",
+  },
+  openGraph: {
+    title: "Contact Athlete Support & Coach Naveen | BMYFIT",
+    description:
+      "Have questions about your ₹99 transformation plan, payment verification, or coaching support? Contact BMYFIT customer desk and Coach Naveen.",
+    url: "https://bmyfit.in/contact",
+  },
 };
 
 export default function ContactPage() {

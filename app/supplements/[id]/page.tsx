@@ -14,9 +14,33 @@ export async function generateMetadata({
   if (!product) {
     return { title: "Product Not Found · BMYFIT" };
   }
+  const title = `${product.fullTitle || product.name} | BMYFIT Supplements`;
+  const description = `${product.subtitle}. Price: ₹${product.price} (MRP: ₹${product.originalPrice}). Verified & recommended by Coach Naveen.`;
   return {
-    title: `${product.fullTitle || product.name} · BMYFIT Supplements`,
-    description: product.subtitle,
+    title,
+    description,
+    alternates: {
+      canonical: `/supplements/${product.id}`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `https://bmyfit.in/supplements/${product.id}`,
+      images: [
+        {
+          url: product.image,
+          width: 800,
+          height: 800,
+          alt: product.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [product.image],
+    },
   };
 }
 

@@ -3,11 +3,70 @@ declare module "next" {
     metadataBase?: URL;
     title?: string | { default: string; template?: string };
     description?: string;
+    applicationName?: string;
+    authors?: Array<{ name: string; url?: string }>;
+    generator?: string;
+    keywords?: string[] | string;
+    creator?: string;
+    publisher?: string;
+    category?: string;
+    formatDetection?: {
+      email?: boolean;
+      address?: boolean;
+      telephone?: boolean;
+    };
+    alternates?: {
+      canonical?: string;
+      languages?: Record<string, string>;
+    };
     robots?: {
       index?: boolean;
       follow?: boolean;
+      googleBot?: {
+        index?: boolean;
+        follow?: boolean;
+        "max-video-preview"?: number;
+        "max-image-preview"?: string;
+        "max-snippet"?: number;
+      };
     };
-    openGraph?: Record<string, unknown>;
+    openGraph?: {
+      title?: string;
+      description?: string;
+      url?: string;
+      siteName?: string;
+      locale?: string;
+      type?: string;
+      images?: Array<{
+        url: string;
+        width?: number;
+        height?: number;
+        alt?: string;
+      }>;
+      [key: string]: unknown;
+    };
+    twitter?: {
+      card?: string;
+      title?: string;
+      description?: string;
+      images?: string[];
+      creator?: string;
+      [key: string]: unknown;
+    };
+    icons?: {
+      icon?: string | Array<{ url: string; sizes?: string; type?: string }>;
+      apple?: string | Array<{ url: string; sizes?: string; type?: string }>;
+    };
+    [key: string]: unknown;
+  };
+
+  export type Viewport = {
+    themeColor?: string;
+    width?: string;
+    initialScale?: number;
+    maximumScale?: number;
+    userScalable?: boolean;
+    [key: string]: unknown;
   };
 
   export type NextConfig = {
@@ -40,6 +99,25 @@ declare module "next" {
       changeFrequency?: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
       priority?: number;
     }>;
+
+    export type Manifest = {
+      name: string;
+      short_name?: string;
+      description?: string;
+      start_url: string;
+      display?: "fullscreen" | "standalone" | "minimal-ui" | "browser";
+      background_color?: string;
+      theme_color?: string;
+      categories?: string[];
+      lang?: string;
+      icons?: Array<{
+        src: string;
+        sizes?: string;
+        type?: string;
+        purpose?: string;
+      }>;
+      [key: string]: unknown;
+    };
   }
 }
 

@@ -7,8 +7,26 @@ import { Button } from "@/components/ui/button";
 import { APP_CONFIG } from "@/lib/config";
 
 export const metadata: Metadata = {
-  title: "About Us · BMYFIT",
-  description: "Learn more about BMYFIT, our mission to bring science-backed, accessible fitness and body composition tools to Indian adults.",
+  title: "About Coach Naveen & BMYFIT | Evidence-Based Indian Fitness",
+  description:
+    "Learn about Coach Naveen, Certified Fitness Coach & Sports Nutritionist, Blaze Gym founder, and BMYFIT's mission to make elite fitness guidance accessible to every Indian for ₹99.",
+  alternates: {
+    canonical: "/about",
+  },
+  openGraph: {
+    title: "About Coach Naveen & BMYFIT | Evidence-Based Indian Fitness",
+    description:
+      "7+ years experience helping 1,000+ Indian adults transform their bodies sustainably through evidence-based nutrition and practical training.",
+    url: "https://bmyfit.in/about",
+    images: [
+      {
+        url: "/images/coach-portrait.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Coach Naveen - BMYFIT Head Coach",
+      },
+    ],
+  },
 };
 
 export default function AboutPage() {
