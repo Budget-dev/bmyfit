@@ -9,6 +9,7 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { AuthCard } from "@/components/auth/auth-card";
 import { useAuth } from "@/hooks/use-auth";
 import type { Assessment } from "@/types/fitness";
+import { calculateBodyFat } from "@/features/calculator";
 
 export interface ResultClientProps {
   id?: string;
@@ -129,9 +130,28 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
   // Calculate gauge position percent for BMI (range 15 to 35)
   const bmiPercent = Math.min(Math.max(((bmiValue - 15) / (35 - 15)) * 100, 5), 95);
 
-  // Body fat metrics
+  // Accurate US Navy Body Fat metrics
+  // Male: Body Fat % = 495 / (1.0324 - 0.19077 × log10(Waist - Neck) + 0.15456 × log10(Height)) - 450
+  // Female: Body Fat % = 495 / (1.29579 - 0.35004 × log10(Waist + Hip - Neck) + 0.22100 × log10(Height)) - 450
   const isMale = data.gender === "male";
-  const bodyFatVal = data.bodyFatPercent ?? (isMale ? 18.4 : 24.5);
+  let bodyFatVal = data.bodyFatPercent;
+  if (bodyFatVal === undefined || bodyFatVal === null) {
+    try {
+      const calculated = calculateBodyFat({
+        gender: data.gender || "male",
+        heightCm: data.heightCm || 175,
+        waistIn: data.waistIn,
+        neckIn: data.neckIn,
+        hipIn: data.hipIn,
+        waistCm: (data as { waistCm?: number }).waistCm,
+        neckCm: (data as { neckCm?: number }).neckCm,
+        hipCm: (data as { hipCm?: number }).hipCm,
+      });
+      bodyFatVal = calculated.value ?? (isMale ? 14.5 : 27.4);
+    } catch {
+      bodyFatVal = isMale ? 14.5 : 27.4;
+    }
+  }
   const bfCategoryLabel =
     bodyFatVal < (isMale ? 14 : 21)
       ? "Athletic"

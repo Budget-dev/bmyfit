@@ -12,6 +12,9 @@ export interface StoredDetails {
   waistIn?: number;
   neckIn?: number;
   hipIn?: number;
+  waistCm?: number;
+  neckCm?: number;
+  hipCm?: number;
 }
 
 export interface StoredGoal {
@@ -100,6 +103,9 @@ export function getFullDraftInput(): AssessmentInput | null {
     waistIn,
     neckIn,
     hipIn,
+    waistCm: details.waistCm,
+    neckCm: details.neckCm,
+    hipCm: details.hipCm,
     goal: goal.goal,
     activityLevel: goal.activityLevel ?? DEFAULT_ACTIVITY_LEVEL,
     dietPreference: goal.dietPreference ?? DEFAULT_DIET_PREFERENCE,

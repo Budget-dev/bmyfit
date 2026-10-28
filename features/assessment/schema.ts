@@ -49,6 +49,9 @@ export const detailsSchema = z
       .min(20, "Hip must be at least 20 inches")
       .max(80, "Hip must be under 80 inches")
       .optional(),
+    waistCm: z.coerce.number().optional(),
+    neckCm: z.coerce.number().optional(),
+    hipCm: z.coerce.number().optional(),
   })
   .superRefine((val, ctx) => {
     if (val.gender === "male") {

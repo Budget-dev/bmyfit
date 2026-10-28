@@ -28,6 +28,9 @@ export interface DetailsInput {
   waistIn: number;
   neckIn: number;
   hipIn?: number;
+  waistCm?: number;
+  neckCm?: number;
+  hipCm?: number;
 }
 
 export type DetailsDraft = Partial<DetailsInput>;

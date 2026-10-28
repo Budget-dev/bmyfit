@@ -1,7 +1,46 @@
 import { describe, expect, it } from "vitest";
-import { calculateBodyFat, inchToCm } from "@/features/calculator/body-fat";
+import {
+  calculateBodyFat,
+  calculateFemaleBodyFatNavy,
+  calculateMaleBodyFatNavy,
+  inchToCm,
+} from "@/features/calculator/body-fat";
 
 describe("US Navy Body Fat Calculator", () => {
+  describe("Direct US Navy Metric Formulas (Male & Female)", () => {
+    it("calculates Male Navy formula accurately: 495 / (1.0324 - 0.19077*log10(waist-neck) + 0.15456*log10(height)) - 450", () => {
+      // waist: 86cm, neck: 38cm, height: 175cm
+      const bf = calculateMaleBodyFatNavy(86, 38, 175);
+      expect(bf).toBeCloseTo(17.71, 0.1);
+    });
+
+    it("calculates Female Navy formula accurately: 495 / (1.29579 - 0.35004*log10(waist+hip-neck) + 0.22100*log10(height)) - 450", () => {
+      // waist: 70cm, hip: 98cm, neck: 33cm, height: 165cm
+      const bf = calculateFemaleBodyFatNavy(70, 98, 33, 165);
+      expect(bf).toBeCloseTo(25.89, 0.1);
+    });
+
+    it("accepts waistCm/neckCm/hipCm directly in calculateBodyFat without precision loss", () => {
+      const maleResult = calculateBodyFat({
+        gender: "male",
+        heightCm: 175,
+        waistCm: 86,
+        neckCm: 38,
+      });
+      expect(maleResult.plausible).toBe(true);
+      expect(maleResult.value).toBe(17.7);
+
+      const femaleResult = calculateBodyFat({
+        gender: "female",
+        heightCm: 165,
+        waistCm: 70,
+        neckCm: 33,
+        hipCm: 98,
+      });
+      expect(femaleResult.plausible).toBe(true);
+      expect(femaleResult.value).toBe(25.9);
+    });
+  });
   it("converts inches to centimetres accurately", () => {
     expect(inchToCm(1)).toBe(2.54);
     expect(inchToCm(10)).toBe(25.4);

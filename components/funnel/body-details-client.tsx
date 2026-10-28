@@ -157,9 +157,9 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
     const defaultNeckCm = gender === "male" ? 36 : 32;
     const defaultHipCm = gender === "male" ? 95 : 98;
 
-    const waistCm = Number(waist) || defaultWaistCm;
-    const neckCm = Number(neck) || defaultNeckCm;
-    const hipCm = Number(hip) || defaultHipCm;
+    const waistCm = waistUnit === "cm" ? (Number(waist) || defaultWaistCm) : Math.round(((Number(waist) || (defaultWaistCm / 2.54)) * 2.54) * 10) / 10;
+    const neckCm = neckUnit === "cm" ? (Number(neck) || defaultNeckCm) : Math.round(((Number(neck) || (defaultNeckCm / 2.54)) * 2.54) * 10) / 10;
+    const hipCm = hipUnit === "cm" ? (Number(hip) || defaultHipCm) : Math.round(((Number(hip) || (defaultHipCm / 2.54)) * 2.54) * 10) / 10;
 
     const waistIn =
       waistUnit === "in"
@@ -181,7 +181,9 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
       weightKg: numWeight,
       waistIn,
       neckIn,
-      ...(gender === "female" ? { hipIn } : {}),
+      waistCm,
+      neckCm,
+      ...(gender === "female" ? { hipIn, hipCm } : {}),
     });
 
     setStep(2);
@@ -209,6 +211,10 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
     const numNeck = Number(neck) || (gender === "male" ? 36 : 32);
     const numHip = Number(hip) || (gender === "male" ? 95 : 98);
 
+    const waistCm = waistUnit === "cm" ? numWaist : Math.round(numWaist * 2.54 * 10) / 10;
+    const neckCm = neckUnit === "cm" ? numNeck : Math.round(numNeck * 2.54 * 10) / 10;
+    const hipCm = hipUnit === "cm" ? numHip : Math.round(numHip * 2.54 * 10) / 10;
+
     const finalWaistIn =
       waistUnit === "in"
         ? numWaist
@@ -229,7 +235,9 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
       weightKg: numWeight,
       waistIn: finalWaistIn,
       neckIn: finalNeckIn,
-      ...(gender === "female" ? { hipIn: finalHipIn } : {}),
+      waistCm,
+      neckCm,
+      ...(gender === "female" ? { hipIn: finalHipIn, hipCm } : {}),
     });
 
     router.push("/calculating");
