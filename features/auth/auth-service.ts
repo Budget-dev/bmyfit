@@ -8,25 +8,39 @@ import {
   updateProfile,
   signOut,
   sendPasswordResetEmail,
-  type User,
 } from "firebase/auth";
 import { auth, db, doc, setDoc, getDoc } from "@/lib/firebase/client";
 import type { UserProfile, SignupData, SigninData } from "@/types/auth";
-import { publicEnv } from "@/lib/env/public";
 
 const DETAILS_STORAGE_KEY = "bmyfit_draft_details_v1";
 const LOCAL_ASSESSMENT_KEY = "bmyfit_local_assessment";
+const AUTH_PROFILE_KEY = "bmyfit_auth_profile";
 
-// In-memory runtime profile (no localStorage, sessions are handled by Firebase Auth)
+// In-memory runtime profile with sessionStorage persistence for client sessions
 let inMemoryProfile: UserProfile | null = null;
 
 export function getStoredProfile(): UserProfile | null {
   if (inMemoryProfile) return inMemoryProfile;
+  if (typeof window !== "undefined") {
+    try {
+      const raw = sessionStorage.getItem(AUTH_PROFILE_KEY);
+      if (raw) {
+        inMemoryProfile = JSON.parse(raw);
+        return inMemoryProfile;
+      }
+    } catch {}
+  }
   return null;
 }
 
 export function saveStoredProfile(profile: UserProfile): void {
   inMemoryProfile = profile;
+
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.setItem(AUTH_PROFILE_KEY, JSON.stringify(profile));
+    } catch {}
+  }
 
   // Persist directly to Firebase Firestore
   if (typeof window !== "undefined" && profile.uid) {
@@ -60,7 +74,7 @@ export function saveStoredProfile(profile: UserProfile): void {
       const details = rawDetails ? JSON.parse(rawDetails) : {};
       details.age = profile.age || details.age || 28;
       sessionStorage.setItem(DETAILS_STORAGE_KEY, JSON.stringify(details));
-    } catch { }
+    } catch {}
 
     try {
       const rawAss = sessionStorage.getItem(LOCAL_ASSESSMENT_KEY);
@@ -69,12 +83,18 @@ export function saveStoredProfile(profile: UserProfile): void {
       ass.email = profile.email;
       ass.phone = profile.phone;
       sessionStorage.setItem(LOCAL_ASSESSMENT_KEY, JSON.stringify(ass));
-    } catch { }
+    } catch {}
   }
 }
 
 export function clearStoredProfile(): void {
   inMemoryProfile = null;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.removeItem(AUTH_PROFILE_KEY);
+      sessionStorage.removeItem("bmyfit_admin_authorized");
+    } catch {}
+  }
 }
 
 export async function fetchFirebaseProfile(uid: string): Promise<UserProfile | null> {
@@ -86,6 +106,9 @@ export async function fetchFirebaseProfile(uid: string): Promise<UserProfile | n
     if (snap.exists()) {
       const data = snap.data() as UserProfile;
       inMemoryProfile = data;
+      try {
+        sessionStorage.setItem(AUTH_PROFILE_KEY, JSON.stringify(data));
+      } catch {}
       return data;
     }
   } catch (err) {
@@ -119,50 +142,29 @@ export async function signInWithGoogle(): Promise<UserProfile> {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
 
-  try {
-    const cred = await signInWithPopup(auth, provider);
-    const fbUser = cred.user;
+  const cred = await signInWithPopup(auth, provider);
+  const fbUser = cred.user;
 
-    const existing = getStoredProfile();
-    const profile: UserProfile = {
-      uid: fbUser.uid,
-      name: fbUser.displayName || existing?.name || "BMYFIT Athlete",
-      email: fbUser.email || existing?.email || "",
-      phone: fbUser.phoneNumber || existing?.phone || "",
-      age: existing?.age || 28,
-      avatarUrl: fbUser.photoURL || undefined,
-      provider: "google",
-      createdAt: existing?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+  // Retrieve any existing remote profile from Firestore to keep stored age, phone, etc.
+  const remoteProfile = await fetchFirebaseProfile(fbUser.uid);
 
-    saveStoredProfile(profile);
-    const token = await fbUser.getIdToken().catch(() => null);
-    await syncProfileToServer(profile, token);
+  const profile: UserProfile = {
+    uid: fbUser.uid,
+    name: fbUser.displayName || remoteProfile?.name || "BMYFIT Athlete",
+    email: fbUser.email || remoteProfile?.email || "",
+    phone: fbUser.phoneNumber || remoteProfile?.phone || "",
+    age: remoteProfile?.age || 28,
+    avatarUrl: fbUser.photoURL || remoteProfile?.avatarUrl || undefined,
+    provider: "google",
+    createdAt: remoteProfile?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
 
-    return profile;
-  } catch (err: unknown) {
-    const error = err as { code?: string; message?: string };
-    // If API key is dummy or not configured in development, provide graceful dev sandbox fallback
-    const isDevKey = !publicEnv.NEXT_PUBLIC_FIREBASE_API_KEY || publicEnv.NEXT_PUBLIC_FIREBASE_API_KEY.includes("Dummy");
-    if (isDevKey || error.code === "auth/api-key-not-valid" || error.code === "auth/configuration-not-found") {
-      console.warn("Firebase Google login bypassed for local development sandbox mode.");
-      const demoProfile: UserProfile = {
-        uid: "google_dev_demo_" + Math.random().toString(36).substring(2, 9),
-        name: "Devendra Verma (Google)",
-        email: "devendra.google@bmyfit.in",
-        phone: "+91 98201 44821",
-        age: 29,
-        avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
-        provider: "google",
-        createdAt: new Date().toISOString(),
-      };
-      saveStoredProfile(demoProfile);
-      await syncProfileToServer(demoProfile);
-      return demoProfile;
-    }
-    throw err;
-  }
+  saveStoredProfile(profile);
+  const token = await fbUser.getIdToken().catch(() => null);
+  await syncProfileToServer(profile, token);
+
+  return profile;
 }
 
 /**
@@ -170,49 +172,29 @@ export async function signInWithGoogle(): Promise<UserProfile> {
  */
 export async function loginWithEmail(data: SigninData): Promise<UserProfile> {
   const { email, password } = data;
-  try {
-    const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
-    const fbUser = cred.user;
+  const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+  const fbUser = cred.user;
 
-    const existing = getStoredProfile();
-    const profile: UserProfile = {
-      uid: fbUser.uid,
-      name: fbUser.displayName || existing?.name || email.split("@")[0],
-      email: fbUser.email || email.trim(),
-      phone: existing?.phone || "+91 98000 00000",
-      age: existing?.age || 28,
-      avatarUrl: fbUser.photoURL || undefined,
-      provider: "password",
-      createdAt: existing?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+  // Retrieve user document from Firestore to restore user's registered name, phone, and age
+  const remoteProfile = await fetchFirebaseProfile(fbUser.uid);
 
-    saveStoredProfile(profile);
-    const token = await fbUser.getIdToken().catch(() => null);
-    await syncProfileToServer(profile, token);
+  const profile: UserProfile = {
+    uid: fbUser.uid,
+    name: remoteProfile?.name || fbUser.displayName || email.split("@")[0],
+    email: fbUser.email || email.trim(),
+    phone: remoteProfile?.phone || fbUser.phoneNumber || "",
+    age: remoteProfile?.age || 28,
+    avatarUrl: fbUser.photoURL || remoteProfile?.avatarUrl || undefined,
+    provider: "password",
+    createdAt: remoteProfile?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
 
-    return profile;
-  } catch (err: unknown) {
-    const error = err as { code?: string; message?: string };
-    const isDevKey = !publicEnv.NEXT_PUBLIC_FIREBASE_API_KEY || publicEnv.NEXT_PUBLIC_FIREBASE_API_KEY.includes("Dummy");
-    if (isDevKey || error.code === "auth/api-key-not-valid" || error.code === "auth/configuration-not-found") {
-      console.warn("Firebase email login bypassed for local development sandbox mode.");
-      const existing = getStoredProfile();
-      const demoProfile: UserProfile = {
-        uid: "usr_dev_" + Math.random().toString(36).substring(2, 9),
-        name: existing?.name || email.split("@")[0],
-        email: email.trim(),
-        phone: existing?.phone || "+91 98201 44821",
-        age: existing?.age || 28,
-        provider: "password",
-        createdAt: new Date().toISOString(),
-      };
-      saveStoredProfile(demoProfile);
-      await syncProfileToServer(demoProfile);
-      return demoProfile;
-    }
-    throw err;
-  }
+  saveStoredProfile(profile);
+  const token = await fbUser.getIdToken().catch(() => null);
+  await syncProfileToServer(profile, token);
+
+  return profile;
 }
 
 /**
@@ -221,48 +203,28 @@ export async function loginWithEmail(data: SigninData): Promise<UserProfile> {
 export async function signupWithEmail(data: SignupData): Promise<UserProfile> {
   const { name, email, password, phone, age } = data;
 
-  try {
-    const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
-    const fbUser = cred.user;
+  const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+  const fbUser = cred.user;
 
-    // Update display name in Firebase Auth
-    await updateProfile(fbUser, { displayName: name.trim() });
+  // Update display name in Firebase Auth
+  await updateProfile(fbUser, { displayName: name.trim() });
 
-    const profile: UserProfile = {
-      uid: fbUser.uid,
-      name: name.trim(),
-      email: fbUser.email || email.trim(),
-      phone: phone.trim(),
-      age: Number(age),
-      provider: "password",
-      createdAt: new Date().toISOString(),
-    };
+  const profile: UserProfile = {
+    uid: fbUser.uid,
+    name: name.trim(),
+    email: fbUser.email || email.trim(),
+    phone: phone.trim(),
+    age: Number(age),
+    provider: "password",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
 
-    saveStoredProfile(profile);
-    const token = await fbUser.getIdToken().catch(() => null);
-    await syncProfileToServer(profile, token);
+  saveStoredProfile(profile);
+  const token = await fbUser.getIdToken().catch(() => null);
+  await syncProfileToServer(profile, token);
 
-    return profile;
-  } catch (err: unknown) {
-    const error = err as { code?: string; message?: string };
-    const isDevKey = !publicEnv.NEXT_PUBLIC_FIREBASE_API_KEY || publicEnv.NEXT_PUBLIC_FIREBASE_API_KEY.includes("Dummy");
-    if (isDevKey || error.code === "auth/api-key-not-valid" || error.code === "auth/configuration-not-found") {
-      console.warn("Firebase signup bypassed for local development sandbox mode.");
-      const demoProfile: UserProfile = {
-        uid: "usr_signup_" + Math.random().toString(36).substring(2, 9),
-        name: name.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        age: Number(age),
-        provider: "password",
-        createdAt: new Date().toISOString(),
-      };
-      saveStoredProfile(demoProfile);
-      await syncProfileToServer(demoProfile);
-      return demoProfile;
-    }
-    throw err;
-  }
+  return profile;
 }
 
 /**
@@ -282,47 +244,5 @@ export async function logoutUser(): Promise<void> {
  * Reset Password Email
  */
 export async function sendResetEmail(email: string): Promise<void> {
-  try {
-    await sendPasswordResetEmail(auth, email.trim());
-  } catch (err: unknown) {
-    const error = err as { code?: string };
-    const isDevKey = !publicEnv.NEXT_PUBLIC_FIREBASE_API_KEY || publicEnv.NEXT_PUBLIC_FIREBASE_API_KEY.includes("Dummy");
-    if (isDevKey || error.code === "auth/api-key-not-valid") {
-      // In dev sandbox, simulate success
-      return;
-    }
-    throw err;
-  }
-}
-
-/**
- * Dev Sandbox One-Click Instant Sign-In
- */
-export async function loginDevSandbox(preset: "new_client" | "member" = "new_client"): Promise<UserProfile> {
-  const profile: UserProfile =
-    preset === "new_client"
-      ? {
-        uid: "demo_user_" + Math.random().toString(36).substring(2, 8),
-        name: "Aryan Sharma",
-        email: "aryan.sharma@bmyfit.in",
-        phone: "+91 98201 44821",
-        age: 26,
-        avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
-        provider: "demo",
-        createdAt: new Date().toISOString(),
-      }
-      : {
-        uid: "demo_member_" + Math.random().toString(36).substring(2, 8),
-        name: "Simran Kaur",
-        email: "simran.kaur@bmyfit.in",
-        phone: "+91 98881 23456",
-        age: 29,
-        avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
-        provider: "demo",
-        createdAt: new Date().toISOString(),
-      };
-
-  saveStoredProfile(profile);
-  await syncProfileToServer(profile);
-  return profile;
+  await sendPasswordResetEmail(auth, email.trim());
 }

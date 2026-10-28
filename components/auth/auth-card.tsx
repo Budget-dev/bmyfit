@@ -4,15 +4,29 @@ import React, { useState, useId } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
-import { sendResetEmail, loginDevSandbox } from "@/features/auth/auth-service";
+import { sendResetEmail } from "@/features/auth/auth-service";
 
 interface AuthCardProps {
   initialMode?: "signin" | "signup";
   onSuccess?: () => void;
   className?: string;
+  initialAge?: string;
+  initialName?: string;
+  initialEmail?: string;
+  initialPhone?: string;
+  subtitle?: string;
 }
 
-export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: AuthCardProps) {
+export function AuthCard({
+  initialMode = "signup",
+  onSuccess,
+  className = "",
+  initialAge,
+  initialName,
+  initialEmail,
+  initialPhone,
+  subtitle,
+}: AuthCardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTarget = searchParams?.get("redirect") || "/plan";
@@ -29,10 +43,10 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
   const [showPassword, setShowPassword] = useState(false);
 
   // Form Fields
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [age, setAge] = useState<string>("26");
+  const [name, setName] = useState(initialName || "");
+  const [email, setEmail] = useState(initialEmail || "");
+  const [phone, setPhone] = useState(initialPhone || "");
+  const [age, setAge] = useState<string>(initialAge || "26");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -142,7 +156,15 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
       } catch (err: unknown) {
         const error = err as { code?: string; message?: string };
         if (error.code === "auth/email-already-in-use") {
-          setErrorMessage("This email is already registered. Please sign in instead.");
+          setErrorMessage("This email is already registered. Please switch to Sign In.");
+        } else if (error.code === "auth/invalid-email") {
+          setErrorMessage("Please provide a valid email address.");
+        } else if (error.code === "auth/weak-password") {
+          setErrorMessage("Password must be at least 6 characters.");
+        } else if (error.code === "auth/operation-not-allowed") {
+          setErrorMessage("Email/Password sign-up is not enabled. Please contact support.");
+        } else if (error.code === "auth/network-request-failed") {
+          setErrorMessage("Network error. Please check your internet connection.");
         } else {
           setErrorMessage(error.message || "Registration failed. Please check your details.");
         }
@@ -177,8 +199,16 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
         }
       } catch (err: unknown) {
         const error = err as { code?: string; message?: string };
-        if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
-          setErrorMessage("Invalid email or password. Please check your credentials.");
+        if (
+          error.code === "auth/user-not-found" ||
+          error.code === "auth/wrong-password" ||
+          error.code === "auth/invalid-credential"
+        ) {
+          setErrorMessage("Invalid email or password. Please verify your details or sign up.");
+        } else if (error.code === "auth/too-many-requests") {
+          setErrorMessage("Access blocked temporarily due to many failed attempts. Try again later or reset password.");
+        } else if (error.code === "auth/network-request-failed") {
+          setErrorMessage("Network error. Please check your internet connection.");
         } else {
           setErrorMessage(error.message || "Failed to sign in. Please try again.");
         }
@@ -203,19 +233,6 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
     }
   };
 
-  const handleSandboxDemoLogin = async () => {
-    try {
-      setLoading(true);
-      const demoProfile = await loginDevSandbox("new_client");
-      setSuccessMessage(`Demo profile loaded as ${demoProfile.name}! Redirecting...`);
-      setTimeout(() => {
-        router.push(redirectTarget);
-      }, 700);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div
       className={`relative w-full max-w-md mx-auto bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-gray-100 shadow-[0_15px_40px_rgba(0,0,0,0.06)] p-4 sm:p-5 text-left ${className}`}
@@ -234,10 +251,11 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
         <h2 className="text-lg sm:text-xl font-black text-gray-950 tracking-tight leading-snug">
           {mode === "signup" ? "Create Your BMYFIT Account" : "Sign In to BMYFIT"}
         </h2>
-        <p className="text-[11px] text-gray-500 mt-0.5 max-w-xs mx-auto line-clamp-1">
-          {mode === "signup"
-            ? "Access personalized nutrition, workout splits & coach check-ins."
-            : "Continue your transformation and access your active weekly plan."}
+        <p className="text-[11px] text-gray-500 mt-0.5 max-w-xs mx-auto line-clamp-2">
+          {subtitle ||
+            (mode === "signup"
+              ? "Access personalized nutrition, workout splits & coach check-ins."
+              : "Continue your transformation and access your active weekly plan.")}
         </p>
       </div>
 
@@ -573,19 +591,13 @@ export function AuthCard({ initialMode = "signup", onSuccess, className = "" }: 
         </button>
       </form>
 
-      {/* Dev Testing Sandbox Shortcut Button */}
-      <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={handleSandboxDemoLogin}
-          className="text-[10px] font-semibold text-gray-500 hover:text-emerald-700 flex items-center gap-1 transition-colors cursor-pointer"
-          title="Instant mock sign-in for testing without filling the form"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Quick Demo Sign-In</span>
-        </button>
-
-        <span className="text-[9px] text-gray-400">SSL 256-Bit</span>
+      {/* Security & Encryption Verification */}
+      <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between text-gray-400">
+        <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-medium">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span>Encrypted Account Security</span>
+        </div>
+        <span className="text-[9px] text-gray-400 font-medium">256-Bit SSL Protection</span>
       </div>
 
       {/* Forgot Password Modal */}

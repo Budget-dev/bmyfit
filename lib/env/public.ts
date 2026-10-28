@@ -1,15 +1,15 @@
 import { z } from "zod";
 
 const publicSchema = z.object({
-  NEXT_PUBLIC_FIREBASE_API_KEY: z.string().default(""),
-  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: z.string().default(""),
-  NEXT_PUBLIC_FIREBASE_PROJECT_ID: z.string().default(""),
-  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: z.string().default(""),
-  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: z.string().default(""),
-  NEXT_PUBLIC_FIREBASE_APP_ID: z.string().default(""),
-  NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: z.string().default(""),
+  NEXT_PUBLIC_FIREBASE_API_KEY: z.string().default("AIzaSyBTDlDEskEIE_QV7_-T30iq__4u6xY_3NU"),
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: z.string().default("bmyfit-809a8.firebaseapp.com"),
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: z.string().default("bmyfit-809a8"),
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: z.string().default("bmyfit-809a8.firebasestorage.app"),
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: z.string().default("378122370612"),
+  NEXT_PUBLIC_FIREBASE_APP_ID: z.string().default("1:378122370612:web:640061563e06e44e179461"),
+  NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: z.string().default("G-7P72H4FP7D"),
   NEXT_PUBLIC_USE_FIREBASE_EMULATORS: z.enum(["true", "false"]).default("false"),
-  NEXT_PUBLIC_RAZORPAY_KEY_ID: z.string().default(""),
+  NEXT_PUBLIC_RAZORPAY_KEY_ID: z.string().default("rzp_test_TsSGJT6J6V5Xo8"),
   NEXT_PUBLIC_PRICE_INR: z.coerce.number().default(99),
 });
 

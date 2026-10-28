@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiteHeader } from "@/components/layout/site-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { AuthCard } from "@/components/auth/auth-card";
 import { useAuth } from "@/hooks/use-auth";
 import type { Assessment } from "@/types/fitness";
 
@@ -16,7 +17,7 @@ export interface ResultClientProps {
 
 export function ResultClient({ id, assessment: initialAssessment }: ResultClientProps) {
   const router = useRouter();
-  const { getIdToken, loading: authLoading } = useAuth();
+  const { isAuthenticated, getIdToken, loading: authLoading } = useAuth();
 
   const [assessment, setAssessment] = useState<Assessment | null>(initialAssessment ?? null);
   const [loading, setLoading] = useState<boolean>(!initialAssessment);
@@ -173,7 +174,7 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
     router.push(`/checkout/${data.id || "latest"}`);
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-white text-gray-900 overflow-x-hidden">
         <SiteHeader />
@@ -181,6 +182,186 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
           <div className="w-10 h-10 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
           <p className="mt-3 text-xs font-bold text-gray-600">Loading your results snapshot...</p>
         </main>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  // Gated Assessment View: User must log in or create an account to view their free score
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex flex-col bg-white text-gray-900 selection:bg-emerald-500 selection:text-white overflow-x-hidden relative">
+        <SiteHeader />
+
+        <main className="flex-1 max-w-md md:max-w-5xl lg:max-w-6xl mx-auto w-full px-3 sm:px-6 lg:px-8 pt-2 md:pt-6 pb-16 flex flex-col justify-start relative">
+          {/* Subheader Status Pill */}
+          <div className="flex items-center justify-between mt-0.5 mb-3 md:mb-5">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-[#057a44] text-[10px] md:text-xs font-black uppercase tracking-wider">
+              <span className="w-2 h-2 rounded-full bg-[#00c853] animate-pulse" />
+              <span>Metabolic Analysis 100% Complete</span>
+            </div>
+            <span className="text-[10px] md:text-xs font-bold text-gray-500">
+              Free Assessment
+            </span>
+          </div>
+
+          {/* Desktop & Mobile Responsive Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10 items-start">
+            {/* Left Column: Locked Score Teaser & Intake Summary (md:col-span-6) */}
+            <div className="md:col-span-6 space-y-4 text-left">
+              <div>
+                <h1 className="text-[22px] min-[390px]:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight leading-[1.1] text-gray-950">
+                  Unlock Your Free{" "}
+                  <span className="text-[#00c853]">Body Score</span>
+                </h1>
+                <p className="text-xs md:text-sm text-gray-600 mt-1.5 leading-relaxed">
+                  Your biometrics and clinical metabolic ratios have been calculated. Create your free account or sign in to instantly reveal your Body Mass Index (BMI), Estimated Body Fat %, and personalized caloric recommendations.
+                </p>
+              </div>
+
+              {/* Verified Intake Summary Card */}
+              <div className="rounded-2xl bg-gray-50/90 border border-gray-200/80 p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] md:text-xs font-black uppercase tracking-wider text-gray-700">
+                    Your Measured Parameters
+                  </span>
+                  <span className="text-[9px] md:text-[10px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full">
+                    Verified
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-2xs">
+                    <span className="text-[9px] text-gray-400 block font-medium">Height / Weight</span>
+                    <span className="font-extrabold text-gray-900">{data.heightCm} cm · {data.weightKg} kg</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-2xs">
+                    <span className="text-[9px] text-gray-400 block font-medium">Gender &amp; Age</span>
+                    <span className="font-extrabold text-gray-900 capitalize">{data.gender} · {data.age}y</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-2xs">
+                    <span className="text-[9px] text-gray-400 block font-medium">Target Goal</span>
+                    <span className="font-extrabold text-emerald-600">{goalConfig.name}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3 Teaser Score Cards (BMI & Body Fat Locked with Frosted Glass) */}
+              <div className="grid grid-cols-3 gap-2">
+                {/* Card 1: BMI (Locked) */}
+                <div className="relative rounded-2xl bg-white border border-gray-200 shadow-xs p-2.5 flex flex-col justify-between min-h-[115px] overflow-hidden">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-xs">
+                      🔒
+                    </div>
+                    <span className="text-[10px] font-black text-gray-950">BMI Score</span>
+                  </div>
+                  <div className="my-auto py-1 filter blur-[5px] select-none text-2xl font-black text-gray-900">
+                    24.2
+                  </div>
+                  <div className="mt-auto">
+                    <span className="inline-block px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[8px] font-bold">
+                      Locked
+                    </span>
+                  </div>
+                  {/* Subtle lock badge overlay */}
+                  <div className="absolute inset-0 bg-white/75 backdrop-blur-[2px] flex flex-col items-center justify-center p-1 text-center">
+                    <span className="text-base">🔒</span>
+                    <span className="text-[8.5px] font-black text-gray-900 mt-0.5 leading-tight">
+                      Free Login Required
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card 2: Estimated Body Fat % (Locked) */}
+                <div className="relative rounded-2xl bg-white border border-gray-200 shadow-xs p-2.5 flex flex-col justify-between min-h-[115px] overflow-hidden">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-xs">
+                      🔒
+                    </div>
+                    <span className="text-[10px] font-black text-gray-950">Body Fat %</span>
+                  </div>
+                  <div className="my-auto py-1 filter blur-[5px] select-none text-2xl font-black text-gray-900">
+                    18.4%
+                  </div>
+                  <div className="mt-auto">
+                    <span className="inline-block px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[8px] font-bold">
+                      Locked
+                    </span>
+                  </div>
+                  {/* Subtle lock badge overlay */}
+                  <div className="absolute inset-0 bg-white/75 backdrop-blur-[2px] flex flex-col items-center justify-center p-1 text-center">
+                    <span className="text-base">🔒</span>
+                    <span className="text-[8.5px] font-black text-gray-900 mt-0.5 leading-tight">
+                      Free Login Required
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card 3: Target Goal */}
+                <div className="rounded-2xl bg-white border border-gray-200 shadow-xs p-2.5 flex flex-col justify-between min-h-[115px]">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded-full bg-emerald-50 text-[#057a44] flex items-center justify-center text-xs">
+                      {goalConfig.icon}
+                    </div>
+                    <span className="text-[10px] font-black text-gray-950">Your Goal</span>
+                  </div>
+                  <div className="my-auto">
+                    <div className="text-sm font-black text-gray-950 leading-tight">
+                      {goalConfig.name}
+                    </div>
+                  </div>
+                  <div className="mt-auto">
+                    <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[8px] font-bold">
+                      Selected
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Coach Naveen Teaser */}
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/60">
+                <div className="relative w-10 h-10 rounded-full overflow-hidden border border-emerald-500 shrink-0">
+                  <Image src="/images/coach-naveen.jpg" alt="Coach Naveen" fill className="object-cover object-top" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-gray-950">Coach Naveen’s Clinical Insight</h4>
+                  <p className="text-[11px] text-gray-600 mt-0.5 leading-snug">
+                    &ldquo;Your metabolic profile gives us the exact baseline needed to structure your calories and workouts. Sign in below to view your full results.&rdquo;
+                  </p>
+                </div>
+              </div>
+
+              {/* Key Trust Guarantees */}
+              <div className="space-y-1.5 pt-1 text-[11px] text-gray-600">
+                <div className="flex items-center gap-2">
+                  <span className="text-emerald-600 font-bold">✓</span>
+                  <span><strong>100% Free</strong> · No payment or credit card required to view your score</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-emerald-600 font-bold">✓</span>
+                  <span><strong>Clinical Accuracy</strong> · Calculated via WHO and US Navy equations</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-emerald-600 font-bold">✓</span>
+                  <span><strong>Instant Access</strong> · Reveal your score immediately upon signing in</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Embedded Sign Up / Sign In Auth Card (md:col-span-6) */}
+            <div className="md:col-span-6">
+              <AuthCard
+                initialMode="signup"
+                initialAge={String(data.age || 26)}
+                initialName={(data as unknown as { name?: string }).name || ""}
+                initialEmail={(data as unknown as { email?: string }).email || ""}
+                initialPhone={(data as unknown as { phone?: string }).phone || ""}
+                subtitle="Create your free account or sign in to instantly reveal your body snapshot & metabolic analysis."
+              />
+            </div>
+          </div>
+        </main>
+
         <BottomNav />
       </div>
     );
