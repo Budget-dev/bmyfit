@@ -27,6 +27,7 @@ import {
   Bell,
   Menu,
   MessageCircle,
+  Video,
 } from "@/components/ui/icons";
 import type {
   PlanDashboardData,
@@ -46,6 +47,7 @@ import { ShoppingBag } from "@/components/ui/supplement-icons";
 import { getRecommendedProductsForGoal } from "@/features/supplements/supplements-data";
 import { PlanPendingScreen } from "./plan-pending-screen";
 import { ClientChatWidget } from "@/components/chat/client-chat-widget";
+import { parseVideoUrl } from "@/lib/video-helper";
 
 interface PlanDashboardProps {
   initialPlan: PlanDashboardData;
@@ -374,6 +376,72 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
             <span>Open Coach Chat</span>
           </button>
         </section>
+
+        {/* ================= COACH PERSONALIZED VIDEO SECTION ================= */}
+        {plan.video?.url && (
+          <section className="bg-white rounded-3xl p-5 sm:p-6 border border-emerald-100/90 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                  <Video className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-black text-gray-900">
+                      {plan.video.title || "Coach Video Guidance & Routine"}
+                    </h3>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wide">
+                      {plan.video.aspectRatio === "9:16" ? "9:16 Reel" : "16:9 Video"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 font-medium">
+                    Personalized technique analysis and workout walkthrough by Coach Naveen
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Video Container in selected aspect ratio (16:9 or 9:16) */}
+            <div className="flex justify-center bg-slate-950/5 rounded-2xl p-2.5 border border-gray-100">
+              <div
+                className={`overflow-hidden rounded-2xl bg-black shadow-lg relative ${
+                  plan.video.aspectRatio === "9:16"
+                    ? "aspect-[9/16] w-full max-w-[340px]"
+                    : "aspect-[16/9] w-full"
+                }`}
+              >
+                {(() => {
+                  const pVid = parseVideoUrl(plan.video.url);
+                  return pVid.isDirectVideo ? (
+                    <video
+                      src={pVid.embedUrl || plan.video.url}
+                      controls
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <iframe
+                      src={pVid.embedUrl || plan.video.url}
+                      title={plan.video.title || "Coach Video"}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full border-0"
+                    />
+                  );
+                })()}
+              </div>
+            </div>
+
+            {plan.video.notes && (
+              <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200/60 text-xs text-emerald-950 space-y-1">
+                <span className="font-bold block uppercase text-[10px] text-emerald-800 tracking-wider">
+                  Coach Guidance Notes:
+                </span>
+                <p className="leading-relaxed font-medium">{plan.video.notes}</p>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* ================= ACTION BUTTONS ROW ================= */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -845,6 +913,58 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
+
+          {/* Coach's Attached Supplements for this Member */}
+          {plan.suggestedSupplements && plan.suggestedSupplements.length > 0 && (
+            <div className="space-y-3 pb-2">
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-block">
+                ★ Prescribed Supplements for {plan.customerName}
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {plan.suggestedSupplements.map((supp) => (
+                  <div
+                    key={supp.productId}
+                    className="p-4 rounded-2xl bg-[#f0fbf4] border border-emerald-200/90 shadow-2xs flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center gap-3 mb-2.5">
+                        <div className="relative w-12 h-12 rounded-xl bg-white p-1 shrink-0 overflow-hidden border border-emerald-100">
+                          <Image
+                            src={supp.image}
+                            alt={supp.name}
+                            fill
+                            className="object-contain p-0.5"
+                            sizes="48px"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-black text-sm text-gray-900 truncate">{supp.name}</h4>
+                          <span className="text-xs font-black text-emerald-800">₹{supp.price.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {supp.customCoachNote && (
+                        <div className="p-2 rounded-xl bg-white/90 border border-emerald-100 text-[11px] text-emerald-950 font-medium mb-3">
+                          <span className="font-bold block text-[10px] text-emerald-700 uppercase">Coach Guidance:</span>
+                          <p>{supp.customCoachNote}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <a
+                      href={supp.affiliateUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2.5 px-3 rounded-xl bg-[#00c853] hover:bg-[#00b34a] text-black font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition"
+                    >
+                      <ShoppingBag className="w-3.5 h-3.5 fill-black" />
+                      <span>Order on Amazon &rarr;</span>
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 4 Recommended Products Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">

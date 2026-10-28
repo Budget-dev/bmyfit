@@ -560,4 +560,13 @@ export function MoreVertical({ className = "w-4 h-4", ...props }: IconProps) {
   );
 }
 
+export function Play({ className = "w-4 h-4", ...props }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polygon points="6 4 20 12 6 20 6 4" />
+    </svg>
+  );
+}
+
+
 

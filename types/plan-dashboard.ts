@@ -49,6 +49,24 @@ export interface WeekPlanData {
   };
 }
 
+export interface PlanVideo {
+  url: string;
+  title?: string;
+  aspectRatio: "16:9" | "9:16";
+  notes?: string;
+}
+
+export interface PlanSupplementRecommendation {
+  productId: string;
+  name: string;
+  subtitle?: string;
+  affiliateUrl: string;
+  price: number;
+  originalPrice?: number;
+  image: string;
+  customCoachNote?: string;
+}
+
 export interface PlanDashboardData {
   id: string;
   assessmentId: string;
@@ -76,6 +94,8 @@ export interface PlanDashboardData {
   coachNotes?: string;
   waterLitres?: number;
   dailyStepGoal?: number;
+  video?: PlanVideo;
+  suggestedSupplements?: PlanSupplementRecommendation[];
   medicalSummary?: {
     hasDisease: boolean;
     diseases: string[];
