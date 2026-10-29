@@ -269,7 +269,7 @@ export function SubscriptionsDashboard({
                       <div className="flex items-center gap-3">
                         <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-200 shrink-0 border border-gray-300">
                           {u.avatar ? (
-                            <Image src={u.avatar} alt={u.name || "Client"} fill className="object-cover" />
+                            <Image src={u.avatar} alt={u.name || "Client"} fill unoptimized className="object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-emerald-700 text-white font-bold text-xs">
                               {(u.name || "C").charAt(0)}

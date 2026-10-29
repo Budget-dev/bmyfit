@@ -522,6 +522,7 @@ export function ClientDetailSidebar({
                                     src={supp.image}
                                     alt={supp.name}
                                     fill
+                                    unoptimized
                                     className="object-contain"
                                     sizes="36px"
                                   />
@@ -630,6 +631,7 @@ export function ClientDetailSidebar({
                                   src={product.image}
                                   alt={product.name}
                                   fill
+                                  unoptimized
                                   className="object-contain"
                                   sizes="28px"
                                 />

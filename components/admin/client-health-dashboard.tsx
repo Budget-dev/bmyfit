@@ -394,7 +394,7 @@ export function ClientHealthDashboard({
                         <div className="flex items-center gap-3">
                           <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 shrink-0 border border-gray-200">
                             {user.avatar ? (
-                              <Image src={user.avatar} alt={user.name} fill className="object-cover" />
+                              <Image src={user.avatar} alt={user.name} fill unoptimized className="object-cover" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center font-bold text-xs bg-emerald-700 text-white">
                                 {user.name.charAt(0)}
@@ -572,7 +572,7 @@ export function ClientHealthDashboard({
                   <div className="flex items-center gap-3">
                     <div className="relative w-11 h-11 rounded-full overflow-hidden bg-gray-100 shrink-0 border border-gray-200">
                       {user.avatar ? (
-                        <Image src={user.avatar} alt={user.name} fill className="object-cover" />
+                        <Image src={user.avatar} alt={user.name} fill unoptimized className="object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center font-bold text-xs bg-emerald-700 text-white">
                           {user.name.charAt(0)}

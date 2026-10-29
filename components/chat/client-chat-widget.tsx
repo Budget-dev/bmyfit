@@ -176,6 +176,7 @@ export function ClientChatWidget({
                   src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
                   alt="Coach Naveen"
                   fill
+                  unoptimized
                   className="object-cover"
                 />
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#25D366] rounded-full border border-white" />

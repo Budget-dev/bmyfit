@@ -160,6 +160,7 @@ export function AdminChatView({
                   src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
                   alt="Coach Naveen"
                   fill
+                  unoptimized
                   className="object-cover"
                 />
               </div>
@@ -241,7 +242,7 @@ export function AdminChatView({
                 {/* User Avatar */}
                 <div className="relative w-11 h-11 rounded-full overflow-hidden bg-gray-200 shrink-0 border border-gray-300/80">
                   {thread.avatarUrl ? (
-                    <Image src={thread.avatarUrl} alt={thread.userName} fill className="object-cover" />
+                    <Image src={thread.avatarUrl} alt={thread.userName} fill unoptimized className="object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-emerald-700 text-white font-bold text-xs">
                       {thread.userName.charAt(0)}
@@ -307,7 +308,7 @@ export function AdminChatView({
             <div className="flex items-center gap-3">
               <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-200 border border-emerald-400">
                 {selectedThread.avatarUrl ? (
-                  <Image src={selectedThread.avatarUrl} alt={selectedThread.userName} fill className="object-cover" />
+                  <Image src={selectedThread.avatarUrl} alt={selectedThread.userName} fill unoptimized className="object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-emerald-800 text-white font-bold text-xs">
                     {selectedThread.userName.charAt(0)}
