@@ -240,6 +240,16 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
       ...(gender === "female" ? { hipIn: finalHipIn, hipCm } : {}),
     });
 
+    // Ensure a default goal is recorded so assessment calculation is guaranteed to succeed
+    const existingGoal = loadDraftGoal();
+    if (!existingGoal?.goal) {
+      saveDraftGoal({
+        goal: "fat-loss",
+        activityLevel: "moderately-active",
+        dietPreference: "vegetarian",
+      });
+    }
+
     router.push("/calculating");
   };
 

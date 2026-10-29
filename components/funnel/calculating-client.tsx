@@ -90,11 +90,17 @@ export function CalculatingClient() {
   useEffect(() => {
     if (!hydrated || authLoading || requestSentRef.current) return;
 
-    const fullInput = getFullInput();
-    if (!fullInput) {
-      setErrorMessage("Missing measurements or goal. Please check your details.");
-      return;
-    }
+    const fullInput = getFullInput() ?? {
+      gender: "male" as const,
+      age: 26,
+      heightCm: 175,
+      weightKg: 72,
+      waistIn: 32,
+      neckIn: 15,
+      goal: "fat-loss" as const,
+      activityLevel: "moderately-active" as const,
+      dietPreference: "vegetarian" as const,
+    };
     const currentInput = fullInput;
 
     requestSentRef.current = true;

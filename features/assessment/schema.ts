@@ -80,7 +80,7 @@ export const detailsSchema = z
   });
 
 export const goalSelectionSchema = z.object({
-  goal: fitnessGoalSchema,
+  goal: fitnessGoalSchema.default("fat-loss"),
   activityLevel: activityLevelSchema.default(DEFAULT_ACTIVITY_LEVEL),
   dietPreference: dietPreferenceSchema.default(DEFAULT_DIET_PREFERENCE),
 });

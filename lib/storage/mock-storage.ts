@@ -212,7 +212,9 @@ if (isClient()) {
  * Get all admin users (served from Firebase-synced memory cache)
  */
 export function getStoredAdminUsers(): AdminUserRecord[] {
-  return Array.from(inMemoryUsers.values()).map((u) => sanitizeAdminUserRecord(u, u.id));
+  return Array.from(inMemoryUsers.values())
+    .filter((u) => !u.id.startsWith("user_membership_") && !u.id.startsWith("user_purchase_") && !u.id.startsWith("mock_"))
+    .map((u) => sanitizeAdminUserRecord(u, u.id));
 }
 
 /**
@@ -462,12 +464,15 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
   } catch {}
 
   // 0.1 Discover registered client accounts
-  if (!inMemoryUsers.has("vxwLoxTRfMBhs7hstEKDO")) {
+  const venkateshUid = "vawLoXTrkMBbaS7hatEXDO";
+  const testAthleteUid = "nqOIc3cJFVIzJB3cGRVyu";
+
+  if (!inMemoryUsers.has(venkateshUid)) {
     inMemoryUsers.set(
-      "vxwLoxTRfMBhs7hstEKDO",
+      venkateshUid,
       sanitizeAdminUserRecord(
         {
-          id: "vxwLoxTRfMBhs7hstEKDO",
+          id: venkateshUid,
           name: "Venkatesh Choppa",
           email: "venkateshchap14@gmail.com",
           phone: "+91 98490 12345",
@@ -479,16 +484,16 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
           joinedAt: "2026-10-28T12:00:00.000Z",
           lastActive: "Active Today",
         },
-        "vxwLoxTRfMBhs7hstEKDO"
+        venkateshUid
       )
     );
   }
-  if (!inMemoryUsers.has("nqOlc3cJjFYzJB3cGRVyu")) {
+  if (!inMemoryUsers.has(testAthleteUid)) {
     inMemoryUsers.set(
-      "nqOlc3cJjFYzJB3cGRVyu",
+      testAthleteUid,
       sanitizeAdminUserRecord(
         {
-          id: "nqOlc3cJjFYzJB3cGRVyu",
+          id: testAthleteUid,
           name: "Test Athlete",
           email: "test_1793282473121@test.com",
           phone: "+91 98000 00000",
@@ -500,7 +505,7 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
           joinedAt: "2026-10-29T14:00:00.000Z",
           lastActive: "Active Today",
         },
-        "nqOlc3cJjFYzJB3cGRVyu"
+        testAthleteUid
       )
     );
   }
@@ -616,12 +621,15 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
       console.warn("Direct Firestore assessments collection sync notice:", e);
     }
 
-    // 4. Fetch chats collection to discover active client threads
+    // 4. Fetch chats collection to discover active client threads (ignoring mock seed IDs)
     try {
       const chatsSnap = await getDocs(collection(db, "chats"));
       chatsSnap.forEach((docSnap) => {
-        const chat = docSnap.data();
         const id = docSnap.id;
+        if (id.startsWith("user_membership_") || id.startsWith("user_purchase_") || id.startsWith("mock_")) {
+          return;
+        }
+        const chat = docSnap.data();
         const existing = inMemoryUsers.get(id);
         if (existing) {
           if (chat.userName) existing.name = chat.userName;

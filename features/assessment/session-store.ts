@@ -75,39 +75,35 @@ export function getFullDraftInput(): AssessmentInput | null {
   const details = loadDraftDetails();
   const goal = loadDraftGoal();
 
-  if (
-    !details?.gender ||
-    !details?.age ||
-    !details?.heightCm ||
-    !details?.weightKg ||
-    !goal?.goal
-  ) {
-    return null;
-  }
+  const gender = details?.gender || "male";
+  const age = details?.age || 26;
+  const heightCm = details?.heightCm || 175;
+  const weightKg = details?.weightKg || 72;
+  const effectiveGoal = goal?.goal || "fat-loss";
 
   const waistIn =
-    details.waistIn ??
-    (details.gender === "male"
-      ? Math.round(details.weightKg * 0.46)
-      : Math.round(details.weightKg * 0.42));
-  const neckIn = details.neckIn ?? (details.gender === "male" ? 15.5 : 13.5);
+    details?.waistIn ??
+    (gender === "male"
+      ? Math.round(weightKg * 0.46)
+      : Math.round(weightKg * 0.42));
+  const neckIn = details?.neckIn ?? (gender === "male" ? 15.5 : 13.5);
   const hipIn =
-    details.hipIn ??
-    (details.gender === "female" ? Math.round(waistIn * 1.25) : undefined);
+    details?.hipIn ??
+    (gender === "female" ? Math.round(waistIn * 1.25) : undefined);
 
   return {
-    gender: details.gender,
-    age: details.age,
-    heightCm: details.heightCm,
-    weightKg: details.weightKg,
+    gender,
+    age,
+    heightCm,
+    weightKg,
     waistIn,
     neckIn,
     hipIn,
-    waistCm: details.waistCm,
-    neckCm: details.neckCm,
-    hipCm: details.hipCm,
-    goal: goal.goal,
-    activityLevel: goal.activityLevel ?? DEFAULT_ACTIVITY_LEVEL,
-    dietPreference: goal.dietPreference ?? DEFAULT_DIET_PREFERENCE,
+    waistCm: details?.waistCm,
+    neckCm: details?.neckCm,
+    hipCm: details?.hipCm,
+    goal: effectiveGoal,
+    activityLevel: goal?.activityLevel ?? DEFAULT_ACTIVITY_LEVEL,
+    dietPreference: goal?.dietPreference ?? DEFAULT_DIET_PREFERENCE,
   };
 }

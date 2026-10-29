@@ -152,12 +152,15 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
   }
 
   // 0.1 Discover registered Firebase Auth clients
-  if (!memoryStore.has("vxwLoxTRfMBhs7hstEKDO")) {
+  const venkateshUid = "vawLoXTrkMBbaS7hatEXDO";
+  const testAthleteUid = "nqOIc3cJFVIzJB3cGRVyu";
+
+  if (!memoryStore.has(venkateshUid)) {
     memoryStore.set(
-      "vxwLoxTRfMBhs7hstEKDO",
+      venkateshUid,
       sanitizeAdminUser(
         {
-          id: "vxwLoxTRfMBhs7hstEKDO",
+          id: venkateshUid,
           name: "Venkatesh Choppa",
           email: "venkateshchap14@gmail.com",
           phone: "+91 98490 12345",
@@ -169,16 +172,16 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
           joinedAt: "2026-10-28T12:00:00.000Z",
           lastActive: "Active Today",
         },
-        "vxwLoxTRfMBhs7hstEKDO"
+        venkateshUid
       )
     );
   }
-  if (!memoryStore.has("nqOlc3cJjFYzJB3cGRVyu")) {
+  if (!memoryStore.has(testAthleteUid)) {
     memoryStore.set(
-      "nqOlc3cJjFYzJB3cGRVyu",
+      testAthleteUid,
       sanitizeAdminUser(
         {
-          id: "nqOlc3cJjFYzJB3cGRVyu",
+          id: testAthleteUid,
           name: "Test Athlete",
           email: "test_1793282473121@test.com",
           phone: "+91 98000 00000",
@@ -190,7 +193,7 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
           joinedAt: "2026-10-29T14:00:00.000Z",
           lastActive: "Active Today",
         },
-        "nqOlc3cJjFYzJB3cGRVyu"
+        testAthleteUid
       )
     );
   }
@@ -361,7 +364,9 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
   }
   }
 
-  const rawUsers = Array.from(memoryStore.entries()).map(([id, u]) => sanitizeAdminUser(u, id));
+  const rawUsers = Array.from(memoryStore.entries())
+    .filter(([id]) => !id.startsWith("user_membership_") && !id.startsWith("user_purchase_") && !id.startsWith("mock_"))
+    .map(([id, u]) => sanitizeAdminUser(u, id));
   rawUsers.forEach((u) => memoryStore.set(u.id, u));
   const users = rawUsers;
 
