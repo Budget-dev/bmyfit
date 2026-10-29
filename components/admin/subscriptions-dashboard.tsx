@@ -42,10 +42,10 @@ export function SubscriptionsDashboard({
   // Compute Financial & Subscription Metrics
   const totalSubscribers = subscribers.length;
   const activeSubscribers = subscribers.filter(
-    (u) => u.plan.status === "approved" || u.plan.status === "active"
+    (u) => u.plan?.status === "approved" || u.plan?.status === "active"
   ).length;
   const pendingCustomization = subscribers.filter(
-    (u) => u.plan.status === "pending_review" || u.needsPlanReview
+    (u) => (u.plan?.status === "pending_review") || u.needsPlanReview
   ).length;
 
   const totalRevenue = subscribers.reduce(
@@ -56,18 +56,18 @@ export function SubscriptionsDashboard({
   // Filter subscribers list
   const filteredSubscribers = subscribers.filter((u) => {
     const matchesSearch =
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (u.phone && u.phone.includes(searchQuery)) ||
       (u.order?.orderId && u.order.orderId.toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (!matchesSearch) return false;
 
     if (statusFilter === "active") {
-      return u.plan.status === "approved" || u.plan.status === "active";
+      return u.plan?.status === "approved" || u.plan?.status === "active";
     }
     if (statusFilter === "pending") {
-      return u.plan.status === "pending_review" || u.needsPlanReview;
+      return (u.plan?.status === "pending_review") || u.needsPlanReview;
     }
     if (statusFilter === "expiring") {
       if (u.subscription?.endDate) {
@@ -260,7 +260,7 @@ export function SubscriptionsDashboard({
                 const adherence = calculateDetailedAdherence(u.plan, u.taskLogs);
                 const isDoingGreat = adherence.percent >= 70;
                 const isFallingBehind = adherence.percent < 40 && adherence.completedTasks > 0;
-                const isPendingPush = u.plan.status === "pending_review" || u.needsPlanReview;
+                const isPendingPush = (u.plan?.status === "pending_review") || u.needsPlanReview;
 
                 return (
                   <tr key={u.id} className="hover:bg-gray-50/70 transition">
@@ -269,15 +269,15 @@ export function SubscriptionsDashboard({
                       <div className="flex items-center gap-3">
                         <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-200 shrink-0 border border-gray-300">
                           {u.avatar ? (
-                            <Image src={u.avatar} alt={u.name} fill className="object-cover" />
+                            <Image src={u.avatar} alt={u.name || "Client"} fill className="object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-emerald-700 text-white font-bold text-xs">
-                              {u.name.charAt(0)}
+                              {(u.name || "C").charAt(0)}
                             </div>
                           )}
                         </div>
                         <div>
-                          <span className="font-bold text-gray-950 block text-xs">{u.name}</span>
+                          <span className="font-bold text-gray-950 block text-xs">{u.name || "BMYFIT Client"}</span>
                           <span className="text-[11px] text-gray-400 block">{u.email}</span>
                           <span className="text-[10px] text-gray-500 font-mono">{u.phone}</span>
                         </div>
@@ -287,14 +287,14 @@ export function SubscriptionsDashboard({
                     {/* Plan Package & Amount */}
                     <td className="py-4 px-4">
                       <span className="font-bold text-gray-950 block">
-                        {u.order?.packageTitle || `${u.plan.weeksCount}-Week Custom Transformation`}
+                        {u.order?.packageTitle || `${u.plan?.weeksCount || 8}-Week Custom Transformation`}
                       </span>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className="text-xs font-black text-emerald-700">
                           {u.order?.amountFormatted || "₹99"}
                         </span>
                         <span className="text-[10px] text-gray-400 font-bold uppercase">
-                          ({u.plan.weeksCount} WEEKS)
+                          ({u.plan?.weeksCount || 8} WEEKS)
                         </span>
                       </div>
                     </td>
@@ -303,10 +303,10 @@ export function SubscriptionsDashboard({
                     <td className="py-4 px-4">
                       <div className="space-y-0.5">
                         <span className="text-[11px] text-gray-900 font-semibold block">
-                          Started: {new Date(u.joinedAt).toLocaleDateString()}
+                          Started: {new Date(u.joinedAt || Date.now()).toLocaleDateString()}
                         </span>
                         <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md inline-block">
-                          ⏳ {Math.max(1, u.plan.weeksCount * 7 - 12)} Days Remaining
+                          ⏳ {Math.max(1, (u.plan?.weeksCount || 8) * 7 - 12)} Days Remaining
                         </span>
                       </div>
                     </td>

@@ -32,9 +32,30 @@ export function BiometricsModal({
 
   if (!user) return null;
 
-  const { biometrics, order, plan, medicalAssessment } = user;
-  const isPending = plan.status === "pending_review";
-  const weightDelta = (biometrics.weightKg - biometrics.targetWeightKg).toFixed(1);
+  const biometrics = user.biometrics || {
+    weightKg: 75,
+    targetWeightKg: 70,
+    heightCm: 175,
+    age: 28,
+    bmi: 24.5,
+    bmiCategory: "normal",
+    bodyFatPercent: 21,
+    bodyFatCategory: "average",
+    waistIn: 34,
+    neckIn: 15.5,
+  };
+  const plan = user.plan || {
+    id: user.id,
+    status: "pending_review",
+    weeksCount: 8,
+    calorieTarget: 1800,
+    proteinTargetGrams: 120,
+    workoutDaysPerWeek: 4,
+  };
+  const order = user.order;
+  const medicalAssessment = user.medicalAssessment;
+  const isPending = (plan.status === "pending_review") || user.needsPlanReview;
+  const weightDelta = ((biometrics.weightKg || 75) - (biometrics.targetWeightKg || 70)).toFixed(1);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/70 backdrop-blur-xs animate-fade-in">

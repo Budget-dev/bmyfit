@@ -34,6 +34,7 @@ import {
   getStoredTaskLogs,
   saveStoredTaskLog,
   fetchFirebaseTaskLogs,
+  generateDashboardPlan,
 } from "@/features/plan/dashboard-data";
 import { saveStoredPlan, upsertStoredAdminUser } from "@/lib/storage/mock-storage";
 import { db, doc, onSnapshot } from "@/lib/firebase/client";
@@ -162,7 +163,16 @@ export function WeekPlanEditor({
   onPushToUser,
   onBackToDirectory,
 }: WeekPlanEditorProps) {
-  const [plan, setPlan] = useState<PlanDashboardData>(user.plan);
+  const safeInitialPlan =
+    user.plan && Array.isArray(user.plan.weeks) && user.plan.weeks.length > 0
+      ? user.plan
+      : generateDashboardPlan(user.id, {
+          customerName: user.name || "Client",
+          status: "pending_review",
+          weeksCount: 8,
+        });
+
+  const [plan, setPlan] = useState<PlanDashboardData>(safeInitialPlan);
   const [selectedWeekNum, setSelectedWeekNum] = useState<number>(1);
   const [editorMode, setEditorMode] = useState<"customize" | "progress">(initialMode);
   const [taskLogs, setTaskLogs] = useState<TaskLogState>(user.taskLogs || {});
@@ -172,25 +182,26 @@ export function WeekPlanEditor({
   const [previewDoc, setPreviewDoc] = useState<MedicalDocument | null>(null);
   const [isCustomDuration, setIsCustomDuration] = useState<boolean>(false);
   const [customMonths, setCustomMonths] = useState<string>(
-    String(plan.monthsCount || Math.max(1, Math.round(plan.weeksCount / 4)))
+    String(safeInitialPlan.monthsCount || Math.max(1, Math.round((safeInitialPlan.weeksCount || 8) / 4)))
   );
 
   // Subscribe to real-time Firebase task completion logs
   useEffect(() => {
     let active = true;
-    const initial = user.taskLogs || getStoredTaskLogs(plan.id);
+    const planId = plan?.id || user.id;
+    const initial = user.taskLogs || getStoredTaskLogs(planId);
     if (initial && Object.keys(initial).length > 0) {
       setTaskLogs(initial);
     }
 
-    void fetchFirebaseTaskLogs(plan.id).then((firebaseLogs) => {
+    void fetchFirebaseTaskLogs(planId).then((firebaseLogs) => {
       if (active && firebaseLogs && Object.keys(firebaseLogs).length > 0) {
         setTaskLogs(firebaseLogs);
       }
     });
 
     try {
-      const unsubscribe = onSnapshot(doc(db, "user_logs", plan.id), (snapshot) => {
+      const unsubscribe = onSnapshot(doc(db, "user_logs", planId), (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data() as TaskLogState;
           if (active) setTaskLogs(data);
@@ -205,19 +216,20 @@ export function WeekPlanEditor({
         active = false;
       };
     }
-  }, [plan.id, user.taskLogs]);
+  }, [plan.id, user.id, user.taskLogs]);
 
   const adherence = calculateDetailedAdherence(plan, taskLogs);
 
   const selectedWeek =
-    plan.weeks.find((w) => w.weekNumber === selectedWeekNum) || plan.weeks[0];
+    (plan?.weeks || []).find((w) => w.weekNumber === selectedWeekNum) ||
+    (plan?.weeks || [])[0];
 
   const selectedWeekAdherence = selectedWeek
     ? calculateWeekProgress(selectedWeek.weekNumber, selectedWeek, taskLogs)
     : { total: 0, completed: 0, percent: 0 };
 
   const coachReviewMessage = selectedWeek
-    ? `Hi ${user.name}! 🌟 Coach review for Week ${selectedWeek.weekNumber}: Your adherence is at ${selectedWeekAdherence.percent}% (${selectedWeekAdherence.completed}/${selectedWeekAdherence.total} completed). Nutrition: ${selectedWeek.nutrition.meals.filter((m) => taskLogs[`w${selectedWeek.weekNumber}_meal_${m.id}`]).length}/${selectedWeek.nutrition.meals.length} meals logged. Keep pushing towards your ${user.goalDisplay} goal!`
+    ? `Hi ${user.name}! 🌟 Coach review for Week ${selectedWeek.weekNumber}: Your adherence is at ${selectedWeekAdherence.percent}% (${selectedWeekAdherence.completed}/${selectedWeekAdherence.total} completed). Nutrition: ${(selectedWeek.nutrition?.meals || []).filter((m) => taskLogs[`w${selectedWeek.weekNumber}_meal_${m.id}`]).length}/${(selectedWeek.nutrition?.meals || []).length} meals logged. Keep pushing towards your ${user.goalDisplay || "fitness"} goal!`
     : "";
 
   // Modify total duration by months

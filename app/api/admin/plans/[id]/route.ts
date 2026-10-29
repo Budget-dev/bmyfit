@@ -1,16 +1,18 @@
 import { getDashboardPlanById, updateDashboardPlanStatus, storeDashboardPlan } from "@/lib/firestore/repositories";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 import { fetchAdminUserById, updateAdminUserPlan } from "@/features/admin/admin-data";
+import { requireAdminUser } from "@/lib/firebase/auth";
 import { AppError, toErrorResponse } from "@/lib/errors";
 import type { PlanStatus, PlanDashboardData } from "@/types/plan-dashboard";
 
 export const runtime = "nodejs";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminUser(request);
     const { id } = await params;
     if (!id) throw new AppError("INVALID_REQUEST", "Plan ID is required", 400);
 
@@ -44,6 +46,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminUser(request);
     const { id } = await params;
     if (!id) throw new AppError("INVALID_REQUEST", "Plan ID is required", 400);
 

@@ -17,12 +17,13 @@ import {
   Activity,
   BarChart2,
   MessageCircle,
-  BellRing,
 } from "@/components/ui/icons";
 import type { AdminUserRecord, AdminStats, MembershipCategory } from "@/types/admin";
 import type { PlanDashboardData } from "@/types/plan-dashboard";
-import { getStoredAdminUsers } from "@/lib/storage/mock-storage";
+import { getStoredAdminUsers, sanitizeAdminUserRecord } from "@/lib/storage/mock-storage";
 import { formatPlanDuration, calculateDetailedAdherence } from "@/features/plan/dashboard-data";
+import { adminFetch } from "@/lib/admin-api-client";
+import { AdminErrorBoundary } from "./admin-error-boundary";
 import { BiometricsModal } from "./biometrics-modal";
 import { PushModal } from "./push-modal";
 import { WeekPlanEditor } from "./week-plan-editor";
@@ -62,7 +63,7 @@ export function AdminDesktopConsole() {
       setLoading(true);
       let serverUsers: AdminUserRecord[] = [];
       try {
-        const res = await fetch("/api/admin/users");
+        const res = await adminFetch("/api/admin/users");
         if (res.ok) {
           const data = await res.json();
           if (data.users) serverUsers = data.users;
@@ -75,34 +76,40 @@ export function AdminDesktopConsole() {
       const localUsers = getStoredAdminUsers();
       const userMap = new Map<string, AdminUserRecord>();
 
-      serverUsers.forEach((u) => userMap.set(u.id, u));
+      serverUsers.forEach((u) => userMap.set(u.id, sanitizeAdminUserRecord(u, u.id)));
       localUsers.forEach((lu) => {
         const existing = userMap.get(lu.id);
         if (existing) {
-          userMap.set(lu.id, {
-            ...existing,
-            ...lu,
-            plan: lu.plan || existing.plan,
-            medicalAssessment: lu.medicalAssessment || existing.medicalAssessment,
-            needsPlanReview: lu.needsPlanReview ?? existing.needsPlanReview,
-          });
+          userMap.set(
+            lu.id,
+            sanitizeAdminUserRecord(
+              {
+                ...existing,
+                ...lu,
+                plan: lu.plan || existing.plan,
+                medicalAssessment: lu.medicalAssessment || existing.medicalAssessment,
+                needsPlanReview: lu.needsPlanReview ?? existing.needsPlanReview,
+              },
+              lu.id
+            )
+          );
         } else {
-          userMap.set(lu.id, lu);
+          userMap.set(lu.id, sanitizeAdminUserRecord(lu, lu.id));
         }
       });
 
       const mergedUsers = Array.from(userMap.values());
       setUsers(mergedUsers);
 
-      // Recompute stats
+      // Recompute stats defensively
       const totalUsers = mergedUsers.length;
       const purchasedPlansCount = mergedUsers.filter((u) => u.membershipCategory === "purchased").length;
       const activeMembershipsCount = mergedUsers.filter((u) => u.membershipCategory === "membership").length;
       const freeMembersCount = mergedUsers.filter((u) => u.membershipCategory === "free").length;
       const pendingReviewCount = mergedUsers.filter(
-        (u) => u.plan.status === "pending_review" || u.needsPlanReview
+        (u) => (u.plan?.status === "pending_review") || u.needsPlanReview
       ).length;
-      const liveApprovedCount = mergedUsers.filter((u) => u.plan.status === "approved").length;
+      const liveApprovedCount = mergedUsers.filter((u) => u.plan?.status === "approved" || u.plan?.status === "active").length;
       const totalRevenueINR = mergedUsers.reduce(
         (sum, u) => sum + (u.order ? Math.round(u.order.amountPaise / 100) : 0),
         0
@@ -140,21 +147,23 @@ export function AdminDesktopConsole() {
 
   // Filtered users list
   const filteredUsers = users.filter((u) => {
+    const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.goalDisplay.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      !q ||
+      (u.name || "").toLowerCase().includes(q) ||
+      (u.email || "").toLowerCase().includes(q) ||
+      (u.phone || "").toLowerCase().includes(q) ||
+      (u.id || "").toLowerCase().includes(q) ||
+      (u.goalDisplay || "").toLowerCase().includes(q) ||
       (u.medicalAssessment?.diseases || []).some((d) =>
-        d.toLowerCase().includes(searchQuery.toLowerCase())
+        (d || "").toLowerCase().includes(q)
       );
 
     const matchesCategory =
       categoryFilter === "all"
         ? true
         : categoryFilter === "pending"
-        ? u.plan.status === "pending_review" || u.needsPlanReview
+        ? (u.plan?.status === "pending_review") || u.needsPlanReview
         : categoryFilter === "medical"
         ? Boolean(u.medicalAssessment?.hasDisease || (u.medicalAssessment?.documents?.length || 0) > 0)
         : u.membershipCategory === categoryFilter;
@@ -174,7 +183,7 @@ export function AdminDesktopConsole() {
 
   const handleSavePlan = async (updatedPlan: PlanDashboardData) => {
     try {
-      const res = await fetch(`/api/admin/plans/${updatedPlan.id}`, {
+      const res = await adminFetch(`/api/admin/plans/${updatedPlan.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedPlan),
@@ -213,23 +222,28 @@ export function AdminDesktopConsole() {
     video?: PlanVideo,
     supplements?: PlanSupplementRecommendation[]
   ) => {
+    const planId = targetUser.plan?.id || targetUser.id;
     const updatedPlan: PlanDashboardData = {
-      ...targetUser.plan,
+      ...(targetUser.plan || {}),
+      id: planId,
+      customerName: targetUser.name,
       status: "approved",
       approvedAt: new Date().toISOString(),
-      coachNotes: notes || targetUser.plan.coachNotes,
-      video: video || targetUser.plan.video,
-      suggestedSupplements: supplements || targetUser.plan.suggestedSupplements,
+      coachNotes: notes || targetUser.plan?.coachNotes || "Plan verified by Head Coach Naveen.",
+      video: video || targetUser.plan?.video,
+      suggestedSupplements: supplements || targetUser.plan?.suggestedSupplements,
+      weeksCount: targetUser.plan?.weeksCount || 8,
+      weeks: targetUser.plan?.weeks || [],
     };
 
     try {
-      await fetch(`/api/admin/plans/${targetUser.plan.id}`, {
+      await adminFetch(`/api/admin/plans/${planId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedPlan),
       });
 
-      await fetch(`/api/admin/plans/${targetUser.id}/push`, {
+      await adminFetch(`/api/admin/plans/${targetUser.id}/push`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -252,7 +266,8 @@ export function AdminDesktopConsole() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-gray-900 flex flex-col font-sans selection:bg-emerald-100 selection:text-emerald-900">
+    <AdminErrorBoundary onReset={fetchUsers}>
+      <div className="min-h-screen bg-[#f8fafc] text-gray-900 flex flex-col font-sans selection:bg-emerald-100 selection:text-emerald-900">
       {/* Desktop Viewport Indicator Banner */}
       <div className="bg-gray-950 text-gray-300 px-4 py-2 text-xs flex items-center justify-between border-b border-gray-800">
         <div className="flex items-center gap-2">
@@ -884,14 +899,14 @@ export function AdminDesktopConsole() {
                         </tr>
                       ) : (
                         filteredUsers.map((u) => {
-                          const isPending = u.plan.status === "pending_review" || u.needsPlanReview;
+                          const isPending = (u.plan?.status === "pending_review") || u.needsPlanReview;
                           return (
                             <tr
                               key={u.id}
                               className="hover:bg-emerald-50/40 transition group cursor-pointer"
                               onClick={() => {
                                 setSelectedUser(u);
-                                setSidebarInitialTab(u.needsPlanReview || u.plan.status === "pending_review" ? "dispatch" : "biometrics");
+                                setSidebarInitialTab((u.needsPlanReview || u.plan?.status === "pending_review") ? "dispatch" : "biometrics");
                                 setIsSidebarOpen(true);
                               }}
                             >
@@ -899,14 +914,14 @@ export function AdminDesktopConsole() {
                               <td className="py-4 px-5">
                                 <div className="flex items-center gap-3">
                                   <img
-                                    src={u.avatar}
-                                    alt={u.name}
+                                    src={u.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80"}
+                                    alt={u.name || "Client"}
                                     className="w-10 h-10 rounded-xl object-cover ring-1 ring-gray-200"
                                   />
                                   <div>
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                       <span className="font-black text-gray-900 group-hover:text-emerald-700 transition">
-                                        {u.name}
+                                        {u.name || "BMYFIT Client"}
                                       </span>
                                       {u.needsPlanReview && (
                                         <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-amber-500 text-white animate-pulse">
@@ -915,7 +930,7 @@ export function AdminDesktopConsole() {
                                       )}
                                     </div>
                                     <span className="block text-[11px] text-gray-500">
-                                      {u.email} · {u.city}
+                                      {u.email} · {u.city || "Online Client"}
                                     </span>
                                     {/* Medical Conditions & Attached Reports Badges */}
                                     {u.medicalAssessment && (
@@ -965,7 +980,7 @@ export function AdminDesktopConsole() {
                                     </span>
                                     <span className="block text-[11px] text-gray-500 font-medium mt-0.5">
                                       {u.order?.amountFormatted || "₹99"} ·{" "}
-                                      {formatPlanDuration(u.plan.weeksCount, u.plan.monthsCount)}
+                                      {formatPlanDuration(u.plan?.weeksCount || 8, u.plan?.monthsCount)}
                                     </span>
                                   </div>
                                 ) : u.membershipCategory === "membership" ? (
@@ -992,21 +1007,21 @@ export function AdminDesktopConsole() {
                               {/* Biometrics Snapshot */}
                               <td className="py-4 px-4">
                                 <span className="font-bold text-gray-900 block">
-                                  {u.biometrics.weightKg} kg · {u.biometrics.heightCm} cm
+                                  {u.biometrics?.weightKg ?? "—"} kg · {u.biometrics?.heightCm ?? "—"} cm
                                 </span>
                                 <span className="text-[11px] text-gray-500 block">
-                                  BMI: <strong>{u.biometrics.bmi}</strong> · BF:{" "}
-                                  <strong>{u.biometrics.bodyFatPercent}%</strong>
+                                  BMI: <strong>{u.biometrics?.bmi ?? "—"}</strong> · BF:{" "}
+                                  <strong>{u.biometrics?.bodyFatPercent ?? "—"}%</strong>
                                 </span>
                               </td>
 
                               {/* Daily Targets */}
                               <td className="py-4 px-4">
                                 <span className="font-bold text-gray-900 block">
-                                  {u.plan.calorieTarget} kcal
+                                  {u.plan?.calorieTarget || 1800} kcal
                                 </span>
                                 <span className="text-[11px] text-gray-500 block">
-                                  {u.plan.proteinTargetGrams}g Protein · {u.plan.workoutDaysPerWeek} Days
+                                  {u.plan?.proteinTargetGrams || 120}g Protein · {u.plan?.workoutDaysPerWeek || 4} Days
                                 </span>
                               </td>
 
@@ -1387,6 +1402,7 @@ export function AdminDesktopConsole() {
           }}
         />
       )}
-    </div>
+      </div>
+    </AdminErrorBoundary>
   );
 }

@@ -8,15 +8,11 @@ import {
   CheckCircle2,
   Clock,
   Video,
-  Play,
-  Flame,
   Target,
   BarChart2,
-  Percent,
   MessageCircle,
   ExternalLink,
   Edit3,
-  BellRing,
   Plus,
   Trash2,
   ShieldCheck,
@@ -24,7 +20,7 @@ import {
 } from "@/components/ui/icons";
 import { ShoppingBag } from "@/components/ui/supplement-icons";
 import type { AdminUserRecord } from "@/types/admin";
-import type { PlanDashboardData, PlanVideo, PlanSupplementRecommendation } from "@/types/plan-dashboard";
+import type { PlanVideo, PlanSupplementRecommendation } from "@/types/plan-dashboard";
 import { SUPPLEMENT_PRODUCTS, type SupplementProduct } from "@/features/supplements/supplements-data";
 import { parseVideoUrl } from "@/lib/video-helper";
 
@@ -136,7 +132,7 @@ export function ClientDetailSidebar({
 
   if (!isOpen || !user) return null;
 
-  const isPending = user.plan.status === "pending_review" || user.needsPlanReview;
+  const isPending = (user.plan?.status === "pending_review") || user.needsPlanReview;
   const parsedVideo = parseVideoUrl(videoUrl);
 
   const handleToggleSupplement = (product: SupplementProduct) => {
@@ -331,7 +327,7 @@ export function ClientDetailSidebar({
                   <span>{successMessage}</span>
                 </div>
                 <a
-                  href={`/plan/${user.plan.id}`}
+                  href={`/plan/${user.plan?.id || user.id}`}
                   target="_blank"
                   rel="noreferrer"
                   className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold shrink-0 transition"
@@ -762,26 +758,26 @@ export function ClientDetailSidebar({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
                     <span className="block text-[10px] font-bold text-slate-400 uppercase">Weight</span>
-                    <span className="text-lg font-black text-slate-900">{user.biometrics.weightKg} kg</span>
-                    <span className="block text-[10px] text-slate-500">Target: {user.biometrics.targetWeightKg} kg</span>
+                    <span className="text-lg font-black text-slate-900">{user.biometrics?.weightKg ?? "—"} kg</span>
+                    <span className="block text-[10px] text-slate-500">Target: {user.biometrics?.targetWeightKg ?? "—"} kg</span>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
                     <span className="block text-[10px] font-bold text-slate-400 uppercase">Height</span>
-                    <span className="text-lg font-black text-slate-900">{user.biometrics.heightCm} cm</span>
-                    <span className="block text-[10px] text-slate-500">Age: {user.biometrics.age} yrs</span>
+                    <span className="text-lg font-black text-slate-900">{user.biometrics?.heightCm ?? "—"} cm</span>
+                    <span className="block text-[10px] text-slate-500">Age: {user.biometrics?.age ?? 28} yrs</span>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200/80">
                     <span className="block text-[10px] font-bold text-emerald-700 uppercase">BMI</span>
-                    <span className="text-lg font-black text-emerald-900">{user.biometrics.bmi}</span>
-                    <span className="block text-[10px] text-emerald-700 capitalize">{user.biometrics.bmiCategory}</span>
+                    <span className="text-lg font-black text-emerald-900">{user.biometrics?.bmi ?? "—"}</span>
+                    <span className="block text-[10px] text-emerald-700 capitalize">{user.biometrics?.bmiCategory ?? "normal"}</span>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-teal-50/70 border border-teal-200/80">
                     <span className="block text-[10px] font-bold text-teal-700 uppercase">US Navy Body Fat</span>
-                    <span className="text-lg font-black text-teal-900">{user.biometrics.bodyFatPercent}%</span>
-                    <span className="block text-[10px] text-teal-700 capitalize">{user.biometrics.bodyFatCategory}</span>
+                    <span className="text-lg font-black text-teal-900">{user.biometrics?.bodyFatPercent ?? "—"}%</span>
+                    <span className="block text-[10px] text-teal-700 capitalize">{user.biometrics?.bodyFatCategory ?? "average"}</span>
                   </div>
                 </div>
 
@@ -793,15 +789,15 @@ export function ClientDetailSidebar({
                   <div className="grid grid-cols-3 gap-3 text-xs">
                     <div>
                       <span className="text-slate-400 block text-[11px]">Waist</span>
-                      <span className="font-bold text-slate-900">{user.biometrics.waistIn} inches</span>
+                      <span className="font-bold text-slate-900">{user.biometrics?.waistIn ?? "—"} inches</span>
                     </div>
                     <div>
                       <span className="text-slate-400 block text-[11px]">Neck</span>
-                      <span className="font-bold text-slate-900">{user.biometrics.neckIn} inches</span>
+                      <span className="font-bold text-slate-900">{user.biometrics?.neckIn ?? "—"} inches</span>
                     </div>
                     <div>
                       <span className="text-slate-400 block text-[11px]">Hip (if female)</span>
-                      <span className="font-bold text-slate-900">{user.biometrics.hipIn ? `${user.biometrics.hipIn} inches` : "N/A (Male)"}</span>
+                      <span className="font-bold text-slate-900">{user.biometrics?.hipIn ? `${user.biometrics.hipIn} inches` : "N/A (Male)"}</span>
                     </div>
                   </div>
                 </div>
@@ -891,7 +887,7 @@ export function ClientDetailSidebar({
                       Week-by-Week Plan Overview
                     </h3>
                     <p className="text-[11px] text-slate-500">
-                      Total duration: {user.plan.weeksCount} Weeks ({user.plan.weeks?.length || 0} active phases)
+                      Total duration: {user.plan?.weeksCount || 8} Weeks ({user.plan?.weeks?.length || 0} active phases)
                     </p>
                   </div>
                   <button
@@ -905,7 +901,7 @@ export function ClientDetailSidebar({
                 </div>
 
                 <div className="space-y-3">
-                  {user.plan.weeks?.slice(0, 4).map((w) => (
+                  {(user.plan?.weeks || []).slice(0, 4).map((w) => (
                     <div
                       key={w.weekNumber}
                       className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-2"
@@ -915,14 +911,14 @@ export function ClientDetailSidebar({
                           Week {w.weekNumber}: {w.phaseTitle}
                         </span>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
-                          {w.workouts.days.length} Workout Days
+                          {(w.workouts?.days || []).length} Workout Days
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 line-clamp-1">{w.phaseSubtitle}</p>
                       <div className="flex items-center gap-3 pt-1 text-[11px] text-slate-600">
-                        <span>🥗 {w.nutrition.calories} kcal</span>
-                        <span>🥩 {w.nutrition.proteinGrams}g Protein</span>
-                        <span>🏋️ {w.workouts.daysPerWeek}d Training</span>
+                        <span>🥗 {w.nutrition?.calories || 1800} kcal</span>
+                        <span>🥩 {w.nutrition?.proteinGrams || 120}g Protein</span>
+                        <span>🏋️ {w.workouts?.daysPerWeek || 4}d Training</span>
                       </div>
                     </div>
                   ))}
@@ -946,7 +942,7 @@ export function ClientDetailSidebar({
                   <div className="pt-2 flex flex-wrap gap-2">
                     <a
                       href={`https://wa.me/${user.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-                        `Hi ${user.name}! Coach Naveen here from BMYFIT. Your personalized ${user.plan.weeksCount}-week plan, custom video routine, and supplement recommendations are live on your dashboard: https://bmyfit.in/plan/${user.plan.id}`
+                        `Hi ${user.name}! Coach Naveen here from BMYFIT. Your personalized ${user.plan?.weeksCount || 8}-week plan, custom video routine, and supplement recommendations are live on your dashboard: https://bmyfit.in/plan/${user.plan?.id || user.id}`
                       )}`}
                       target="_blank"
                       rel="noreferrer"
@@ -1012,7 +1008,7 @@ export function ClientDetailSidebar({
           {/* ================= FOOTER ================= */}
           <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
             <a
-              href={`/plan/${user.plan.id}`}
+              href={`/plan/${user.plan?.id || user.id}`}
               target="_blank"
               rel="noreferrer"
               className="text-xs font-bold text-slate-600 hover:text-emerald-700 flex items-center gap-1.5 transition"

@@ -196,10 +196,10 @@ export function ClientHealthDashboard({
                     )}
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-950 text-xs">{user.name}</h3>
-                    <p className="text-[11px] text-gray-500">{user.goalDisplay}</p>
+                    <h3 className="font-bold text-gray-950 text-xs">{user.name || "BMYFIT Client"}</h3>
+                    <p className="text-[11px] text-gray-500">{user.goalDisplay || "General Fitness"}</p>
                     <span className="text-[10px] text-rose-700 font-bold block mt-0.5">
-                      Target: {user.biometrics.targetWeightKg}kg (Current: {user.biometrics.weightKg}kg)
+                      Target: {user.biometrics?.targetWeightKg || 70}kg (Current: {user.biometrics?.weightKg || 75}kg)
                     </span>
                   </div>
                 </div>
@@ -418,14 +418,14 @@ export function ClientHealthDashboard({
                   Reported Conditions:
                 </span>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {user.medicalAssessment?.diseases.map((d, i) => (
+                  {(user.medicalAssessment?.diseases || []).map((d, i) => (
                     <span key={i} className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white border border-amber-200 text-amber-900 shadow-2xs">
                       🩺 {d}
                     </span>
                   ))}
-                  {Boolean(user.medicalAssessment?.documents.length) && (
+                  {Boolean(user.medicalAssessment?.documents?.length) && (
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
-                      📎 {user.medicalAssessment?.documents.length} Lab Report(s)
+                      📎 {user.medicalAssessment?.documents?.length || 0} Lab Report(s)
                     </span>
                   )}
                 </div>

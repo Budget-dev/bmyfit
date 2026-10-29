@@ -1,7 +1,8 @@
 "use client";
 
-import type { AdminUserRecord, MedicalAssessment, MedicalDocument, UserSubscription } from "@/types/admin";
+import type { AdminUserRecord, MedicalAssessment, MedicalDocument, UserSubscription, UserBiometrics } from "@/types/admin";
 import type { PlanDashboardData, PlanStatus } from "@/types/plan-dashboard";
+import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 import {
   db,
   doc,
@@ -15,6 +16,71 @@ export const SAMPLE_MEDICAL_DOCS: MedicalDocument[] = [];
 
 export function isClient(): boolean {
   return typeof window !== "undefined";
+}
+
+export function sanitizeAdminUserRecord(raw: Partial<AdminUserRecord>, id: string): AdminUserRecord {
+  const name = raw.name?.trim() || "BMYFIT Member";
+  const defaultBiometrics: UserBiometrics = {
+    gender: "male",
+    age: 28,
+    heightCm: 175,
+    weightKg: 75,
+    targetWeightKg: 70,
+    waistIn: 34,
+    neckIn: 15.5,
+    bmi: 24.5,
+    bmiCategory: "normal",
+    bodyFatPercent: 21.0,
+    bodyFatCategory: "average",
+    bmr: 1700,
+    tdee: 2350,
+    caloricTarget: 1800,
+    proteinTargetGrams: 120,
+    activityLevel: "moderately-active",
+    dietPreference: "vegetarian",
+    waterLitres: 3.5,
+    dailyStepGoal: 10000,
+  };
+
+  const biometrics: UserBiometrics = {
+    ...defaultBiometrics,
+    ...(raw.biometrics || {}),
+  };
+
+  const plan: PlanDashboardData =
+    raw.plan && Array.isArray(raw.plan.weeks) && raw.plan.weeks.length > 0
+      ? raw.plan
+      : generateDashboardPlan(id, {
+          customerName: name,
+          status: raw.membershipCategory === "purchased" ? "pending_review" : "active",
+          weeksCount: 8,
+        });
+
+  return {
+    id,
+    name,
+    email: raw.email || `${id}@client.bmyfit.in`,
+    phone: raw.phone || "+91 98000 00000",
+    city: raw.city || "Online Client",
+    avatar:
+      raw.avatar ||
+      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
+    joinedAt: raw.joinedAt || new Date().toISOString(),
+    lastActive: raw.lastActive || "Active Today",
+    membershipCategory: raw.membershipCategory || "free",
+    membershipTitle:
+      raw.membershipTitle ||
+      (raw.membershipCategory === "purchased" ? "Purchased Client Plan" : "Free Registered Member"),
+    goal: raw.goal || "fat-loss",
+    goalDisplay: raw.goalDisplay || "Fat Loss & Conditioning",
+    needsPlanReview: raw.needsPlanReview ?? (raw.membershipCategory === "purchased"),
+    biometrics,
+    plan,
+    order: raw.order,
+    subscription: raw.subscription,
+    medicalAssessment: raw.medicalAssessment,
+    taskLogs: raw.taskLogs || {},
+  };
 }
 
 // In-memory runtime cache (no localStorage) synchronized with Firebase Firestore
@@ -39,12 +105,16 @@ function initFirebaseListeners() {
             inMemoryUsers.delete(change.doc.id);
           } else {
             const existing = inMemoryUsers.get(change.doc.id);
-            inMemoryUsers.set(change.doc.id, {
-              ...existing,
-              ...data,
-              id: change.doc.id,
-              plan: data.plan || existing?.plan,
-            });
+            const sanitized = sanitizeAdminUserRecord(
+              {
+                ...existing,
+                ...data,
+                id: change.doc.id,
+                plan: data.plan || existing?.plan,
+              },
+              change.doc.id
+            );
+            inMemoryUsers.set(change.doc.id, sanitized);
           }
         });
       },
@@ -141,7 +211,7 @@ if (isClient()) {
  * Get all admin users (served from Firebase-synced memory cache)
  */
 export function getStoredAdminUsers(): AdminUserRecord[] {
-  return Array.from(inMemoryUsers.values());
+  return Array.from(inMemoryUsers.values()).map((u) => sanitizeAdminUserRecord(u, u.id));
 }
 
 /**

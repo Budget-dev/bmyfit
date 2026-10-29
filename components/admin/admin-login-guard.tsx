@@ -58,15 +58,11 @@ export function AdminLoginGuard({ children }: AdminLoginGuardProps) {
 
     try {
       setLoading(true);
-      // Attempt Firebase email login
-      try {
-        await loginWithEmail({
-          email: AUTHORIZED_ADMIN_EMAIL,
-          password: adminPassword,
-        });
-      } catch (err: unknown) {
-        console.warn("Firebase Auth admin login attempt notice:", err);
-      }
+      // Authenticate with Firebase Auth
+      await loginWithEmail({
+        email: AUTHORIZED_ADMIN_EMAIL,
+        password: adminPassword,
+      });
 
       // Authorize admin session
       const coachProfile: UserProfile = {
@@ -88,33 +84,10 @@ export function AdminLoginGuard({ children }: AdminLoginGuardProps) {
       setLocalAdminAuthed(true);
     } catch (err: unknown) {
       const error = err as { message?: string };
-      setErrorMessage(error.message || "Admin authentication failed. Please verify your credentials.");
+      setErrorMessage(error.message || "Admin authentication failed. Please verify your coach credentials.");
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickCoachDemo = () => {
-    setLoading(true);
-    setErrorMessage(null);
-    const coachProfile: UserProfile = {
-      uid: "coach_naveen_head_admin",
-      name: "Coach Naveen",
-      email: AUTHORIZED_ADMIN_EMAIL,
-      phone: "+91 98201 44821",
-      age: 34,
-      role: "admin",
-      provider: "password",
-      avatarUrl: "/images/coach-naveen.jpg",
-      createdAt: new Date().toISOString(),
-    };
-
-    saveStoredProfile(coachProfile);
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("bmyfit_admin_authorized", "true");
-    }
-    setLocalAdminAuthed(true);
-    setLoading(false);
   };
 
   const handleAdminLogout = async () => {
@@ -315,19 +288,14 @@ export function AdminLoginGuard({ children }: AdminLoginGuardProps) {
             </button>
           </form>
 
-          {/* Quick 1-Click Access for Coach Naveen (Testing & Verification) */}
-          <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
-            <button
-              type="button"
-              onClick={handleQuickCoachDemo}
-              disabled={loading}
-              className="w-full py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 font-bold text-[11px] transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span className="w-2 h-2 rounded-full bg-[#00c853] animate-pulse" />
-              <span>Quick Login as Coach Naveen ({AUTHORIZED_ADMIN_EMAIL})</span>
-            </button>
+          {/* Secure Admin Notice */}
+          <div className="mt-4 pt-4 border-t border-gray-100 space-y-1">
+            <p className="text-[11px] font-bold text-gray-700 text-center flex items-center justify-center gap-1.5">
+              <span>🔒</span>
+              <span>Encrypted Administrative Portal</span>
+            </p>
             <p className="text-[10px] text-gray-400 text-center">
-              🔒 Note: Public registration and signup are disabled on this administrative endpoint.
+              Public self-registration is strictly disabled on this endpoint. Authenticated coaches only.
             </p>
           </div>
         </div>

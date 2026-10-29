@@ -1,4 +1,5 @@
 import { pushPlanToUserDashboard } from "@/features/admin/admin-data";
+import { requireAdminUser } from "@/lib/firebase/auth";
 import { AppError, toErrorResponse } from "@/lib/errors";
 
 export const runtime = "nodejs";
@@ -8,6 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminUser(request);
     const { id } = await params;
     if (!id) throw new AppError("INVALID_REQUEST", "Plan ID is required", 400);
 

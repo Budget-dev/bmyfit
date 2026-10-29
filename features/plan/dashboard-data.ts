@@ -52,12 +52,13 @@ const WEEK_THEMES = [
   { phase: "Ultimate peak condition", desc: "Achieve and maintain your sharpest, strongest physical condition." },
 ];
 
-export function formatPlanDuration(weeksCount: number, monthsCount?: number): string {
-  const m = monthsCount || Math.max(1, Math.round(weeksCount / 4));
-  if (weeksCount % 4 === 0) {
-    return `${m} ${m === 1 ? "Month" : "Months"} (${weeksCount} Weeks)`;
+export function formatPlanDuration(weeksCount?: number, monthsCount?: number): string {
+  const safeWeeks = Number(weeksCount) > 0 ? Number(weeksCount) : 8;
+  const m = monthsCount && monthsCount > 0 ? monthsCount : Math.max(1, Math.round(safeWeeks / 4));
+  if (safeWeeks % 4 === 0) {
+    return `${m} ${m === 1 ? "Month" : "Months"} (${safeWeeks} Weeks)`;
   }
-  return `${weeksCount} Weeks (~${m} ${m === 1 ? "Month" : "Months"})`;
+  return `${safeWeeks} Weeks (~${m} ${m === 1 ? "Month" : "Months"})`;
 }
 
 export function generateDashboardPlan(
@@ -390,9 +391,10 @@ export interface AdherenceSummary {
 }
 
 export function calculateDetailedAdherence(
-  plan: PlanDashboardData,
+  plan?: PlanDashboardData | null,
   logs: TaskLogState = {}
 ): AdherenceSummary {
+  const safeLogs = logs || {};
   let totalTasks = 0;
   let completedTasks = 0;
   let mealsTotal = 0;
@@ -402,39 +404,48 @@ export function calculateDetailedAdherence(
   let habitsTotal = 0;
   let habitsCompleted = 0;
 
-  plan.weeks.forEach((w) => {
-    // Nutrition meals
-    w.nutrition.meals.forEach((m) => {
-      mealsTotal++;
-      totalTasks++;
-      if (logs[`w${w.weekNumber}_meal_${m.id}`]) {
-        mealsCompleted++;
+  if (plan && Array.isArray(plan.weeks)) {
+    plan.weeks.forEach((w) => {
+      if (!w) return;
+      // Nutrition meals
+      if (w.nutrition && Array.isArray(w.nutrition.meals)) {
+        w.nutrition.meals.forEach((m) => {
+          if (!m) return;
+          mealsTotal++;
+          totalTasks++;
+          if (safeLogs[`w${w.weekNumber}_meal_${m.id}`]) {
+            mealsCompleted++;
+            completedTasks++;
+          }
+        });
+      }
+
+      // Workouts
+      if (w.workouts && Array.isArray(w.workouts.days)) {
+        w.workouts.days.forEach((d) => {
+          if (!d) return;
+          workoutsTotal++;
+          totalTasks++;
+          if (safeLogs[`w${w.weekNumber}_workout_${d.id}`]) {
+            workoutsCompleted++;
+            completedTasks++;
+          }
+        });
+      }
+
+      // Habits
+      habitsTotal += 2;
+      totalTasks += 2;
+      if (safeLogs[`w${w.weekNumber}_habit_water`]) {
+        habitsCompleted++;
+        completedTasks++;
+      }
+      if (safeLogs[`w${w.weekNumber}_habit_steps`]) {
+        habitsCompleted++;
         completedTasks++;
       }
     });
-
-    // Workouts
-    w.workouts.days.forEach((d) => {
-      workoutsTotal++;
-      totalTasks++;
-      if (logs[`w${w.weekNumber}_workout_${d.id}`]) {
-        workoutsCompleted++;
-        completedTasks++;
-      }
-    });
-
-    // Habits
-    habitsTotal += 2;
-    totalTasks += 2;
-    if (logs[`w${w.weekNumber}_habit_water`]) {
-      habitsCompleted++;
-      completedTasks++;
-    }
-    if (logs[`w${w.weekNumber}_habit_steps`]) {
-      habitsCompleted++;
-      completedTasks++;
-    }
-  });
+  }
 
   const overallPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
   const mealsPercent = mealsTotal > 0 ? Math.round((mealsCompleted / mealsTotal) * 100) : 0;

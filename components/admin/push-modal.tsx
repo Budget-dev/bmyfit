@@ -8,6 +8,7 @@ import {
   ExternalLink,
 } from "@/components/ui/icons";
 import type { AdminUserRecord } from "@/types/admin";
+import { adminFetch } from "@/lib/admin-api-client";
 
 interface PushModalProps {
   user: AdminUserRecord | null;
@@ -18,7 +19,7 @@ interface PushModalProps {
 export function PushModal({ user, onClose, onSuccess }: PushModalProps) {
   const [coachName, setCoachName] = useState<string>("Coach Naveen (Blaze Gym Owner & Head Coach)");
   const [coachNotes, setCoachNotes] = useState<string>(
-    user?.plan.coachNotes ||
+    user?.plan?.coachNotes ||
       "Weekly plan tailored to your biometrics and goals. Stay consistent with your protein and daily step count!"
   );
   const [pushing, setPushing] = useState<boolean>(false);
@@ -31,7 +32,8 @@ export function PushModal({ user, onClose, onSuccess }: PushModalProps) {
     try {
       setPushing(true);
       setErrorMessage(null);
-      const res = await fetch(`/api/admin/plans/${user.plan.id}/push`, {
+      const planId = user.plan?.id || user.id;
+      const res = await adminFetch(`/api/admin/plans/${planId}/push`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -25,6 +25,71 @@ globalThis.__bmyfit_admin_store__ = memoryStore;
 // Clean initial store: No hardcoded or mock users. Real clients are fetched from Firestore.
 export const INITIAL_ADMIN_USERS: AdminUserRecord[] = [];
 
+export function sanitizeAdminUser(raw: Partial<AdminUserRecord>, id: string): AdminUserRecord {
+  const name = raw.name?.trim() || "BMYFIT Member";
+  const defaultBiometrics: UserBiometrics = {
+    gender: "male",
+    age: 28,
+    heightCm: 175,
+    weightKg: 75,
+    targetWeightKg: 70,
+    waistIn: 34,
+    neckIn: 15.5,
+    bmi: 24.5,
+    bmiCategory: "normal",
+    bodyFatPercent: 21.0,
+    bodyFatCategory: "average",
+    bmr: 1700,
+    tdee: 2350,
+    caloricTarget: 1800,
+    proteinTargetGrams: 120,
+    activityLevel: "moderately-active",
+    dietPreference: "vegetarian",
+    waterLitres: 3.5,
+    dailyStepGoal: 10000,
+  };
+
+  const biometrics: UserBiometrics = {
+    ...defaultBiometrics,
+    ...(raw.biometrics || {}),
+  };
+
+  const plan: PlanDashboardData =
+    raw.plan && Array.isArray(raw.plan.weeks) && raw.plan.weeks.length > 0
+      ? raw.plan
+      : generateDashboardPlan(id, {
+          customerName: name,
+          status: raw.membershipCategory === "purchased" ? "pending_review" : "active",
+          weeksCount: 8,
+        });
+
+  return {
+    id,
+    name,
+    email: raw.email || `${id}@client.bmyfit.in`,
+    phone: raw.phone || "+91 98000 00000",
+    city: raw.city || "Online Client",
+    avatar:
+      raw.avatar ||
+      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
+    joinedAt: raw.joinedAt || new Date().toISOString(),
+    lastActive: raw.lastActive || "Active Today",
+    membershipCategory: raw.membershipCategory || "free",
+    membershipTitle:
+      raw.membershipTitle ||
+      (raw.membershipCategory === "purchased" ? "Purchased Client Plan" : "Free Registered Member"),
+    goal: raw.goal || "fat-loss",
+    goalDisplay: raw.goalDisplay || "Fat Loss & Conditioning",
+    needsPlanReview: raw.needsPlanReview ?? (raw.membershipCategory === "purchased"),
+    biometrics,
+    plan,
+    order: raw.order,
+    subscription: raw.subscription,
+    medicalAssessment: raw.medicalAssessment,
+    taskLogs: raw.taskLogs || {},
+  };
+}
+
 function ensureMemoryStore() {
   // Real database mode: no fake mock users are seeded into memoryStore
 }
@@ -196,15 +261,17 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
     console.warn("Firestore user_logs collection fetch notice:", err);
   }
 
-  const users = Array.from(memoryStore.values());
+  const rawUsers = Array.from(memoryStore.entries()).map(([id, u]) => sanitizeAdminUser(u, id));
+  rawUsers.forEach((u) => memoryStore.set(u.id, u));
+  const users = rawUsers;
 
   const stats: AdminStats = {
     totalUsers: users.length,
     freeMembersCount: users.filter((u) => u.membershipCategory === "free").length,
     activeMembershipsCount: users.filter((u) => u.membershipCategory === "membership").length,
     purchasedPlansCount: users.filter((u) => u.membershipCategory === "purchased").length,
-    pendingReviewCount: users.filter((u) => u.plan.status === "pending_review").length,
-    approvedCount: users.filter((u) => u.plan.status === "approved" || u.plan.status === "active").length,
+    pendingReviewCount: users.filter((u) => (u.plan?.status === "pending_review") || u.needsPlanReview).length,
+    approvedCount: users.filter((u) => u.plan?.status === "approved" || u.plan?.status === "active").length,
     totalRevenueINR: users.reduce((acc, u) => acc + (u.order ? Math.round(u.order.amountPaise / 100) : 0), 0),
   };
 
@@ -213,8 +280,9 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
 
 export async function fetchAdminUserById(userId: string): Promise<AdminUserRecord | null> {
   ensureMemoryStore();
-  const user = memoryStore.get(userId);
-  if (!user) return null;
+  const rawUser = memoryStore.get(userId);
+  if (!rawUser) return null;
+  const user = sanitizeAdminUser(rawUser, userId);
 
   // Check if live plan exists in Firestore
   try {
@@ -316,10 +384,11 @@ export async function pushPlanToUserDashboard(
   notes?: string
 ): Promise<{ success: boolean; pushedPlan: PlanDashboardData; user: AdminUserRecord }> {
   ensureMemoryStore();
-  const user = memoryStore.get(userId);
-  if (!user) {
+  const rawUser = memoryStore.get(userId);
+  if (!rawUser) {
     throw new Error(`User with ID ${userId} not found`);
   }
+  const user = sanitizeAdminUser(rawUser, userId);
 
   const nowIso = new Date().toISOString();
   const updatedPlan: PlanDashboardData = {
