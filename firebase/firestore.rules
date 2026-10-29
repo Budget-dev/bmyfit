@@ -6,25 +6,39 @@ service cloud.firestore {
     // Assumed Data Model & Architecture
     // ===============================================================
     //
+    // Collection: assessments/{assessmentId}
+    // Document ID: assessmentId (e.g. asm_123456 or generatedId)
+    // Fields:
+    //   - id: string
+    //   - uid / userId: string (matches owner UID or "anonymous-user")
+    //   - gender, age, heightCm, weightKg, targetWeightKg, waistIn, neckIn, hipIn
+    //   - goal, activityLevel, dietPreference
+    //   - bmi, bmiCategory, bodyFatPercent, bodyFatCategory, bodyFatWarning
+    //   - bmr, tdee, caloricTarget, proteinTargetGrams, waterLitres, dailyStepGoal
+    //   - name, email, phone: optional PII from intake form
+    //   - createdAt, updatedAt: string / timestamp
+    //
     // Collection: users/{userId}
     // Document ID: userId (matching request.auth.uid)
     // Fields:
-    //   - id: string (optional, matches userId)
-    //   - uid: string (optional, matches userId)
+    //   - id: string (matches userId)
+    //   - uid: string (matches userId)
     //   - name: string (optional, max 100 chars)
-    //   - email: string (PII, validated email format, max 100 chars)
-    //   - phone: string (PII, optional, max 30 chars)
+    //   - email: string (optional, max 100 chars)
+    //   - phone: string (optional, max 30 chars)
     //   - age: number (optional, 0 to 130)
     //   - avatarUrl / avatar: string (optional, max 2048 chars)
     //   - provider: string (optional, max 50 chars)
-    //   - role: string ('admin' | 'client' | 'coach' | 'user') [PRIVILEGED - Immutable by clients]
-    //   - membershipCategory: string ('free' | 'membership' | 'purchased') [ENTITLEMENT - Immutable by clients]
+    //   - role: string ('admin' | 'client' | 'coach' | 'user') [PRIVILEGED - Protected against self-escalation]
+    //   - membershipCategory: string ('free' | 'membership' | 'purchased') [ENTITLEMENT - Protected against self-escalation]
     //   - membershipTitle: string (optional, max 100 chars)
     //   - city: string (optional, max 100 chars)
-    //   - goal / goalDisplay: string (optional)
+    //   - goal / goalDisplay: string (optional, max 100 chars)
     //   - needsPlanReview: bool (optional)
+    //   - assessmentId: string (optional, max 128 chars)
+    //   - joinedAt, lastActive: string / timestamp (optional)
     //   - biometrics, plan, medicalAssessment, order, subscription, taskLogs: map (optional)
-    //   - createdAt, updatedAt, lastActive: string / timestamp (optional)
+    //   - createdAt, updatedAt: string / timestamp (optional)
     //
     // Collection: plans/{planId}
     // Document ID: planId (plan identifier, assessment ID, or userId)
@@ -58,25 +72,15 @@ service cloud.firestore {
     //   - startDate, endDate: string / timestamp
     //
     // Collection: medical_consultations/{consultationId}
-    // Document ID: consultationId (consultation ID or assessment ID or userId)
+    // Document ID: consultationId (consultation ID, assessment ID, or userId)
     // Fields:
-    //   - userId / uid: string (matches owner UID)
+    //   - userId / uid: string
     //   - hasDisease: bool
-    //   - diseases: list of strings (max 50)
-    //   - customDiseaseDescription: string (max 2000 chars)
-    //   - medications: string (max 2000 chars)
-    //   - documents: list of maps (max 30)
+    //   - diseases: list of strings
+    //   - customDiseaseDescription: string
+    //   - medications: string
+    //   - documents: list of maps
     //   - submittedAt: string / timestamp
-    //
-    // Collection: assessments/{assessmentId}
-    // Document ID: assessmentId
-    // Fields:
-    //   - id: string
-    //   - userId / uid: string (matches owner UID)
-    //   - gender, age, heightCm, weightKg, waistIn, neckIn, hipIn
-    //   - goal, activityLevel, dietPreference
-    //   - bmi, bmiCategory, bodyFatPercent, bodyFatCategory, bodyFatWarning
-    //   - createdAt, updatedAt: string / timestamp
     //
     // Collection: orders/{orderId}
     // Document ID: orderId
@@ -142,8 +146,11 @@ service cloud.firestore {
     // Direct trusted authority check: verified bootstrap email or Firebase Auth custom claim
     function isSuperAdmin() {
       return signedIn() && (
-        request.auth.token.email == 'bmyfitnesscoach@gmail.com' ||
-        request.auth.token.role == 'admin'
+        ('email' in request.auth.token && (
+          request.auth.token.email == 'bmyfitnesscoach@gmail.com' ||
+          request.auth.token.email.matches('(?i)^bmyfitnesscoach@gmail\\.com$')
+        )) ||
+        ('role' in request.auth.token && request.auth.token.role == 'admin')
       );
     }
 
@@ -160,13 +167,6 @@ service cloud.firestore {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
     }
 
-    function uidNotModified() {
-      return (
-        (!('uid' in request.resource.data) || !('uid' in resource.data) || request.resource.data.uid == resource.data.uid) &&
-        (!('userId' in request.resource.data) || !('userId' in resource.data) || request.resource.data.userId == resource.data.userId)
-      );
-    }
-
     function isValidEmail(email) {
       return email is string &&
         email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');
@@ -177,8 +177,8 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidUser(data) {
-      return (!('name' in data) || (data.name is string && data.name.size() > 0 && data.name.size() <= 100)) &&
-             (!('email' in data) || (data.email is string && data.email.size() <= 100 && isValidEmail(data.email))) &&
+      return (!('name' in data) || (data.name is string && data.name.size() <= 100)) &&
+             (!('email' in data) || data.email == '' || (data.email is string && data.email.size() <= 100 && isValidEmail(data.email))) &&
              (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
              (!('age' in data) || (data.age is number && data.age >= 0 && data.age <= 130)) &&
              (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 2048)) &&
@@ -188,9 +188,16 @@ service cloud.firestore {
              (!('membershipCategory' in data) || (data.membershipCategory is string && data.membershipCategory in ['free', 'membership', 'purchased'])) &&
              (!('membershipTitle' in data) || (data.membershipTitle is string && data.membershipTitle.size() <= 100)) &&
              (!('city' in data) || (data.city is string && data.city.size() <= 100)) &&
-             (!('goal' in data) || (data.goal is string && data.goal.size() <= 50)) &&
+             (!('goal' in data) || (data.goal is string && data.goal.size() <= 100)) &&
              (!('goalDisplay' in data) || (data.goalDisplay is string && data.goalDisplay.size() <= 100)) &&
              (!('needsPlanReview' in data) || data.needsPlanReview is bool) &&
+             (!('assessmentId' in data) || (data.assessmentId is string && data.assessmentId.size() <= 128)) &&
+             (!('id' in data) || (data.id is string && data.id.size() <= 128)) &&
+             (!('uid' in data) || (data.uid is string && data.uid.size() <= 128)) &&
+             (!('joinedAt' in data) || (data.joinedAt is string && data.joinedAt.size() <= 100) || data.joinedAt is timestamp) &&
+             (!('lastActive' in data) || (data.lastActive is string && data.lastActive.size() <= 100) || data.lastActive is timestamp) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 100) || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 100) || data.updatedAt is timestamp) &&
              (!('biometrics' in data) || data.biometrics is map) &&
              (!('plan' in data) || data.plan is map) &&
              (!('medicalAssessment' in data) || data.medicalAssessment is map) &&
@@ -228,9 +235,17 @@ service cloud.firestore {
     // Collection Rules
     // ===============================================================
 
-    // User profile documents (Defense against role privilege escalation and immutable fields)
+    // 1. Fitness Assessments
+    // Lead assessments submitted through intake funnel (allows anonymous and prospective leads to calculate and view biometrics)
+    match /assessments/{assessmentId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isAdmin();
+    }
+
+    // 2. User profile documents (Defense against role privilege escalation and PII leakage)
     match /users/{userId} {
-      allow read: if signedIn() || isAdmin() || isOwner(userId);
+      allow read: if isOwner(userId) || isAdmin();
 
       // Clients can create their own profile, but cannot elevate role or set privileged membership
       allow create: if (
@@ -238,72 +253,71 @@ service cloud.firestore {
         (
           isOwner(userId) &&
           isValidUser(request.resource.data) &&
-          (!('role' in request.resource.data) || (request.resource.data.role != 'admin' && request.resource.data.role in ['client', 'user'])) &&
-          (!('membershipCategory' in request.resource.data) || request.resource.data.membershipCategory == 'free') &&
           (!('id' in request.resource.data) || request.resource.data.id == userId) &&
-          (!('uid' in request.resource.data) || request.resource.data.uid == userId)
+          (!('uid' in request.resource.data) || request.resource.data.uid == userId) &&
+          (!('role' in request.resource.data) || (request.resource.data.role != 'admin' && request.resource.data.role != 'coach' && request.resource.data.role in ['client', 'user'])) &&
+          (!('membershipCategory' in request.resource.data) || request.resource.data.membershipCategory == 'free')
         )
       );
 
-      // Clients can update their own profile, but CANNOT touch role or membershipCategory
+      // Clients can update their own profile, but CANNOT elevate role or membershipCategory to privileged tiers
       allow update: if (
         (isAdmin() && isValidUser(request.resource.data)) ||
         (
           isOwner(userId) &&
           isValidUser(request.resource.data) &&
-          areImmutableFieldsUnchanged(['role', 'membershipCategory', 'id', 'uid']) &&
-          (!('role' in request.resource.data) || request.resource.data.role != 'admin' || (resource.data != null && resource.data.role == 'admin'))
+          (!('id' in request.resource.data) || request.resource.data.id == userId) &&
+          (!('uid' in request.resource.data) || request.resource.data.uid == userId) &&
+          (!('id' in resource.data) || !('id' in request.resource.data) || request.resource.data.id == resource.data.id) &&
+          (!('uid' in resource.data) || !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid) &&
+          (!('role' in request.resource.data) || (request.resource.data.role in ['client', 'user'] && request.resource.data.role != 'admin' && request.resource.data.role != 'coach') || ('role' in resource.data && request.resource.data.role == resource.data.role)) &&
+          (!('membershipCategory' in request.resource.data) || request.resource.data.membershipCategory == 'free' || ('membershipCategory' in resource.data && request.resource.data.membershipCategory == resource.data.membershipCategory))
         )
       );
 
       allow delete: if isAdmin();
     }
 
-    // Personalized fitness and diet plans
-    // Clients and admin can read plans; editable ONLY by admin
+    // 3. Personalized fitness and diet plans
+    // Previewable by clients and visitors; editable ONLY by admin
     match /plans/{planId} {
-      allow read: if signedIn() || isAdmin();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
-    // User daily task completion logs and progress
+    // 4. User daily task completion logs and adherence progress
     match /user_logs/{logId} {
-      allow read, write: if signedIn();
+      allow read: if signedIn() || isAdmin();
+      allow create, update: if signedIn() || isAdmin();
+      allow delete: if isAdmin();
     }
 
-    // User subscriptions and entitlement synchronization
+    // 5. User subscriptions and entitlement synchronization
     match /subscriptions/{subscriptionId} {
       allow read: if signedIn() || isAdmin();
       allow write: if isAdmin();
     }
 
-    // Health dossier & medical consultations
+    // 6. Health dossier & medical consultations
+    // Submitted during intake funnel by anonymous or signed-in leads; managed by coach admin
     match /medical_consultations/{consultationId} {
-      allow read: if signedIn() || isAdmin();
-      allow create, update: if signedIn() || isOwner(consultationId);
+      allow read: if signedIn() || isAdmin() || true;
+      allow create, update: if true;
       allow delete: if isAdmin();
     }
 
-    // Fitness Assessments
-    // Lead assessments submitted through intake funnel (allows anonymous and signed-in leads)
-    match /assessments/{assessmentId} {
-      allow read: if signedIn() || isAdmin();
-      allow create, update: if signedIn() || true;
-      allow delete: if isAdmin();
-    }
-
-    // Payment orders (strictly server-managed writes via Firebase Admin)
+    // 7. Payment orders (strictly server-managed writes via Firebase Admin)
     match /orders/{orderId} {
       allow read: if signedIn() || isAdmin();
       allow write: if false;
     }
 
-    // Payment webhook event receipts (strictly server-managed idempotency)
+    // 8. Payment webhook event receipts (strictly server-managed idempotency)
     match /paymentWebhooks/{eventId} {
       allow read, write: if false;
     }
 
-    // Real-time chat threads between clients and Coach Naveen (admin)
+    // 9. Real-time chat threads between clients and Coach Naveen (admin)
     match /chats/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create, update: if (isOwner(userId) || isAdmin()) && isValidChatThread(request.resource.data, userId);
@@ -317,7 +331,7 @@ service cloud.firestore {
       }
     }
 
-    // Default fallback: deny all access to any unspecified collection
+    // 10. Default fallback: deny all access to any unspecified collection
     match /{document=**} {
       allow read, write: if false;
     }

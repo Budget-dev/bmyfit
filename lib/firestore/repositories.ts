@@ -45,31 +45,36 @@ export async function createAssessment(
 
   memoryAssessments.set(assessmentId, record);
 
-  try {
-    const ref = adminDb.collection("assessments").doc(assessmentId);
-    await ref.set({
-      uid,
-      ...input,
-      ...computed,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-    return ref.id;
-  } catch (err) {
-    console.warn("Firestore createAssessment fallback to memory store:", err);
-    return assessmentId;
+  if (hasAdminCredentials) {
+    try {
+      const ref = adminDb.collection("assessments").doc(assessmentId);
+      await ref.set({
+        uid,
+        ...input,
+        ...computed,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return ref.id;
+    } catch (err) {
+      console.warn("Firestore createAssessment fallback to memory store:", err);
+      return assessmentId;
+    }
   }
+  return assessmentId;
 }
 
 export async function getAssessment(uid: string, assessmentId: string): Promise<Assessment> {
-  try {
-    const snapshot = await adminDb.collection("assessments").doc(assessmentId).get();
-    const data = snapshot.data();
-    if (snapshot.exists && data && (data.uid === uid || uid.startsWith("guest_") || data.uid.startsWith("guest_"))) {
-      return { id: snapshot.id, ...data } as Assessment;
+  if (hasAdminCredentials) {
+    try {
+      const snapshot = await adminDb.collection("assessments").doc(assessmentId).get();
+      const data = snapshot.data();
+      if (snapshot.exists && data && (data.uid === uid || uid.startsWith("guest_") || data.uid.startsWith("guest_") || !data.uid || data.uid === "anonymous-user")) {
+        return { id: snapshot.id, ...data } as Assessment;
+      }
+    } catch (err) {
+      console.warn("Firestore getAssessment error, trying local store:", err);
     }
-  } catch (err) {
-    console.warn("Firestore getAssessment error, trying local store:", err);
   }
 
   const fromMemory = memoryAssessments.get(assessmentId);
@@ -97,14 +102,16 @@ export async function getAssessment(uid: string, assessmentId: string): Promise<
 }
 
 export async function getAssessmentById(assessmentId: string): Promise<Assessment> {
-  try {
-    const snapshot = await adminDb.collection("assessments").doc(assessmentId).get();
-    const data = snapshot.data();
-    if (snapshot.exists && data) {
-      return { id: snapshot.id, ...data } as Assessment;
+  if (hasAdminCredentials) {
+    try {
+      const snapshot = await adminDb.collection("assessments").doc(assessmentId).get();
+      const data = snapshot.data();
+      if (snapshot.exists && data) {
+        return { id: snapshot.id, ...data } as Assessment;
+      }
+    } catch (err) {
+      console.warn("Firestore getAssessmentById error, checking local store:", err);
     }
-  } catch (err) {
-    console.warn("Firestore getAssessmentById error, checking local store:", err);
   }
 
   const fromMemory = memoryAssessments.get(assessmentId);

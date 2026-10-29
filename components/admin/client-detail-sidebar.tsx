@@ -174,11 +174,11 @@ export function ClientDetailSidebar({
     try {
       const videoPayload: PlanVideo | undefined = videoUrl.trim()
         ? {
-            url: videoUrl.trim(),
-            title: videoTitle.trim() || `Form & Routine Breakdown for ${user.name}`,
-            aspectRatio: videoRatio,
-            notes: videoNotes.trim(),
-          }
+          url: videoUrl.trim(),
+          title: videoTitle.trim() || `Form & Routine Breakdown for ${user.name}`,
+          aspectRatio: videoRatio,
+          notes: videoNotes.trim(),
+        }
         : undefined;
 
       await onPushPlan(user, coachNotes, videoPayload, selectedSupplements);
@@ -212,7 +212,7 @@ export function ClientDetailSidebar({
       {/* Slide-over Right Panel */}
       <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
         <div className="w-screen max-w-2xl bg-white shadow-2xl border-l border-slate-200 flex flex-col h-full animate-in slide-in-from-right duration-300">
-          
+
           {/* ================= HEADER ================= */}
           <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/70 flex items-start justify-between gap-4">
             <div className="flex items-center gap-3.5 min-w-0">
@@ -262,11 +262,10 @@ export function ClientDetailSidebar({
               <button
                 type="button"
                 onClick={() => setActiveTab("dispatch")}
-                className={`py-3 border-b-2 transition flex items-center gap-1.5 ${
-                  activeTab === "dispatch"
-                    ? "border-emerald-600 text-emerald-700 font-bold"
-                    : "border-transparent text-slate-500 hover:text-slate-900"
-                }`}
+                className={`py-3 border-b-2 transition flex items-center gap-1.5 ${activeTab === "dispatch"
+                  ? "border-emerald-600 text-emerald-700 font-bold"
+                  : "border-transparent text-slate-500 hover:text-slate-900"
+                  }`}
               >
                 <Rocket className="w-4 h-4 text-emerald-600" />
                 <span>Send Plan &amp; Video</span>
@@ -278,11 +277,10 @@ export function ClientDetailSidebar({
               <button
                 type="button"
                 onClick={() => setActiveTab("biometrics")}
-                className={`py-3 border-b-2 transition flex items-center gap-1.5 ${
-                  activeTab === "biometrics"
-                    ? "border-emerald-600 text-emerald-700 font-bold"
-                    : "border-transparent text-slate-500 hover:text-slate-900"
-                }`}
+                className={`py-3 border-b-2 transition flex items-center gap-1.5 ${activeTab === "biometrics"
+                  ? "border-emerald-600 text-emerald-700 font-bold"
+                  : "border-transparent text-slate-500 hover:text-slate-900"
+                  }`}
               >
                 <BarChart2 className="w-4 h-4" />
                 <span>Body Stats &amp; Health</span>
@@ -291,11 +289,10 @@ export function ClientDetailSidebar({
               <button
                 type="button"
                 onClick={() => setActiveTab("plan")}
-                className={`py-3 border-b-2 transition flex items-center gap-1.5 ${
-                  activeTab === "plan"
-                    ? "border-emerald-600 text-emerald-700 font-bold"
-                    : "border-transparent text-slate-500 hover:text-slate-900"
-                }`}
+                className={`py-3 border-b-2 transition flex items-center gap-1.5 ${activeTab === "plan"
+                  ? "border-emerald-600 text-emerald-700 font-bold"
+                  : "border-transparent text-slate-500 hover:text-slate-900"
+                  }`}
               >
                 <Edit3 className="w-4 h-4" />
                 <span>Targets &amp; Routine</span>
@@ -304,11 +301,10 @@ export function ClientDetailSidebar({
               <button
                 type="button"
                 onClick={() => setActiveTab("alert")}
-                className={`py-3 border-b-2 transition flex items-center gap-1.5 ${
-                  activeTab === "alert"
-                    ? "border-emerald-600 text-emerald-700 font-bold"
-                    : "border-transparent text-slate-500 hover:text-slate-900"
-                }`}
+                className={`py-3 border-b-2 transition flex items-center gap-1.5 ${activeTab === "alert"
+                  ? "border-emerald-600 text-emerald-700 font-bold"
+                  : "border-transparent text-slate-500 hover:text-slate-900"
+                  }`}
               >
                 <MessageCircle className="w-4 h-4 text-[#25D366]" />
                 <span>WhatsApp Alert</span>
@@ -340,7 +336,7 @@ export function ClientDetailSidebar({
             {/* ---------------- TAB 1: SEND PLAN & VIDEO ---------------- */}
             {activeTab === "dispatch" && (
               <div className="space-y-6">
-                
+
                 {/* Section A: Personalized Video Instruction */}
                 <div className="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80 space-y-4">
                   <div className="flex items-center justify-between">
@@ -396,22 +392,20 @@ export function ClientDetailSidebar({
                         <button
                           type="button"
                           onClick={() => setVideoRatio("16:9")}
-                          className={`px-3 py-2 text-xs font-bold rounded-xl border transition flex items-center justify-center gap-1.5 ${
-                            videoRatio === "16:9"
-                              ? "bg-slate-900 text-white border-slate-900 shadow-xs"
-                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
-                          }`}
+                          className={`px-3 py-2 text-xs font-bold rounded-xl border transition flex items-center justify-center gap-1.5 ${videoRatio === "16:9"
+                            ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                            }`}
                         >
                           <span>16:9 (Landscape)</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => setVideoRatio("9:16")}
-                          className={`px-3 py-2 text-xs font-bold rounded-xl border transition flex items-center justify-center gap-1.5 ${
-                            videoRatio === "9:16"
-                              ? "bg-slate-900 text-white border-slate-900 shadow-xs"
-                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
-                          }`}
+                          className={`px-3 py-2 text-xs font-bold rounded-xl border transition flex items-center justify-center gap-1.5 ${videoRatio === "9:16"
+                            ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                            }`}
                         >
                           <span>9:16 (Shorts/Reel)</span>
                         </button>
@@ -441,11 +435,10 @@ export function ClientDetailSidebar({
                     {parsedVideo.embedUrl ? (
                       <div className="flex justify-center bg-black/5 rounded-2xl p-2 border border-slate-200/80">
                         <div
-                          className={`overflow-hidden rounded-xl bg-black shadow-md relative ${
-                            videoRatio === "9:16"
-                              ? "aspect-[9/16] w-[220px]"
-                              : "aspect-[16/9] w-full"
-                          }`}
+                          className={`overflow-hidden rounded-xl bg-black shadow-md relative ${videoRatio === "9:16"
+                            ? "aspect-[9/16] w-[220px]"
+                            : "aspect-[16/9] w-full"
+                            }`}
                         >
                           {parsedVideo.isDirectVideo ? (
                             <video
@@ -466,9 +459,8 @@ export function ClientDetailSidebar({
                       </div>
                     ) : (
                       <div
-                        className={`rounded-xl border-2 border-dashed border-slate-200 bg-white flex flex-col items-center justify-center p-6 text-center ${
-                          videoRatio === "9:16" ? "h-64 max-w-[220px] mx-auto" : "h-40 w-full"
-                        }`}
+                        className={`rounded-xl border-2 border-dashed border-slate-200 bg-white flex flex-col items-center justify-center p-6 text-center ${videoRatio === "9:16" ? "h-64 max-w-[220px] mx-auto" : "h-40 w-full"
+                          }`}
                       >
                         <Video className="w-8 h-8 text-slate-300 mb-2" />
                         <span className="text-xs font-semibold text-slate-500">
@@ -619,11 +611,10 @@ export function ClientDetailSidebar({
                           <div
                             key={product.id}
                             onClick={() => handleToggleSupplement(product)}
-                            className={`p-2 rounded-xl border text-left cursor-pointer transition flex items-center justify-between gap-2 ${
-                              isSelected
-                                ? "bg-emerald-50 border-emerald-300 ring-1 ring-emerald-200"
-                                : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                            }`}
+                            className={`p-2 rounded-xl border text-left cursor-pointer transition flex items-center justify-between gap-2 ${isSelected
+                              ? "bg-emerald-50 border-emerald-300 ring-1 ring-emerald-200"
+                              : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                              }`}
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <div className="relative w-7 h-7 rounded-md bg-slate-50 p-0.5 shrink-0 overflow-hidden">
@@ -646,11 +637,10 @@ export function ClientDetailSidebar({
                               </div>
                             </div>
                             <span
-                              className={`p-1 rounded-md text-[10px] font-bold shrink-0 ${
-                                isSelected
-                                  ? "bg-emerald-600 text-white"
-                                  : "bg-slate-100 text-slate-600"
-                              }`}
+                              className={`p-1 rounded-md text-[10px] font-bold shrink-0 ${isSelected
+                                ? "bg-emerald-600 text-white"
+                                : "bg-slate-100 text-slate-600"
+                                }`}
                             >
                               {isSelected ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
                             </span>
@@ -741,8 +731,8 @@ export function ClientDetailSidebar({
                       {isPushing
                         ? "Delivering Plan to User..."
                         : isPending
-                        ? `Send Customized Plan to ${user.name} (Push Live)`
-                        : `Update & Re-send Live Plan to ${user.name}`}
+                          ? `Send Customized Plan to ${user.name} (Push Live)`
+                          : `Update & Re-send Live Plan to ${user.name}`}
                     </span>
                   </button>
                   <p className="text-[11px] text-center text-slate-400 mt-2 font-medium">
@@ -755,7 +745,7 @@ export function ClientDetailSidebar({
             {/* ---------------- TAB 2: BIOMETRICS & HEALTH ---------------- */}
             {activeTab === "biometrics" && (
               <div className="space-y-6">
-                
+
                 {/* 4 Cards Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">

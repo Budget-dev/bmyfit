@@ -9,6 +9,7 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunnelState } from "@/hooks/use-funnel-state";
 import { calculateAssessment } from "@/lib/assessment/plan";
+import { db, doc, setDoc } from "@/lib/firebase/client";
 
 const STEPS = [
   {
@@ -94,11 +95,47 @@ export function CalculatingClient() {
       setErrorMessage("Missing measurements or goal. Please check your details.");
       return;
     }
+    const currentInput = fullInput;
 
     requestSentRef.current = true;
 
     async function executeCalculation() {
       try {
+        const calculated = calculateAssessment(currentInput);
+        const generatedId = `asm_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+        let finalAssessmentId = generatedId;
+
+        // Persist to session storage immediately so result is always instant
+        if (typeof window !== "undefined") {
+          const localAssessment = {
+            id: generatedId,
+            uid: "anonymous-user",
+            ...currentInput,
+            ...calculated,
+            createdAt: new Date().toISOString(),
+          };
+          sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(localAssessment));
+          sessionStorage.setItem("bmyfit_local_calculated", JSON.stringify(calculated));
+        }
+
+        // Persist to Firestore client SDK directly
+        try {
+          if (typeof window !== "undefined") {
+            const firestorePayload = {
+              id: generatedId,
+              uid: "anonymous-user",
+              ...currentInput,
+              ...calculated,
+              createdAt: new Date().toISOString(),
+            };
+            void setDoc(doc(db, "assessments", generatedId), firestorePayload).catch((e) => {
+              console.warn("Client assessment firestore notice:", e);
+            });
+          }
+        } catch (e) {
+          console.warn("Direct Firestore assessment error:", e);
+        }
+
         const token = await getIdToken();
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
@@ -110,54 +147,32 @@ export function CalculatingClient() {
         const res = await fetch("/api/assessments", {
           method: "POST",
           headers,
-          body: JSON.stringify(fullInput),
+          body: JSON.stringify(currentInput),
         }).catch(() => null);
 
         if (res && res.ok) {
           const data = await res.json().catch(() => ({}));
           if (data.assessmentId) {
-            targetResultUrlRef.current = `/result/${data.assessmentId}`;
-            calculationFinishedRef.current = true;
-            return;
+            finalAssessmentId = data.assessmentId;
+            if (typeof window !== "undefined") {
+              const updated = {
+                id: finalAssessmentId,
+                uid: "anonymous-user",
+                ...currentInput,
+                ...calculated,
+                createdAt: new Date().toISOString(),
+              };
+              sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(updated));
+            }
           }
         }
 
-        // Fallback for local development or guest sessions:
-        // Client-side pure calculation and storage in session
-        if (fullInput) {
-          const calculated = calculateAssessment(fullInput);
-          const localAssessment = {
-            id: "local",
-            uid: "anonymous-user",
-            ...fullInput,
-            ...calculated,
-            createdAt: new Date().toISOString(),
-          };
-          if (typeof window !== "undefined") {
-            sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(localAssessment));
-          }
-          targetResultUrlRef.current = "/result/local";
-          calculationFinishedRef.current = true;
-        }
+        targetResultUrlRef.current = `/result/${finalAssessmentId}`;
+        calculationFinishedRef.current = true;
       } catch (err) {
-        // Fallback to local
-        if (fullInput) {
-          const calculated = calculateAssessment(fullInput);
-          const localAssessment = {
-            id: "local",
-            uid: "anonymous-user",
-            ...fullInput,
-            ...calculated,
-            createdAt: new Date().toISOString(),
-          };
-          if (typeof window !== "undefined") {
-            sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(localAssessment));
-          }
-          targetResultUrlRef.current = "/result/local";
-          calculationFinishedRef.current = true;
-        } else {
-          setErrorMessage(err instanceof Error ? err.message : "Calculation failed. Please try again.");
-        }
+        console.warn("Calculation fallback:", err);
+        targetResultUrlRef.current = "/result/local";
+        calculationFinishedRef.current = true;
       }
     }
 

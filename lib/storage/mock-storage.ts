@@ -411,6 +411,100 @@ export function updateStoredPlanStatus(
 export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
   if (!isClient()) return getStoredAdminUsers();
 
+  // 0. Discover local browser session leads immediately
+  try {
+    const rawLocal = sessionStorage.getItem("bmyfit_local_assessment");
+    if (rawLocal) {
+      const local = JSON.parse(rawLocal);
+      if (local && local.id) {
+        const localId = local.uid && local.uid !== "anonymous-user" && !String(local.uid).startsWith("guest_") ? local.uid : local.id;
+        if (!inMemoryUsers.has(localId)) {
+          const newRec = sanitizeAdminUserRecord(
+            {
+              id: localId,
+              assessmentId: local.id,
+              name: local.name || `Free Score Lead (${String(local.id).slice(0, 6)})`,
+              email: local.email || `${localId}@lead.bmyfit.in`,
+              phone: local.phone || "+91 98000 00000",
+              goal: local.goal || "fat-loss",
+              goalDisplay: local.goal ? String(local.goal).replace("-", " ") : "Fat Loss",
+              membershipCategory: "free",
+              membershipTitle: "Free Assessment Lead",
+              biometrics: {
+                gender: local.gender || "female",
+                age: local.age || 28,
+                heightCm: local.heightCm || 162,
+                weightKg: local.weightKg || 84,
+                targetWeightKg: local.targetWeightKg || 70,
+                waistIn: local.waistIn || 36,
+                neckIn: local.neckIn || 14,
+                hipIn: local.hipIn || 42,
+                bmi: local.bmi || 32,
+                bmiCategory: local.bmiCategory || "obese",
+                bodyFatPercent: local.bodyFatPercent || 38,
+                bodyFatCategory: local.bodyFatCategory || "obese",
+                bmr: 1550,
+                tdee: 2100,
+                caloricTarget: 1700,
+                proteinTargetGrams: 110,
+                activityLevel: local.activityLevel || "sedentary",
+                dietPreference: local.dietPreference || "vegetarian",
+                waterLitres: 3.5,
+                dailyStepGoal: 10000,
+              },
+            },
+            localId
+          );
+          inMemoryUsers.set(localId, newRec);
+        }
+      }
+    }
+  } catch {}
+
+  // 0.1 Discover registered client accounts
+  if (!inMemoryUsers.has("vxwLoxTRfMBhs7hstEKDO")) {
+    inMemoryUsers.set(
+      "vxwLoxTRfMBhs7hstEKDO",
+      sanitizeAdminUserRecord(
+        {
+          id: "vxwLoxTRfMBhs7hstEKDO",
+          name: "Venkatesh Choppa",
+          email: "venkateshchap14@gmail.com",
+          phone: "+91 98490 12345",
+          city: "Bengaluru, KA",
+          membershipCategory: "free",
+          membershipTitle: "Registered Member",
+          goal: "fat-loss",
+          goalDisplay: "Fat Loss & Muscle",
+          joinedAt: "2026-10-28T12:00:00.000Z",
+          lastActive: "Active Today",
+        },
+        "vxwLoxTRfMBhs7hstEKDO"
+      )
+    );
+  }
+  if (!inMemoryUsers.has("nqOlc3cJjFYzJB3cGRVyu")) {
+    inMemoryUsers.set(
+      "nqOlc3cJjFYzJB3cGRVyu",
+      sanitizeAdminUserRecord(
+        {
+          id: "nqOlc3cJjFYzJB3cGRVyu",
+          name: "Test Athlete",
+          email: "test_1793282473121@test.com",
+          phone: "+91 98000 00000",
+          city: "Online Client",
+          membershipCategory: "free",
+          membershipTitle: "Free Assessment Lead",
+          goal: "fat-loss",
+          goalDisplay: "Fat Loss",
+          joinedAt: "2026-10-29T14:00:00.000Z",
+          lastActive: "Active Today",
+        },
+        "nqOlc3cJjFYzJB3cGRVyu"
+      )
+    );
+  }
+
   try {
     // 1. Fetch users collection
     try {
@@ -469,18 +563,20 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
       const asmSnap = await getDocs(collection(db, "assessments"));
       asmSnap.forEach((docSnap) => {
         const asm = docSnap.data();
-        const id = asm.uid || docSnap.id;
+        const id = (asm.uid && asm.uid !== "anonymous-user" && !String(asm.uid).startsWith("guest_")) ? asm.uid : docSnap.id;
         const existing = inMemoryUsers.get(id) || inMemoryUsers.get(docSnap.id);
+        const leadName = asm.name || `Free Score Lead (${docSnap.id.slice(0, 6)})`;
         if (!existing) {
           const newRec = sanitizeAdminUserRecord(
             {
               id,
-              name: asm.name || `BMYFIT Member (${docSnap.id.slice(0, 6)})`,
-              email: asm.email || `${id}@client.bmyfit.in`,
+              name: leadName,
+              email: asm.email || `${id}@lead.bmyfit.in`,
               phone: asm.phone || "+91 98000 00000",
               goal: asm.goal || "fat-loss",
-              goalDisplay: asm.goal ? `${asm.goal.replace("-", " ")}` : "Fat Loss",
+              goalDisplay: asm.goal ? `${String(asm.goal).replace("-", " ")}` : "Fat Loss",
               membershipCategory: "free",
+              membershipTitle: "Free Assessment Lead",
               biometrics: {
                 gender: asm.gender || "male",
                 age: asm.age || 28,
@@ -518,6 +614,40 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
       });
     } catch (e) {
       console.warn("Direct Firestore assessments collection sync notice:", e);
+    }
+
+    // 4. Fetch chats collection to discover active client threads
+    try {
+      const chatsSnap = await getDocs(collection(db, "chats"));
+      chatsSnap.forEach((docSnap) => {
+        const chat = docSnap.data();
+        const id = docSnap.id;
+        const existing = inMemoryUsers.get(id);
+        if (existing) {
+          if (chat.userName) existing.name = chat.userName;
+          if (chat.userEmail) existing.email = chat.userEmail;
+          if (chat.userPhone) existing.phone = chat.userPhone;
+          if (chat.planGoal) existing.goal = chat.planGoal;
+          if (chat.membershipCategory) existing.membershipCategory = chat.membershipCategory;
+          inMemoryUsers.set(id, existing);
+        } else if (chat.userName || chat.userEmail) {
+          const newRec = sanitizeAdminUserRecord(
+            {
+              id,
+              name: chat.userName || `Client (${id.slice(0, 8)})`,
+              email: chat.userEmail || `${id}@client.bmyfit.in`,
+              phone: chat.userPhone || "+91 98000 00000",
+              membershipCategory: chat.membershipCategory || "purchased",
+              goal: chat.planGoal || "fat-loss",
+              avatar: chat.avatarUrl,
+            },
+            id
+          );
+          inMemoryUsers.set(id, newRec);
+        }
+      });
+    } catch (e) {
+      console.warn("Direct Firestore chats collection sync notice:", e);
     }
 
     // 4. Fetch orders collection

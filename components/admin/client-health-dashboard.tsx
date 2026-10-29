@@ -115,33 +115,6 @@ export function ClientHealthDashboard({
 
   return (
     <div className="space-y-6">
-      {/* ================= HEADER WITH SYNC ACTION ================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-gray-100">
-        <div>
-          <h1 className="text-xl font-black text-gray-950 tracking-tight flex items-center gap-2">
-            <span>Client Performance &amp; Health Status</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          </h1>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Real-time biometric tracking, adherence compliance, and rapid coach interventions.
-          </p>
-        </div>
-
-        {onRefresh && (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onRefresh}
-              disabled={isSyncing}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-gray-700 bg-white border border-gray-200/90 hover:bg-gray-50 hover:border-gray-300 shadow-xs transition active:scale-95 disabled:opacity-60"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 text-gray-600 ${isSyncing ? "animate-spin text-emerald-600" : ""}`} />
-              <span>{isSyncing ? "Syncing Firestore..." : "Sync Live Firestore"}</span>
-            </button>
-          </div>
-        )}
-      </div>
-
       {/* ================= KPI METRIC CARDS (SHADCN STYLE) ================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Enrolled Clients */}

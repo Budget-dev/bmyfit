@@ -46,20 +46,71 @@ export function saveStoredProfile(profile: UserProfile): void {
   if (typeof window !== "undefined" && profile.uid) {
     try {
       const userRef = doc(db, "users", profile.uid);
-      void setDoc(
-        userRef,
-        {
-          id: profile.uid,
-          name: profile.name,
-          email: profile.email,
-          phone: profile.phone,
-          age: profile.age,
-          avatarUrl: profile.avatarUrl,
-          provider: profile.provider,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      ).catch((err) => {
+      const isCoach = profile.email?.toLowerCase() === "bmyfitnesscoach@gmail.com";
+      const payload: Record<string, unknown> = {
+        id: profile.uid,
+        uid: profile.uid,
+        name: profile.name || (isCoach ? "Coach Naveen" : "BMYFIT Member"),
+        email: profile.email || "",
+        phone: profile.phone || "+91 98000 00000",
+        age: typeof profile.age === "number" && !isNaN(profile.age) ? profile.age : 26,
+        provider: profile.provider || "password",
+        role: isCoach ? "admin" : (profile.role || "user"),
+        membershipCategory: isCoach ? "membership" : "free",
+        updatedAt: new Date().toISOString(),
+      };
+      if (profile.avatarUrl) {
+        payload.avatarUrl = profile.avatarUrl;
+      }
+
+      // Check for locally calculated assessment biometrics and link to user
+      try {
+        const rawAss = sessionStorage.getItem(LOCAL_ASSESSMENT_KEY);
+        if (rawAss) {
+          const ass = JSON.parse(rawAss);
+          if (ass.weightKg) {
+            payload.biometrics = {
+              gender: ass.gender || "male",
+              age: ass.age || profile.age || 26,
+              heightCm: ass.heightCm || 175,
+              weightKg: ass.weightKg || 70,
+              waistIn: ass.waistIn || 32,
+              neckIn: ass.neckIn || 14.5,
+              hipIn: ass.hipIn,
+              bmi: ass.bmi || 24.2,
+              bmiCategory: ass.bmiCategory || "normal",
+              bodyFatPercent: ass.bodyFatPercent || 18.4,
+              bodyFatCategory: ass.bodyFatCategory || "average",
+              caloricTarget: 1800,
+              proteinTargetGrams: 120,
+              activityLevel: ass.activityLevel || "moderately-active",
+              dietPreference: ass.dietPreference || "vegetarian",
+            };
+            payload.goal = ass.goal || "fat-loss";
+            payload.goalDisplay = ass.goal ? String(ass.goal).replace("-", " ") : "Fat Loss";
+
+            // Also persist assessment document with user UID in Firestore
+            const asmId = ass.id || `asm_${profile.uid}`;
+            void setDoc(
+              doc(db, "assessments", asmId),
+              {
+                id: asmId,
+                uid: profile.uid,
+                email: profile.email,
+                name: profile.name,
+                phone: profile.phone,
+                ...ass,
+                updatedAt: new Date().toISOString(),
+              },
+              { merge: true }
+            ).catch((err) => console.warn("Link assessment notice:", err));
+          }
+        }
+      } catch (e) {
+        console.warn("Notice checking draft biometrics:", e);
+      }
+
+      void setDoc(userRef, payload, { merge: true }).catch((err) => {
         console.warn("Firebase profile sync notice:", err);
       });
     } catch (e) {

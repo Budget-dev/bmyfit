@@ -58,12 +58,16 @@ export function AdminLoginGuard({ children }: AdminLoginGuardProps) {
 
     try {
       setLoading(true);
+      let authenticatedUid = "coach_naveen_head_admin";
       // Authenticate with Firebase Auth
       try {
-        await loginWithEmail({
+        const loggedIn = await loginWithEmail({
           email: AUTHORIZED_ADMIN_EMAIL,
           password: adminPassword,
         });
+        if (loggedIn?.uid) {
+          authenticatedUid = loggedIn.uid;
+        }
       } catch (authErr) {
         if (adminPassword === "bmyfit2026admin" || adminPassword === "coachnaveen2026" || adminPassword.length >= 6) {
           console.warn("Using master coach credential fallback:", authErr);
@@ -74,7 +78,7 @@ export function AdminLoginGuard({ children }: AdminLoginGuardProps) {
 
       // Authorize admin session
       const coachProfile: UserProfile = {
-        uid: "coach_naveen_head_admin",
+        uid: authenticatedUid,
         name: "Coach Naveen",
         email: AUTHORIZED_ADMIN_EMAIL,
         phone: "+91 98201 44821",
