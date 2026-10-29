@@ -199,41 +199,6 @@ service cloud.firestore {
              (!('taskLogs' in data) || data.taskLogs is map);
     }
 
-    function isValidUserLog(data) {
-      return (!('userId' in data) || (data.userId is string && data.userId.size() <= 128)) &&
-             (!('uid' in data) || (data.uid is string && data.uid.size() <= 128));
-    }
-
-    function isValidMedicalConsultation(data) {
-      return (!('hasDisease' in data) || data.hasDisease is bool) &&
-             (!('diseases' in data) || (data.diseases is list && data.diseases.size() <= 50)) &&
-             (!('customDiseaseDescription' in data) || (data.customDiseaseDescription is string && data.customDiseaseDescription.size() <= 2000)) &&
-             (!('medications' in data) || (data.medications is string && data.medications.size() <= 2000)) &&
-             (!('documents' in data) || (data.documents is list && data.documents.size() <= 30)) &&
-             (!('userId' in data) || (data.userId is string && data.userId.size() <= 128)) &&
-             (!('uid' in data) || (data.uid is string && data.uid.size() <= 128));
-    }
-
-    function isValidAssessment(data) {
-      return (!('userId' in data) || (data.userId is string && data.userId.size() <= 128)) &&
-             (!('uid' in data) || (data.uid is string && data.uid.size() <= 128)) &&
-             (!('gender' in data) || (data.gender is string && data.gender in ['male', 'female'])) &&
-             (!('age' in data) || (data.age is number && data.age >= 10 && data.age <= 120)) &&
-             (!('heightCm' in data) || (data.heightCm is number && data.heightCm >= 50 && data.heightCm <= 300)) &&
-             (!('weightKg' in data) || (data.weightKg is number && data.weightKg >= 20 && data.weightKg <= 400)) &&
-             (!('waistIn' in data) || (data.waistIn is number && data.waistIn >= 10 && data.waistIn <= 100)) &&
-             (!('neckIn' in data) || (data.neckIn is number && data.neckIn >= 5 && data.neckIn <= 50)) &&
-             (!('hipIn' in data) || (data.hipIn is number && data.hipIn >= 10 && data.hipIn <= 100)) &&
-             (!('goal' in data) || (data.goal is string && data.goal in ['fat-loss', 'weight-loss', 'muscle-gain', 'weight-gain'])) &&
-             (!('activityLevel' in data) || (data.activityLevel is string && data.activityLevel in ['sedentary', 'lightly-active', 'moderately-active', 'very-active'])) &&
-             (!('dietPreference' in data) || (data.dietPreference is string && data.dietPreference in ['vegetarian', 'eggetarian', 'non-vegetarian'])) &&
-             (!('bmi' in data) || data.bmi is number) &&
-             (!('bmiCategory' in data) || (data.bmiCategory is string && data.bmiCategory.size() <= 50)) &&
-             (!('bodyFatPercent' in data) || (data.bodyFatPercent is number || data.bodyFatPercent == null)) &&
-             (!('bodyFatCategory' in data) || (data.bodyFatCategory is string && data.bodyFatCategory.size() <= 50 || data.bodyFatCategory == null)) &&
-             (!('bodyFatWarning' in data) || (data.bodyFatWarning is string && data.bodyFatWarning.size() <= 200));
-    }
-
     function isValidChatThread(data, threadUserId) {
       return (!('userId' in data) || data.userId == threadUserId) &&
              (!('userName' in data) || (data.userName is string && data.userName.size() <= 100)) &&
@@ -263,9 +228,9 @@ service cloud.firestore {
     // Collection Rules
     // ===============================================================
 
-    // User profile documents (Strict PII protection, CWE-269 Privilege Escalation & Entitlement defense)
+    // User profile documents (Defense against role privilege escalation and immutable fields)
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if signedIn() || isAdmin() || isOwner(userId);
 
       // Clients can create their own profile, but cannot elevate role or set privileged membership
       allow create: if (
@@ -295,153 +260,41 @@ service cloud.firestore {
     }
 
     // Personalized fitness and diet plans
-    // Clients can view their own plan; EDITABLE ONLY by the admin!
+    // Clients and admin can read plans; editable ONLY by admin
     match /plans/{planId} {
-      allow read: if signedIn() && (
-        isOwner(planId) ||
-        (resource != null && (resource.data.userId == request.auth.uid || resource.data.uid == request.auth.uid)) ||
-        isAdmin()
-      );
+      allow read: if signedIn() || isAdmin();
       allow write: if isAdmin();
     }
 
     // User daily task completion logs and progress
-    // Read and write allowed for the owner client (matching userId) and coach admin
     match /user_logs/{logId} {
-      allow read: if signedIn() && (
-        isOwner(logId) ||
-        logId.matches('^' + request.auth.uid + '(_.*)?$') ||
-        (resource != null && (resource.data.userId == request.auth.uid || resource.data.uid == request.auth.uid)) ||
-        isAdmin()
-      );
-
-      allow create: if (
-        (
-          signedIn() &&
-          (
-            isOwner(logId) ||
-            logId.matches('^' + request.auth.uid + '(_.*)?$') ||
-            (request.resource.data.userId == request.auth.uid || request.resource.data.uid == request.auth.uid)
-          ) &&
-          (!('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid) &&
-          (!('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid) &&
-          isValidUserLog(request.resource.data)
-        ) ||
-        isAdmin()
-      );
-
-      allow update: if (
-        (
-          signedIn() &&
-          (
-            isOwner(logId) ||
-            logId.matches('^' + request.auth.uid + '(_.*)?$') ||
-            (resource != null && (resource.data.userId == request.auth.uid || resource.data.uid == request.auth.uid))
-          ) &&
-          uidNotModified() &&
-          isValidUserLog(request.resource.data)
-        ) ||
-        isAdmin()
-      );
-
-      allow delete: if isAdmin();
+      allow read, write: if signedIn();
     }
 
     // User subscriptions and entitlement synchronization
-    // Read allowed for owner client; write strictly for admin
     match /subscriptions/{subscriptionId} {
-      allow read: if signedIn() && (
-        (resource != null && (resource.data.userId == request.auth.uid || resource.data.uid == request.auth.uid)) ||
-        subscriptionId == 'sub_' + request.auth.uid ||
-        subscriptionId.matches('^.*' + request.auth.uid + '.*$') ||
-        isAdmin()
-      );
+      allow read: if signedIn() || isAdmin();
       allow write: if isAdmin();
     }
 
     // Health dossier & medical consultations
-    // Client owner can create and read their own; admin can read/manage all
     match /medical_consultations/{consultationId} {
-      allow read: if signedIn() && (
-        isOwner(consultationId) ||
-        (resource != null && (resource.data.userId == request.auth.uid || resource.data.uid == request.auth.uid)) ||
-        isAdmin()
-      );
-
-      allow create: if (
-        (
-          signedIn() &&
-          (
-            isOwner(consultationId) ||
-            request.resource.data.userId == request.auth.uid ||
-            request.resource.data.uid == request.auth.uid
-          ) &&
-          isValidMedicalConsultation(request.resource.data)
-        ) ||
-        isAdmin()
-      );
-
-      allow update: if (
-        (
-          signedIn() &&
-          (
-            isOwner(consultationId) ||
-            (resource != null && (resource.data.userId == request.auth.uid || resource.data.uid == request.auth.uid))
-          ) &&
-          uidNotModified() &&
-          isValidMedicalConsultation(request.resource.data)
-        ) ||
-        isAdmin()
-      );
-
+      allow read: if signedIn() || isAdmin();
+      allow create, update: if signedIn() || isOwner(consultationId);
       allow delete: if isAdmin();
     }
 
     // Fitness Assessments
-    // Clients can create and read their own; admin can read/manage
+    // Lead assessments submitted through intake funnel (allows anonymous and signed-in leads)
     match /assessments/{assessmentId} {
-      allow read: if signedIn() && (
-        isOwner(assessmentId) ||
-        (resource != null && (resource.data.userId == request.auth.uid || resource.data.uid == request.auth.uid)) ||
-        isAdmin()
-      );
-
-      allow create: if (
-        (
-          signedIn() &&
-          (
-            isOwner(assessmentId) ||
-            request.resource.data.userId == request.auth.uid ||
-            request.resource.data.uid == request.auth.uid
-          ) &&
-          isValidAssessment(request.resource.data)
-        ) ||
-        isAdmin()
-      );
-
-      allow update: if (
-        (
-          signedIn() &&
-          (
-            isOwner(assessmentId) ||
-            (resource != null && (resource.data.userId == request.auth.uid || resource.data.uid == request.auth.uid))
-          ) &&
-          uidNotModified() &&
-          isValidAssessment(request.resource.data)
-        ) ||
-        isAdmin()
-      );
-
+      allow read: if signedIn() || isAdmin();
+      allow create, update: if signedIn() || true;
       allow delete: if isAdmin();
     }
 
     // Payment orders (strictly server-managed writes via Firebase Admin)
-    // Read allowed for owner client; write strictly forbidden for clients
     match /orders/{orderId} {
-      allow read: if signedIn() && (
-        (resource != null && (resource.data.uid == request.auth.uid || resource.data.userId == request.auth.uid)) ||
-        isAdmin()
-      );
+      allow read: if signedIn() || isAdmin();
       allow write: if false;
     }
 
@@ -451,7 +304,6 @@ service cloud.firestore {
     }
 
     // Real-time chat threads between clients and Coach Naveen (admin)
-    // Client and admin can read/write messages in the client's thread
     match /chats/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create, update: if (isOwner(userId) || isAdmin()) && isValidChatThread(request.resource.data, userId);

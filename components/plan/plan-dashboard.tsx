@@ -110,8 +110,9 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
     );
   }
 
+  const weeks = Array.isArray(plan?.weeks) ? plan.weeks : [];
   const selectedWeek: WeekPlanData =
-    plan.weeks.find((w) => w.weekNumber === selectedWeekNum) || plan.weeks[0] || {
+    weeks.find((w) => w.weekNumber === selectedWeekNum) || weeks[0] || {
       weekNumber: 1,
       phaseTitle: "Build your foundation",
       phaseSubtitle: "Establish consistency",

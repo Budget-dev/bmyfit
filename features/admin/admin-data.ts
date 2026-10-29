@@ -9,7 +9,7 @@ import type {
 } from "@/types/admin";
 import type { PlanDashboardData, PlanStatus, WeekPlanData, TaskLogState } from "@/types/plan-dashboard";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
-import { adminDb } from "@/lib/firebase/admin";
+import { adminDb, hasAdminCredentials } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
 
 // In-memory cache for fast desktop administration & live synchronization with Firestore
@@ -97,9 +97,10 @@ function ensureMemoryStore() {
 export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; stats: AdminStats }> {
   ensureMemoryStore();
 
-  // 1. Fetch real registered users from Firestore "users" collection
-  try {
-    const usersSnap = await adminDb.collection("users").get();
+  if (hasAdminCredentials) {
+    // 1. Fetch real registered users from Firestore "users" collection
+    try {
+      const usersSnap = await adminDb.collection("users").get();
     if (!usersSnap.empty) {
       for (const doc of usersSnap.docs) {
         const userData = doc.data();
@@ -260,6 +261,7 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
   } catch (err) {
     console.warn("Firestore user_logs collection fetch notice:", err);
   }
+  }
 
   const rawUsers = Array.from(memoryStore.entries()).map(([id, u]) => sanitizeAdminUser(u, id));
   rawUsers.forEach((u) => memoryStore.set(u.id, u));
@@ -285,13 +287,15 @@ export async function fetchAdminUserById(userId: string): Promise<AdminUserRecor
   const user = sanitizeAdminUser(rawUser, userId);
 
   // Check if live plan exists in Firestore
-  try {
-    const doc = await adminDb.collection("plans").doc(userId).get();
-    if (doc.exists) {
-      user.plan = { ...user.plan, ...(doc.data() as PlanDashboardData) };
+  if (hasAdminCredentials) {
+    try {
+      const doc = await adminDb.collection("plans").doc(userId).get();
+      if (doc.exists) {
+        user.plan = { ...user.plan, ...(doc.data() as PlanDashboardData) };
+      }
+    } catch (err) {
+      console.warn("Firestore fetchAdminUserById error:", err);
     }
-  } catch (err) {
-    console.warn("Firestore fetchAdminUserById error:", err);
   }
 
   return user;
@@ -303,7 +307,7 @@ export async function updateAdminUserPlan(
 ): Promise<AdminUserRecord> {
   ensureMemoryStore();
   let user = memoryStore.get(userId);
-  if (!user) {
+  if (!user && hasAdminCredentials) {
     try {
       const uDoc = await adminDb.collection("users").doc(userId).get();
       if (uDoc.exists) {
@@ -355,24 +359,26 @@ export async function updateAdminUserPlan(
   memoryStore.set(userId, user);
 
   // Sync to Firestore 'plans' and 'users' collections
-  try {
-    await adminDb.collection("plans").doc(userId).set(
-      {
-        ...updatedPlan,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-    await adminDb.collection("users").doc(userId).set(
-      {
-        plan: updatedPlan,
-        needsPlanReview: updatedPlan.status === "pending_review",
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-  } catch (err) {
-    console.warn("Firestore sync updateAdminUserPlan error:", err);
+  if (hasAdminCredentials) {
+    try {
+      await adminDb.collection("plans").doc(userId).set(
+        {
+          ...updatedPlan,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      await adminDb.collection("users").doc(userId).set(
+        {
+          plan: updatedPlan,
+          needsPlanReview: updatedPlan.status === "pending_review",
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.warn("Firestore sync updateAdminUserPlan error:", err);
+    }
   }
 
   return user;
@@ -407,35 +413,37 @@ export async function pushPlanToUserDashboard(
   memoryStore.set(userId, user);
 
   // Write to Firestore plans and users collection so user dashboard immediately receives it
-  try {
-    await adminDb.collection("plans").doc(userId).set(
-      {
-        ...updatedPlan,
-        status: "approved",
-        approvedAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-    await adminDb.collection("users").doc(userId).set(
-      {
-        plan: updatedPlan,
-        needsPlanReview: false,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-    if (user.subscription) {
-      await adminDb.collection("subscriptions").doc(user.subscription.id).set(
+  if (hasAdminCredentials) {
+    try {
+      await adminDb.collection("plans").doc(userId).set(
         {
-          status: "active",
+          ...updatedPlan,
+          status: "approved",
+          approvedAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
       );
+      await adminDb.collection("users").doc(userId).set(
+        {
+          plan: updatedPlan,
+          needsPlanReview: false,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      if (user.subscription) {
+        await adminDb.collection("subscriptions").doc(user.subscription.id).set(
+          {
+            status: "active",
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+    } catch (err) {
+      console.warn("Firestore pushPlanToUserDashboard error:", err);
     }
-  } catch (err) {
-    console.warn("Firestore pushPlanToUserDashboard error:", err);
   }
 
   return { success: true, pushedPlan: updatedPlan, user };
@@ -567,35 +575,37 @@ export async function registerPurchasedClient(
     memoryStore.set(existing.id, existing);
 
     // Sync to Firestore 'subscriptions', 'users', 'plans'
-    try {
-      await adminDb.collection("subscriptions").doc(subId).set(
-        {
-          ...subscription,
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-      await adminDb.collection("users").doc(existing.id).set(
-        {
-          membershipCategory: "purchased",
-          membershipTitle: subscription.packageTitle,
-          subscription,
-          plan: existing.plan,
-          needsPlanReview: true,
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-      await adminDb.collection("plans").doc(existing.plan.id || params.assessmentId || existing.id).set(
-        {
-          ...existing.plan,
-          status: "pending_review",
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-    } catch (err) {
-      console.warn("Firestore sync registerPurchasedClient existing error:", err);
+    if (hasAdminCredentials) {
+      try {
+        await adminDb.collection("subscriptions").doc(subId).set(
+          {
+            ...subscription,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+        await adminDb.collection("users").doc(existing.id).set(
+          {
+            membershipCategory: "purchased",
+            membershipTitle: subscription.packageTitle,
+            subscription,
+            plan: existing.plan,
+            needsPlanReview: true,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+        await adminDb.collection("plans").doc(existing.plan.id || params.assessmentId || existing.id).set(
+          {
+            ...existing.plan,
+            status: "pending_review",
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        console.warn("Firestore sync registerPurchasedClient existing error:", err);
+      }
     }
 
     return existing;
@@ -681,41 +691,43 @@ export async function registerPurchasedClient(
   memoryStore.set(id, newRecord);
 
   // Sync to Firestore collections: 'subscriptions', 'users', 'plans'
-  try {
-    await adminDb.collection("subscriptions").doc(subId).set(
-      {
-        ...subscription,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+  if (hasAdminCredentials) {
+    try {
+      await adminDb.collection("subscriptions").doc(subId).set(
+        {
+          ...subscription,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
 
-    await adminDb.collection("users").doc(id).set(
-      {
-        uid: id,
-        id,
-        name: newRecord.name,
-        email: newRecord.email,
-        phone: newRecord.phone,
-        membershipCategory: "purchased",
-        membershipTitle: subscription.packageTitle,
-        subscription,
-        plan,
-        needsPlanReview: true,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+      await adminDb.collection("users").doc(id).set(
+        {
+          uid: id,
+          id,
+          name: newRecord.name,
+          email: newRecord.email,
+          phone: newRecord.phone,
+          membershipCategory: "purchased",
+          membershipTitle: subscription.packageTitle,
+          subscription,
+          plan,
+          needsPlanReview: true,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
 
-    await adminDb.collection("plans").doc(params.assessmentId || id).set(
-      {
-        ...plan,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-  } catch (err) {
-    console.warn("Firestore sync registerPurchasedClient error:", err);
+      await adminDb.collection("plans").doc(params.assessmentId || id).set(
+        {
+          ...plan,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.warn("Firestore sync registerPurchasedClient error:", err);
+    }
   }
 
   return newRecord;
@@ -797,22 +809,24 @@ export async function registerOrUpdateAuthUser(params: {
 
   memoryStore.set(params.id, newRecord);
 
-  try {
-    await adminDb.collection("users").doc(params.id).set(
-      {
-        uid: params.id,
-        name: params.name,
-        email: params.email,
-        phone: params.phone || "",
-        age,
-        avatarUrl: params.avatarUrl || "",
-        membershipCategory: "free",
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-  } catch (err) {
-    console.warn("Firestore sync registerOrUpdateAuthUser error:", err);
+  if (hasAdminCredentials) {
+    try {
+      await adminDb.collection("users").doc(params.id).set(
+        {
+          uid: params.id,
+          name: params.name,
+          email: params.email,
+          phone: params.phone || "",
+          age,
+          avatarUrl: params.avatarUrl || "",
+          membershipCategory: "free",
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.warn("Firestore sync registerOrUpdateAuthUser error:", err);
+    }
   }
 
   return newRecord;

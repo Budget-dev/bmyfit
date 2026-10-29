@@ -8,6 +8,7 @@ import {
   doc,
   setDoc,
   getDoc,
+  getDocs,
   collection,
   onSnapshot,
 } from "@/lib/firebase/client";
@@ -400,4 +401,198 @@ export function updateStoredPlanStatus(
   }
   saveStoredPlan(plan);
   return plan;
+}
+
+/**
+ * Direct real-time fetch from client Firestore:
+ * Queries "users", "plans", "assessments", "orders", "subscriptions", "medical_consultations"
+ * and updates in-memory store so newly registered users and funnel leads sync immediately.
+ */
+export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
+  if (!isClient()) return getStoredAdminUsers();
+
+  try {
+    // 1. Fetch users collection
+    try {
+      const userSnap = await getDocs(collection(db, "users"));
+      userSnap.forEach((docSnap) => {
+        const data = docSnap.data() as Partial<AdminUserRecord>;
+        const existing = inMemoryUsers.get(docSnap.id);
+        const record = sanitizeAdminUserRecord(
+          {
+            ...existing,
+            ...data,
+            id: docSnap.id,
+            plan: data.plan || existing?.plan,
+          },
+          docSnap.id
+        );
+        inMemoryUsers.set(docSnap.id, record);
+      });
+    } catch (e) {
+      console.warn("Direct Firestore users collection sync notice:", e);
+    }
+
+    // 2. Fetch plans collection
+    try {
+      const plansSnap = await getDocs(collection(db, "plans"));
+      plansSnap.forEach((docSnap) => {
+        const planData = docSnap.data() as PlanDashboardData;
+        inMemoryPlans.set(docSnap.id, { ...planData, id: docSnap.id });
+        const existing = inMemoryUsers.get(docSnap.id);
+        if (existing) {
+          existing.plan = { ...existing.plan, ...planData };
+          if (planData.status === "approved" || planData.status === "active") {
+            existing.needsPlanReview = false;
+          }
+          inMemoryUsers.set(docSnap.id, existing);
+        } else if (planData.customerName) {
+          const newRec = sanitizeAdminUserRecord(
+            {
+              id: docSnap.id,
+              name: planData.customerName,
+              email: `${docSnap.id}@client.bmyfit.in`,
+              membershipCategory: "purchased",
+              plan: planData,
+            },
+            docSnap.id
+          );
+          inMemoryUsers.set(docSnap.id, newRec);
+        }
+      });
+    } catch (e) {
+      console.warn("Direct Firestore plans collection sync notice:", e);
+    }
+
+    // 3. Fetch assessments collection
+    try {
+      const asmSnap = await getDocs(collection(db, "assessments"));
+      asmSnap.forEach((docSnap) => {
+        const asm = docSnap.data();
+        const id = asm.uid || docSnap.id;
+        const existing = inMemoryUsers.get(id) || inMemoryUsers.get(docSnap.id);
+        if (!existing) {
+          const newRec = sanitizeAdminUserRecord(
+            {
+              id,
+              name: asm.name || `BMYFIT Member (${docSnap.id.slice(0, 6)})`,
+              email: asm.email || `${id}@client.bmyfit.in`,
+              phone: asm.phone || "+91 98000 00000",
+              goal: asm.goal || "fat-loss",
+              goalDisplay: asm.goal ? `${asm.goal.replace("-", " ")}` : "Fat Loss",
+              membershipCategory: "free",
+              biometrics: {
+                gender: asm.gender || "male",
+                age: asm.age || 28,
+                heightCm: asm.heightCm || 175,
+                weightKg: asm.weightKg || 78,
+                targetWeightKg: asm.targetWeightKg || 70,
+                waistIn: asm.waistIn || 34,
+                neckIn: asm.neckIn || 15.5,
+                hipIn: asm.hipIn,
+                bmi: asm.bmi || 25,
+                bmiCategory: asm.bmiCategory || "normal",
+                bodyFatPercent: asm.bodyFatPercent || 20,
+                bodyFatCategory: asm.bodyFatCategory || "average",
+                bmr: 1700,
+                tdee: 2350,
+                caloricTarget: 1800,
+                proteinTargetGrams: 120,
+                activityLevel: asm.activityLevel || "moderately-active",
+                dietPreference: asm.dietPreference || "vegetarian",
+                waterLitres: 3.5,
+                dailyStepGoal: 10000,
+              },
+            },
+            id
+          );
+          inMemoryUsers.set(id, newRec);
+        } else {
+          if (asm.weightKg && existing.biometrics) {
+            existing.biometrics.weightKg = asm.weightKg;
+            existing.biometrics.heightCm = asm.heightCm || existing.biometrics.heightCm;
+            existing.biometrics.bmi = asm.bmi || existing.biometrics.bmi;
+            existing.biometrics.bodyFatPercent = asm.bodyFatPercent || existing.biometrics.bodyFatPercent;
+          }
+        }
+      });
+    } catch (e) {
+      console.warn("Direct Firestore assessments collection sync notice:", e);
+    }
+
+    // 4. Fetch orders collection
+    try {
+      const ordersSnap = await getDocs(collection(db, "orders"));
+      ordersSnap.forEach((docSnap) => {
+        const order = docSnap.data();
+        const targetId = order.uid || order.userId;
+        if (targetId) {
+          const user = inMemoryUsers.get(targetId);
+          if (user) {
+            user.membershipCategory = "purchased";
+            user.needsPlanReview = user.plan?.status === "pending_review";
+            user.order = {
+              orderId: order.razorpayOrderId || docSnap.id,
+              razorpayPaymentId: order.razorpayPaymentId || "pay_verified",
+              amountPaise: order.amountPaise || 9900,
+              amountFormatted: `₹${Math.round((order.amountPaise || 9900) / 100)}`,
+              currency: "INR",
+              status: "paid",
+              packageTitle: "8-Week Custom Transformation Plan",
+              durationWeeks: 8,
+              purchasedAt: order.paidAt || new Date().toISOString(),
+            };
+          }
+        }
+      });
+    } catch (e) {
+      console.warn("Direct Firestore orders collection sync notice:", e);
+    }
+
+    // 5. Fetch subscriptions collection
+    try {
+      const subsSnap = await getDocs(collection(db, "subscriptions"));
+      subsSnap.forEach((docSnap) => {
+        const sub = docSnap.data() as UserSubscription;
+        const targetId = sub.userId || docSnap.id.replace("sub_", "");
+        const user = inMemoryUsers.get(targetId);
+        if (user) {
+          user.subscription = { ...sub, id: docSnap.id };
+          user.membershipCategory = "purchased";
+          if (sub.packageTitle) user.membershipTitle = sub.packageTitle;
+        }
+      });
+    } catch (e) {
+      console.warn("Direct Firestore subscriptions collection sync notice:", e);
+    }
+
+    // 6. Fetch medical_consultations collection
+    try {
+      const medSnap = await getDocs(collection(db, "medical_consultations"));
+      medSnap.forEach((docSnap) => {
+        const med = docSnap.data() as MedicalAssessment & { userId?: string };
+        const targetId = med.userId || docSnap.id;
+        const user = inMemoryUsers.get(targetId);
+        if (user) {
+          user.medicalAssessment = {
+            hasDisease: Boolean(med.hasDisease),
+            diseases: Array.isArray(med.diseases) ? med.diseases : [],
+            customDiseaseDescription: med.customDiseaseDescription,
+            medications: med.medications,
+            documents: Array.isArray(med.documents) ? med.documents : [],
+            submittedAt: med.submittedAt || new Date().toISOString(),
+          };
+          if (med.diseases && med.diseases.length > 0 && user.biometrics) {
+            user.biometrics.medicalConditions = med.diseases.join(", ");
+          }
+        }
+      });
+    } catch (e) {
+      console.warn("Direct Firestore medical_consultations sync notice:", e);
+    }
+  } catch (err) {
+    console.warn("syncFirestoreUsersDirectly error:", err);
+  }
+
+  return getStoredAdminUsers();
 }

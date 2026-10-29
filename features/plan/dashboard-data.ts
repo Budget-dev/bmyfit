@@ -491,17 +491,20 @@ export function calculateDetailedAdherence(
 }
 
 export function calculateOverallProgress(
-  plan: PlanDashboardData,
-  logs: TaskLogState
+  plan?: PlanDashboardData | null,
+  logs: TaskLogState = {}
 ): { total: number; completed: number; percent: number } {
   let total = 0;
   let completed = 0;
 
-  plan.weeks.forEach((w) => {
-    const res = calculateWeekProgress(w.weekNumber, w, logs);
-    total += res.total;
-    completed += res.completed;
-  });
+  if (plan && Array.isArray(plan.weeks)) {
+    plan.weeks.forEach((w) => {
+      if (!w) return;
+      const res = calculateWeekProgress(w.weekNumber, w, logs);
+      total += res.total;
+      completed += res.completed;
+    });
+  }
 
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
   return { total, completed, percent };

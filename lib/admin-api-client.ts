@@ -27,3 +27,4 @@ export async function adminFetch(url: string, init: RequestInit = {}): Promise<R
     headers,
   });
 }
+

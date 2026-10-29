@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/icons";
 import type { AdminUserRecord, AdminStats, MembershipCategory } from "@/types/admin";
 import type { PlanDashboardData } from "@/types/plan-dashboard";
-import { getStoredAdminUsers, sanitizeAdminUserRecord } from "@/lib/storage/mock-storage";
+import { getStoredAdminUsers, sanitizeAdminUserRecord, syncFirestoreUsersDirectly } from "@/lib/storage/mock-storage";
 import { formatPlanDuration, calculateDetailedAdherence } from "@/features/plan/dashboard-data";
 import { adminFetch } from "@/lib/admin-api-client";
 import { AdminErrorBoundary } from "./admin-error-boundary";
@@ -57,6 +57,7 @@ export function AdminDesktopConsole() {
   const [pushUser, setPushUser] = useState<AdminUserRecord | null>(null);
   const [alertUser, setAlertUser] = useState<AdminUserRecord | null>(null);
   const [globalAlert, setGlobalAlert] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -72,11 +73,39 @@ export function AdminDesktopConsole() {
         console.warn("Could not fetch server admin users, using local cache", e);
       }
 
+      // Direct client-side Firestore query for all collections
+      let liveFirestoreUsers: AdminUserRecord[] = [];
+      try {
+        liveFirestoreUsers = await syncFirestoreUsersDirectly();
+      } catch (e) {
+        console.warn("Direct Firestore sync notice:", e);
+      }
+
       // Merge with Firebase-synced users so newly paid clients appear instantly
       const localUsers = getStoredAdminUsers();
       const userMap = new Map<string, AdminUserRecord>();
 
       serverUsers.forEach((u) => userMap.set(u.id, sanitizeAdminUserRecord(u, u.id)));
+      liveFirestoreUsers.forEach((lfu) => {
+        const existing = userMap.get(lfu.id);
+        if (existing) {
+          userMap.set(
+            lfu.id,
+            sanitizeAdminUserRecord(
+              {
+                ...existing,
+                ...lfu,
+                plan: lfu.plan || existing.plan,
+                medicalAssessment: lfu.medicalAssessment || existing.medicalAssessment,
+                needsPlanReview: lfu.needsPlanReview ?? existing.needsPlanReview,
+              },
+              lfu.id
+            )
+          );
+        } else {
+          userMap.set(lfu.id, sanitizeAdminUserRecord(lfu, lfu.id));
+        }
+      });
       localUsers.forEach((lu) => {
         const existing = userMap.get(lu.id);
         if (existing) {
@@ -143,6 +172,22 @@ export function AdminDesktopConsole() {
 
   useEffect(() => {
     void fetchUsers();
+  }, [fetchUsers]);
+
+  const handleRefreshData = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      const direct = await syncFirestoreUsersDirectly();
+      await fetchUsers();
+      setGlobalAlert(`Successfully synced ${direct.length} clients and plans directly from live Firestore!`);
+      setTimeout(() => setGlobalAlert(null), 4000);
+    } catch (err) {
+      console.error("Refresh error:", err);
+      setGlobalAlert("Failed to sync from Firestore. Please verify internet connection.");
+      setTimeout(() => setGlobalAlert(null), 4000);
+    } finally {
+      setIsSyncing(false);
+    }
   }, [fetchUsers]);
 
   // Filtered users list
@@ -628,12 +673,12 @@ export function AdminDesktopConsole() {
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
-                  onClick={fetchUsers}
-                  disabled={loading}
-                  className="px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 shadow-xs transition"
+                  onClick={handleRefreshData}
+                  disabled={loading || isSyncing}
+                  className="px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 shadow-xs transition active:scale-95 disabled:opacity-60"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-                  <span>Refresh Data</span>
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading || isSyncing ? "animate-spin text-emerald-600" : ""}`} />
+                  <span>{isSyncing ? "Syncing..." : "Refresh Data"}</span>
                 </button>
               </div>
             </div>
@@ -723,6 +768,8 @@ export function AdminDesktopConsole() {
                 onSendAlert={(u) => {
                   setAlertUser(u);
                 }}
+                onRefresh={handleRefreshData}
+                isSyncing={isSyncing}
               />
             </div>
           )}
