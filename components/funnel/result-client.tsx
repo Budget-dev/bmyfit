@@ -7,6 +7,21 @@ import { useRouter } from "next/navigation";
 import { SiteHeader } from "@/components/layout/site-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { useAuth } from "@/hooks/use-auth";
+import {
+  FontAwesomeIcon,
+  faDumbbell,
+  faFire,
+  faHeartPulse,
+  faBullseye,
+  faLock,
+  faUtensils,
+  faAppleWhole,
+  faChartLine,
+  faCalendarDays,
+  faCheckCircle,
+  faArrowRight,
+  faWhatsapp,
+} from "@/components/ui/font-awesome-icons";
 import type { Assessment } from "@/types/fitness";
 import { calculateBodyFat } from "@/features/calculator";
 
@@ -41,7 +56,7 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
           setLoading(false);
         }
       }
-    } catch {}
+    } catch { }
 
     if (!id || id === "local") {
       setLoading(false);
@@ -62,7 +77,7 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
             setAssessment(data.assessment);
             try {
               sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(data.assessment));
-            } catch {}
+            } catch { }
           }
         }
       } catch (e) {
@@ -104,12 +119,12 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
     bmiValue < 18.5
       ? "Underweight"
       : bmiValue < 23
-      ? "Normal"
-      : bmiValue < 25
-      ? "Normal"
-      : bmiValue < 30
-      ? "Overweight"
-      : "Obese";
+        ? "Normal"
+        : bmiValue < 25
+          ? "Normal"
+          : bmiValue < 30
+            ? "Overweight"
+            : "Obese";
 
   // Calculate gauge position percent for BMI (range 15 to 35)
   const bmiPercent = Math.min(Math.max(((bmiValue - 15) / (35 - 15)) * 100, 5), 95);
@@ -144,8 +159,8 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
     bodyFatVal < (isMale ? 14 : 21)
       ? "Athletic"
       : bodyFatVal <= (isMale ? 20 : 28)
-      ? "Moderate"
-      : "Above Average";
+        ? "Moderate"
+        : "Above Average";
 
   // Calculate gauge position percent for Body Fat (range 8% to 36%)
   const bfPercent = Math.min(Math.max(((bodyFatVal - 8) / (36 - 8)) * 100, 5), 95);
@@ -203,7 +218,7 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
 
       {/* 2. Main Container with relative positioning for artwork */}
       <main className="flex-1 max-w-md md:max-w-5xl lg:max-w-6xl mx-auto w-full px-2.5 min-[390px]:px-3 sm:px-6 lg:px-8 pt-0.5 md:pt-6 pb-14 sm:pb-16 md:pb-16 flex flex-col justify-start relative overflow-x-hidden">
-        
+
         {/* Top Right Shirtless Muscular Model with Emerald Brush Splash (Mobile Only) */}
         <div className="md:hidden absolute top-3 -right-6 sm:-right-4 w-[160px] min-[390px]:w-[185px] aspect-[3/4] pointer-events-none select-none z-0">
           <Image
@@ -221,7 +236,7 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
 
         {/* Foreground Content Layer (z-10) */}
         <div className="relative z-10 w-full">
-          
+
           {/* Subheader Navigation Row */}
           <div className="flex items-center justify-between mt-0.5 mb-2 md:mb-4">
             <div className="flex items-center gap-1.5">
@@ -275,11 +290,7 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
                 {/* Header with Icon */}
                 <div className="flex items-center gap-1 md:gap-2">
                   <div className="w-4.5 h-4.5 md:w-7 md:h-7 rounded-full bg-emerald-50 text-[#057a44] flex items-center justify-center shrink-0">
-                    <svg className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 text-[#057a44]" fill="currentColor" viewBox="0 0 24 24">
-                      <rect x="3" y="12" width="3.5" height="9" rx="0.8" />
-                      <rect x="10" y="7" width="3.5" height="14" rx="0.8" />
-                      <rect x="17" y="3" width="3.5" height="18" rx="0.8" />
-                    </svg>
+                    <FontAwesomeIcon icon={faHeartPulse} className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 text-[#057a44]" />
                   </div>
                   <span className="text-[8.5px] min-[390px]:text-[9px] md:text-xs font-black text-gray-950">BMI</span>
                 </div>
@@ -314,8 +325,8 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
               <div>
                 {/* Header with Icon */}
                 <div className="flex items-center gap-1 md:gap-2">
-                  <div className="w-4.5 h-4.5 md:w-7 md:h-7 rounded-full bg-emerald-50 text-[#057a44] flex items-center justify-center shrink-0">
-                    <span className="text-[9px] md:text-xs font-black text-[#057a44] leading-none">%</span>
+                  <div className="w-4.5 h-4.5 md:w-7 md:h-7 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                    <FontAwesomeIcon icon={faFire} className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 text-amber-600" />
                   </div>
                   <span className="text-[8px] min-[390px]:text-[8.5px] md:text-xs font-black text-gray-950 leading-tight">
                     Estimated<br />Body Fat
@@ -357,11 +368,7 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
                 {/* Header with Icon */}
                 <div className="flex items-center gap-1 md:gap-2">
                   <div className="w-4.5 h-4.5 md:w-7 md:h-7 rounded-full bg-emerald-50 text-[#057a44] flex items-center justify-center shrink-0">
-                    <svg className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 text-[#057a44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-                      <circle cx="12" cy="12" r="9" />
-                      <circle cx="12" cy="12" r="5" />
-                      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-                    </svg>
+                    <FontAwesomeIcon icon={faBullseye} className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 text-[#057a44]" />
                   </div>
                   <span className="text-[8px] min-[390px]:text-[8.5px] md:text-xs font-black text-gray-950">Your Goal</span>
                 </div>
@@ -441,295 +448,250 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
           </div>
         </div>
 
-        {/* Right Column: Hero Offer Card & What You Get (md:col-span-6) */}
-        <div className="md:col-span-6 space-y-4 md:sticky md:top-20">
-          {/* =================================================== */}
-          {/* "Your personalized plan is ready" Hero Offer Card   */}
-          {/* =================================================== */}
-          <div className="mt-1.5 min-[390px]:mt-2 md:mt-0 rounded-2xl md:rounded-3xl bg-[#031c14] border border-emerald-950 p-2 min-[390px]:p-2.5 md:p-6 text-white text-left relative overflow-hidden shadow-lg md:shadow-xl">
-            {/* Ambient emerald backlight glow */}
-            <div className="absolute top-0 right-0 w-40 md:w-60 h-40 md:h-60 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                    {/* Right Column: Hero Offer Card & What You Get (md:col-span-6) */}
+            <div className="md:col-span-6 space-y-4 md:sticky md:top-20">
+              {/* =================================================== */}
+              {/* "Your personalized plan is ready" Hero Offer Card   */}
+              {/* =================================================== */}
+              <div className="mt-1.5 min-[390px]:mt-2 md:mt-0 rounded-2xl md:rounded-3xl bg-[#031c14] border border-emerald-950 p-2 min-[390px]:p-2.5 md:p-6 text-white text-left relative overflow-hidden shadow-lg md:shadow-xl">
+                {/* Ambient emerald backlight glow */}
+                <div className="absolute top-0 right-0 w-40 md:w-60 h-40 md:h-60 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-            {/* Top Heading */}
-            <div className="relative z-10">
-              <div className="flex items-center gap-1 md:gap-2">
-                <svg className="w-3.5 h-3.5 md:w-5 md:h-5 text-[#00e676] shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
-                </svg>
-                <h3 className="text-[12px] min-[390px]:text-[13px] md:text-2xl font-black tracking-tight leading-tight">
-                  Your personalized plan <span className="text-[#00e676]">is ready</span>
+                {/* Top Heading */}
+                <div className="relative z-10">
+                  <div className="flex items-center gap-1 md:gap-2">
+                    <FontAwesomeIcon icon={faLock} className="w-3.5 h-3.5 md:w-5 md:h-5 text-[#00e676] shrink-0" />
+                    <h3 className="text-[12px] min-[390px]:text-[13px] md:text-2xl font-black tracking-tight leading-tight">
+                      Your personalized plan <span className="text-[#00e676]">is ready</span>
+                    </h3>
+                  </div>
+                  <p className="text-[7.5px] min-[390px]:text-[8px] md:text-sm text-gray-300 mt-0.5 md:mt-1">
+                    Get a complete 8-week plan based on your body data and goal.
+                  </p>
+                </div>
+
+                {/* Middle Section: 6 Feature Bullets & Phone Mockup */}
+                <div className="relative z-10 flex items-center justify-between gap-1.5 md:gap-4 mt-1.5 min-[390px]:mt-2 md:mt-4">
+                  {/* Left Column: 6 Feature Points (2 cols of 3) */}
+                  <div className="flex-1 grid grid-cols-2 gap-x-1.5 md:gap-x-4 gap-y-1 md:gap-y-3">
+                    {/* 1. Daily calorie target */}
+                    <div className="flex items-start gap-1 md:gap-2">
+                      <div className="w-4.5 h-4.5 md:w-8 md:h-8 rounded-full bg-emerald-900/60 border border-emerald-500/30 text-[#00e676] flex items-center justify-center shrink-0">
+                        <FontAwesomeIcon icon={faUtensils} className="w-2.5 h-2.5 md:w-4 md:h-4 text-[#00e676]" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[8px] min-[390px]:text-[8.5px] md:text-xs font-bold text-white leading-tight">
+                          Daily calorie target
+                        </div>
+                        <div className="text-[6.5px] min-[390px]:text-[7px] md:text-[11px] text-gray-400 leading-none mt-0.5 truncate">
+                          Based on your body &amp; goal
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 2. Protein target */}
+                    <div className="flex items-start gap-1 md:gap-2">
+                      <div className="w-4.5 h-4.5 md:w-8 md:h-8 rounded-full bg-emerald-900/60 border border-emerald-500/30 text-[#00e676] flex items-center justify-center shrink-0">
+                        <FontAwesomeIcon icon={faAppleWhole} className="w-2.5 h-2.5 md:w-4 md:h-4 text-[#00e676]" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[8px] min-[390px]:text-[8.5px] md:text-xs font-bold text-white leading-tight">
+                          Protein target
+                        </div>
+                        <div className="text-[6.5px] min-[390px]:text-[7px] md:text-[11px] text-gray-400 leading-none mt-0.5 truncate">
+                          Optimize for your goal
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 3. Personalized workout */}
+                    <div className="flex items-start gap-1 md:gap-2">
+                      <div className="w-4.5 h-4.5 md:w-8 md:h-8 rounded-full bg-emerald-900/60 border border-emerald-500/30 text-[#00e676] flex items-center justify-center shrink-0">
+                        <FontAwesomeIcon icon={faDumbbell} className="w-2.5 h-2.5 md:w-4 md:h-4 text-[#00e676]" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[8px] min-[390px]:text-[8.5px] md:text-xs font-bold text-white leading-tight">
+                          Personalized workout
+                        </div>
+                        <div className="text-[6.5px] min-[390px]:text-[7px] md:text-[11px] text-gray-400 leading-none mt-0.5 truncate">
+                          Sets, reps &amp; progression
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 4. Indian diet plan */}
+                    <div className="flex items-start gap-1 md:gap-2">
+                      <div className="w-4.5 h-4.5 md:w-8 md:h-8 rounded-full bg-emerald-900/60 border border-emerald-500/30 text-[#00e676] flex items-center justify-center shrink-0">
+                        <FontAwesomeIcon icon={faUtensils} className="w-2.5 h-2.5 md:w-4 md:h-4 text-[#00e676]" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[8px] min-[390px]:text-[8.5px] md:text-xs font-bold text-white leading-tight">
+                          Indian diet plan
+                        </div>
+                        <div className="text-[6.5px] min-[390px]:text-[7px] md:text-[11px] text-gray-400 leading-none mt-0.5 truncate">
+                          Simple &amp; practical meals
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 5. Progress tracking */}
+                    <div className="flex items-start gap-1 md:gap-2">
+                      <div className="w-4.5 h-4.5 md:w-8 md:h-8 rounded-full bg-emerald-900/60 border border-emerald-500/30 text-[#00e676] flex items-center justify-center shrink-0">
+                        <FontAwesomeIcon icon={faChartLine} className="w-2.5 h-2.5 md:w-4 md:h-4 text-[#00e676]" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[8px] min-[390px]:text-[8.5px] md:text-xs font-bold text-white leading-tight">
+                          Progress tracking
+                        </div>
+                        <div className="text-[6.5px] min-[390px]:text-[7px] md:text-[11px] text-gray-400 leading-none mt-0.5 truncate">
+                          Track your changes weekly
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 6. 8-week structure */}
+                    <div className="flex items-start gap-1 md:gap-2">
+                      <div className="w-4.5 h-4.5 md:w-8 md:h-8 rounded-full bg-emerald-900/60 border border-emerald-500/30 text-[#00e676] flex items-center justify-center shrink-0">
+                        <FontAwesomeIcon icon={faCalendarDays} className="w-2.5 h-2.5 md:w-4 md:h-4 text-[#00e676]" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[8px] min-[390px]:text-[8.5px] md:text-xs font-bold text-white leading-tight">
+                          8-week structure
+                        </div>
+                        <div className="text-[6.5px] min-[390px]:text-[7px] md:text-[11px] text-gray-400 leading-none mt-0.5 truncate">
+                          Step-by-step guidance
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Isometric 3D Smartphone Plan Mockup Graphic */}
+                  <div className="w-[82px] min-[390px]:w-[92px] md:w-[130px] aspect-[3/4] relative shrink-0">
+                    <Image
+                      src="/images/plan-phone-mockup.png"
+                      alt="BMYFIT Plan Phone Mockup"
+                      fill
+                      sizes="(max-width: 768px) 120px, 160px"
+                      className="object-contain drop-shadow-xl"
+                    />
+                  </div>
+                </div>
+
+                {/* Primary Action Button: Unlock My Plan - ₹99 */}
+                <button
+                  type="button"
+                  onClick={handleUnlockPlan}
+                  className="w-full py-2 min-[390px]:py-2.5 md:py-4 px-3 md:px-6 rounded-full md:rounded-2xl bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-[12px] min-[390px]:text-[13px] md:text-base flex items-center justify-center gap-1.5 md:gap-3 shadow-[0_3px_15px_rgba(0,230,118,0.4)] hover:shadow-lg active:scale-98 transition-all cursor-pointer mt-1.5 min-[390px]:mt-2 md:mt-5 group"
+                >
+                  <span>Unlock My Plan — ₹99</span>
+                  <FontAwesomeIcon icon={faArrowRight} className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-950 group-hover:translate-x-1 transition-transform" />
+                </button>
+
+                {/* Trust row */}
+                <div className="flex items-center justify-center gap-2.5 md:gap-4 text-[7.5px] min-[390px]:text-[8px] md:text-xs text-gray-300 font-medium mt-1 md:mt-3 select-none">
+                  <span className="flex items-center gap-1">
+                    <FontAwesomeIcon icon={faCheckCircle} className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 text-[#00e676]" />
+                    One-time payment
+                  </span>
+                  <span>•</span>
+                  <span>No subscription</span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <FontAwesomeIcon icon={faLock} className="w-2.5 h-2.5 md:w-3 md:h-3 text-[#00e676]" />
+                    Secure payment
+                  </span>
+                </div>
+              </div>
+
+              {/* =================================================== */}
+              {/* "What you get for ₹99?" Section                     */}
+              {/* =================================================== */}
+              <div className="mt-1.5 min-[390px]:mt-2 text-left">
+                <h3 className="text-[11px] min-[390px]:text-[12px] font-black text-gray-950 tracking-tight leading-tight">
+                  What you get for ₹99?
                 </h3>
+                <p className="text-[7.5px] min-[390px]:text-[8px] text-gray-500 leading-tight mt-0.5 mb-1 min-[390px]:mb-1.5">
+                  A complete, personalized fitness and nutrition plan built around your body.
+                </p>
+
+                {/* 4 Feature Cards Grid matching screenshot (All 4 in a single row!) */}
+                <div className="grid grid-cols-4 gap-1 min-[390px]:gap-1.5 md:gap-3">
+                  {/* Card 1: Nutrition */}
+                  <div className="rounded-xl md:rounded-2xl bg-white border border-gray-100 shadow-[0_1px_6px_rgba(0,0,0,0.03)] md:shadow-xs p-1 min-[390px]:p-1.5 md:p-3.5 flex flex-col justify-between min-h-[58px] min-[390px]:min-h-[64px] md:min-h-[110px]">
+                    <div className="w-5 h-5 md:w-8 md:h-8 rounded-full bg-emerald-50 text-[#057a44] flex items-center justify-center shrink-0">
+                      <FontAwesomeIcon icon={faUtensils} className="w-2.5 h-2.5 md:w-4 md:h-4 text-[#057a44]" />
+                    </div>
+                    <div className="mt-1 md:mt-2">
+                      <div className="text-[8px] min-[390px]:text-[8.5px] md:text-sm font-black text-gray-950 leading-tight">Nutrition</div>
+                      <div className="text-[6px] min-[390px]:text-[6.5px] md:text-xs text-gray-500 leading-tight mt-0.5">
+                        Personalized calories + Indian meal options
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Training */}
+                  <div className="rounded-xl md:rounded-2xl bg-white border border-gray-100 shadow-[0_1px_6px_rgba(0,0,0,0.03)] md:shadow-xs p-1 min-[390px]:p-1.5 md:p-3.5 flex flex-col justify-between min-h-[58px] min-[390px]:min-h-[64px] md:min-h-[110px]">
+                    <div className="w-5 h-5 md:w-8 md:h-8 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                      <FontAwesomeIcon icon={faDumbbell} className="w-2.5 h-2.5 md:w-4 md:h-4 text-orange-600" />
+                    </div>
+                    <div className="mt-1 md:mt-2">
+                      <div className="text-[8px] min-[390px]:text-[8.5px] md:text-sm font-black text-gray-950 leading-tight">Training</div>
+                      <div className="text-[6px] min-[390px]:text-[6.5px] md:text-xs text-gray-500 leading-tight mt-0.5">
+                        Goal-specific workout + progression
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 3: Progress */}
+                  <div className="rounded-xl md:rounded-2xl bg-white border border-gray-100 shadow-[0_1px_6px_rgba(0,0,0,0.03)] md:shadow-xs p-1 min-[390px]:p-1.5 md:p-3.5 flex flex-col justify-between min-h-[58px] min-[390px]:min-h-[64px] md:min-h-[110px]">
+                    <div className="w-5 h-5 md:w-8 md:h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                      <FontAwesomeIcon icon={faChartLine} className="w-2.5 h-2.5 md:w-4 md:h-4 text-blue-600" />
+                    </div>
+                    <div className="mt-1 md:mt-2">
+                      <div className="text-[8px] min-[390px]:text-[8.5px] md:text-sm font-black text-gray-950 leading-tight">Progress</div>
+                      <div className="text-[6px] min-[390px]:text-[6.5px] md:text-xs text-gray-500 leading-tight mt-0.5">
+                        Clear weekly structure to track changes
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 4: Strategy */}
+                  <div className="rounded-xl md:rounded-2xl bg-white border border-gray-100 shadow-[0_1px_6px_rgba(0,0,0,0.03)] md:shadow-xs p-1 min-[390px]:p-1.5 md:p-3.5 flex flex-col justify-between min-h-[58px] min-[390px]:min-h-[64px] md:min-h-[110px]">
+                    <div className="w-5 h-5 md:w-8 md:h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                      <FontAwesomeIcon icon={faBullseye} className="w-2.5 h-2.5 md:w-4 md:h-4 text-rose-600" />
+                    </div>
+                    <div className="mt-1 md:mt-2">
+                      <div className="text-[8px] min-[390px]:text-[8.5px] md:text-sm font-black text-gray-950 leading-tight">Strategy</div>
+                      <div className="text-[6px] min-[390px]:text-[6.5px] md:text-xs text-gray-500 leading-tight mt-0.5">
+                        Built around YOUR body data and goal
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Free Lead 1-on-1 Consultation Trigger with Coach Naveen */}
+                <div className="mt-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("bmyfit_open_chat"));
+                      }
+                    }}
+                    className="w-full py-2 px-3 rounded-full bg-emerald-50 hover:bg-emerald-100 text-[#075E54] border border-emerald-300/80 font-bold text-[11px] min-[390px]:text-xs flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
+                  >
+                    <FontAwesomeIcon icon={faWhatsapp} className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#25D366]" />
+                    <span>Questions about your score? Chat with Coach Naveen</span>
+                  </button>
+                </div>
               </div>
-              <p className="text-[7.5px] min-[390px]:text-[8px] md:text-sm text-gray-300 mt-0.5 md:mt-1">
-                Get a complete 8-week plan based on your body data and goal.
-              </p>
             </div>
-
-            {/* Middle Section: 6 Feature Bullets & Phone Mockup */}
-            <div className="relative z-10 flex items-center justify-between gap-1.5 md:gap-4 mt-1.5 min-[390px]:mt-2 md:mt-4">
-              
-              {/* Left Column: 6 Feature Points (2 cols of 3) */}
-              <div className="flex-1 grid grid-cols-2 gap-x-1.5 md:gap-x-4 gap-y-1 md:gap-y-3">
-                
-                {/* 1. Daily calorie target */}
-                <div className="flex items-start gap-1 md:gap-2">
-                  <div className="w-4.5 h-4.5 md:w-8 md:h-8 rounded-full bg-emerald-900/60 border border-emerald-500/30 text-[#00e676] flex items-center justify-center shrink-0">
-                    <svg className="w-2.5 h-2.5 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
-                      <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
-                      <line x1="6" y1="1" x2="6" y2="4" />
-                      <line x1="10" y1="1" x2="10" y2="4" />
-                      <line x1="14" y1="1" x2="14" y2="4" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[8px] min-[390px]:text-[8.5px] md:text-xs font-bold text-white leading-tight">
-                      Daily calorie target
-                    </div>
-                    <div className="text-[6.5px] min-[390px]:text-[7px] md:text-[11px] text-gray-400 leading-none mt-0.5 truncate">
-                      Based on your body &amp; goal
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Protein target */}
-                <div className="flex items-start gap-1 md:gap-2">
-                  <div className="w-4.5 h-4.5 md:w-8 md:h-8 rounded-full bg-emerald-900/60 border border-emerald-500/30 text-[#00e676] flex items-center justify-center shrink-0">
-                    <svg className="w-2.5 h-2.5 md:w-4 md:h-4" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[8px] min-[390px]:text-[8.5px] md:text-xs font-bold text-white leading-tight">
-                      Protein target
-                    </div>
-                    <div className="text-[6.5px] min-[390px]:text-[7px] md:text-[11px] text-gray-400 leading-none mt-0.5 truncate">
-                      Optimize for your goal
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Personalized workout */}
-                <div className="flex items-start gap-1 md:gap-2">
-                  <div className="w-4.5 h-4.5 md:w-8 md:h-8 rounded-full bg-emerald-900/60 border border-emerald-500/30 text-[#00e676] flex items-center justify-center shrink-0">
-                    <svg className="w-2.5 h-2.5 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                      <rect x="2" y="8" width="2.5" height="8" rx="0.8" fill="currentColor" />
-                      <line x1="7.5" y1="12" x2="16.5" y2="12" stroke="currentColor" strokeWidth="2.2" />
-                      <rect x="19.5" y="8" width="2.5" height="8" rx="0.8" fill="currentColor" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[8px] min-[390px]:text-[8.5px] md:text-xs font-bold text-white leading-tight">
-                      Personalized workout
-                    </div>
-                    <div className="text-[6.5px] min-[390px]:text-[7px] md:text-[11px] text-gray-400 leading-none mt-0.5 truncate">
-                      Sets, reps &amp; progression
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Indian diet plan */}
-                <div className="flex items-start gap-1 md:gap-2">
-                  <div className="w-4.5 h-4.5 md:w-8 md:h-8 rounded-full bg-emerald-900/60 border border-emerald-500/30 text-[#00e676] flex items-center justify-center shrink-0">
-                    <svg className="w-2.5 h-2.5 md:w-4 md:h-4" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[8px] min-[390px]:text-[8.5px] md:text-xs font-bold text-white leading-tight">
-                      Indian diet plan
-                    </div>
-                    <div className="text-[6.5px] min-[390px]:text-[7px] md:text-[11px] text-gray-400 leading-none mt-0.5 truncate">
-                      Simple &amp; practical meals
-                    </div>
-                  </div>
-                </div>
-
-                {/* 5. Progress tracking */}
-                <div className="flex items-start gap-1 md:gap-2">
-                  <div className="w-4.5 h-4.5 md:w-8 md:h-8 rounded-full bg-emerald-900/60 border border-emerald-500/30 text-[#00e676] flex items-center justify-center shrink-0">
-                    <svg className="w-2.5 h-2.5 md:w-4 md:h-4" viewBox="0 0 24 24" fill="currentColor">
-                      <rect x="3" y="12" width="3.5" height="9" rx="0.8" />
-                      <rect x="10" y="7" width="3.5" height="14" rx="0.8" />
-                      <rect x="17" y="3" width="3.5" height="18" rx="0.8" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[8px] min-[390px]:text-[8.5px] md:text-xs font-bold text-white leading-tight">
-                      Progress tracking
-                    </div>
-                    <div className="text-[6.5px] min-[390px]:text-[7px] md:text-[11px] text-gray-400 leading-none mt-0.5 truncate">
-                      Track your changes weekly
-                    </div>
-                  </div>
-                </div>
-
-                {/* 6. 8-week structure */}
-                <div className="flex items-start gap-1 md:gap-2">
-                  <div className="w-4.5 h-4.5 md:w-8 md:h-8 rounded-full bg-emerald-900/60 border border-emerald-500/30 text-[#00e676] flex items-center justify-center shrink-0">
-                    <svg className="w-2.5 h-2.5 md:w-4 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <rect x="3" y="4" width="18" height="18" rx="2" />
-                      <line x1="16" y1="2" x2="16" y2="6" />
-                      <line x1="8" y1="2" x2="8" y2="6" />
-                      <line x1="3" y1="10" x2="21" y2="10" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[8px] min-[390px]:text-[8.5px] md:text-xs font-bold text-white leading-tight">
-                      8-week structure
-                    </div>
-                    <div className="text-[6.5px] min-[390px]:text-[7px] md:text-[11px] text-gray-400 leading-none mt-0.5 truncate">
-                      Step-by-step guidance
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Right Column: Isometric 3D Smartphone Plan Mockup Graphic */}
-              <div className="w-[82px] min-[390px]:w-[92px] md:w-[130px] aspect-[3/4] relative shrink-0">
-                <Image
-                  src="/images/plan-phone-mockup.png"
-                  alt="BMYFIT Plan Phone Mockup"
-                  fill
-                  sizes="(max-width: 768px) 120px, 160px"
-                  className="object-contain drop-shadow-xl"
-                />
-              </div>
-
-            </div>
-
-            {/* Primary Action Button: Unlock My Plan - ₹99 */}
-            <button
-              type="button"
-              onClick={handleUnlockPlan}
-              className="w-full py-2 min-[390px]:py-2.5 md:py-4 px-3 md:px-6 rounded-full md:rounded-2xl bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-[12px] min-[390px]:text-[13px] md:text-base flex items-center justify-center gap-1.5 md:gap-3 shadow-[0_3px_15px_rgba(0,230,118,0.4)] hover:shadow-lg active:scale-98 transition-all cursor-pointer mt-1.5 min-[390px]:mt-2 md:mt-5"
-            >
-              <span>Unlock My Plan — ₹99</span>
-              <span className="text-sm md:text-lg font-black">→</span>
-            </button>
-
-            {/* Trust row */}
-            <div className="flex items-center justify-center gap-2.5 md:gap-4 text-[7.5px] min-[390px]:text-[8px] md:text-xs text-gray-300 font-medium mt-1 md:mt-3 select-none">
-              <span className="flex items-center gap-1">
-                <svg className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 text-[#00e676]" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                One-time payment
-              </span>
-              <span>•</span>
-              <span>No subscription</span>
-              <span>•</span>
-              <span>Secure payment</span>
-            </div>
-
-          </div>
-
-          {/* =================================================== */}
-          {/* "What you get for ₹99?" Section                     */}
-          {/* =================================================== */}
-          <div className="mt-1.5 min-[390px]:mt-2 text-left">
-            <h3 className="text-[11px] min-[390px]:text-[12px] font-black text-gray-950 tracking-tight leading-tight">
-              What you get for ₹99?
-            </h3>
-            <p className="text-[7.5px] min-[390px]:text-[8px] text-gray-500 leading-tight mt-0.5 mb-1 min-[390px]:mb-1.5">
-              A complete, personalized fitness and nutrition plan built around your body.
-            </p>
-
-            {/* 4 Feature Cards Grid matching screenshot (All 4 in a single row!) */}
-            <div className="grid grid-cols-4 gap-1 min-[390px]:gap-1.5 md:gap-3">
-              
-              {/* Card 1: Nutrition */}
-              <div className="rounded-xl md:rounded-2xl bg-white border border-gray-100 shadow-[0_1px_6px_rgba(0,0,0,0.03)] md:shadow-xs p-1 min-[390px]:p-1.5 md:p-3.5 flex flex-col justify-between min-h-[58px] min-[390px]:min-h-[64px] md:min-h-[110px]">
-                <div className="w-5 h-5 md:w-8 md:h-8 rounded-full bg-emerald-50 text-[#057a44] flex items-center justify-center shrink-0">
-                  <svg className="w-2.5 h-2.5 md:w-4 md:h-4 text-[#057a44]" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" />
-                  </svg>
-                </div>
-                <div className="mt-1 md:mt-2">
-                  <div className="text-[8px] min-[390px]:text-[8.5px] md:text-sm font-black text-gray-950 leading-tight">Nutrition</div>
-                  <div className="text-[6px] min-[390px]:text-[6.5px] md:text-xs text-gray-500 leading-tight mt-0.5">
-                    Personalized calories + Indian meal options
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 2: Training */}
-              <div className="rounded-xl md:rounded-2xl bg-white border border-gray-100 shadow-[0_1px_6px_rgba(0,0,0,0.03)] md:shadow-xs p-1 min-[390px]:p-1.5 md:p-3.5 flex flex-col justify-between min-h-[58px] min-[390px]:min-h-[64px] md:min-h-[110px]">
-                <div className="w-5 h-5 md:w-8 md:h-8 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-                  <svg className="w-2.5 h-2.5 md:w-4 md:h-4 text-orange-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                    <rect x="2" y="8" width="2.5" height="8" rx="0.8" fill="currentColor" />
-                    <line x1="7.5" y1="12" x2="16.5" y2="12" stroke="currentColor" strokeWidth="2.2" />
-                    <rect x="19.5" y="8" width="2.5" height="8" rx="0.8" fill="currentColor" />
-                  </svg>
-                </div>
-                <div className="mt-1 md:mt-2">
-                  <div className="text-[8px] min-[390px]:text-[8.5px] md:text-sm font-black text-gray-950 leading-tight">Training</div>
-                  <div className="text-[6px] min-[390px]:text-[6.5px] md:text-xs text-gray-500 leading-tight mt-0.5">
-                    Goal-specific workout + progression
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: Progress */}
-              <div className="rounded-xl md:rounded-2xl bg-white border border-gray-100 shadow-[0_1px_6px_rgba(0,0,0,0.03)] md:shadow-xs p-1 min-[390px]:p-1.5 md:p-3.5 flex flex-col justify-between min-h-[58px] min-[390px]:min-h-[64px] md:min-h-[110px]">
-                <div className="w-5 h-5 md:w-8 md:h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                  <svg className="w-2.5 h-2.5 md:w-4 md:h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                    <rect x="3" y="12" width="3.5" height="9" rx="0.8" />
-                    <rect x="10" y="7" width="3.5" height="14" rx="0.8" />
-                    <rect x="17" y="3" width="3.5" height="18" rx="0.8" />
-                  </svg>
-                </div>
-                <div className="mt-1 md:mt-2">
-                  <div className="text-[8px] min-[390px]:text-[8.5px] md:text-sm font-black text-gray-950 leading-tight">Progress</div>
-                  <div className="text-[6px] min-[390px]:text-[6.5px] md:text-xs text-gray-500 leading-tight mt-0.5">
-                    Clear weekly structure to track changes
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 4: Strategy */}
-              <div className="rounded-xl md:rounded-2xl bg-white border border-gray-100 shadow-[0_1px_6px_rgba(0,0,0,0.03)] md:shadow-xs p-1 min-[390px]:p-1.5 md:p-3.5 flex flex-col justify-between min-h-[58px] min-[390px]:min-h-[64px] md:min-h-[110px]">
-                <div className="w-5 h-5 md:w-8 md:h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                  <svg className="w-2.5 h-2.5 md:w-4 md:h-4 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-                    <circle cx="12" cy="12" r="9" />
-                    <circle cx="12" cy="12" r="5" />
-                    <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-                  </svg>
-                </div>
-                <div className="mt-1 md:mt-2">
-                  <div className="text-[8px] min-[390px]:text-[8.5px] md:text-sm font-black text-gray-950 leading-tight">Strategy</div>
-                  <div className="text-[6px] min-[390px]:text-[6.5px] md:text-xs text-gray-500 leading-tight mt-0.5">
-                    Built around YOUR body data and goal
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Free Lead 1-on-1 Consultation Trigger with Coach Naveen */}
-            <div className="mt-2 text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  if (typeof window !== "undefined") {
-                    window.dispatchEvent(new CustomEvent("bmyfit_open_chat"));
-                  }
-                }}
-                className="w-full py-2 px-3 rounded-full bg-emerald-50 hover:bg-emerald-100 text-[#075E54] border border-emerald-300/80 font-bold text-[11px] min-[390px]:text-xs flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
-              >
-                <span>💬 Questions about your score? Chat with Coach Naveen</span>
-              </button>
-            </div>
-          </div>
-
           </div>
         </div>
-      </div>
 
-    </main>
+      </main>
 
-      {/* View Details Modal */}
+{/* View Details Modal */}
       {detailsModalOpen && (
         <div
           role="dialog"

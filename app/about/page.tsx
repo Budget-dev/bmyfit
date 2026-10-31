@@ -5,6 +5,16 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  FontAwesomeIcon,
+  faBullseye,
+  faHeartPulse,
+  faUtensils,
+  faShieldHalved,
+  faCertificate,
+  faArrowRight,
+} from "@/components/ui/font-awesome-icons";
 import { APP_CONFIG } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -52,7 +62,7 @@ export default function AboutPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-ink-muted dark:text-surface-300 leading-relaxed border-t border-surface-200 dark:border-surface-800 pt-6">
               <div className="bg-surface-50 dark:bg-surface-900/50 p-5 rounded-2xl border border-surface-200/60 dark:border-surface-800/60 space-y-2">
                 <h3 className="text-base font-bold text-ink dark:text-white flex items-center gap-2">
-                  <span>🎯</span>
+                  <FontAwesomeIcon icon={faBullseye} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>Our Mission</span>
                 </h3>
                 <p>
@@ -62,7 +72,7 @@ export default function AboutPage() {
 
               <div className="bg-surface-50 dark:bg-surface-900/50 p-5 rounded-2xl border border-surface-200/60 dark:border-surface-800/60 space-y-2">
                 <h3 className="text-base font-bold text-ink dark:text-white flex items-center gap-2">
-                  <span>📊</span>
+                  <FontAwesomeIcon icon={faHeartPulse} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>Why Body Fat % &amp; BMI Matter</span>
                 </h3>
                 <p>
@@ -72,7 +82,7 @@ export default function AboutPage() {
 
               <div className="bg-surface-50 dark:bg-surface-900/50 p-5 rounded-2xl border border-surface-200/60 dark:border-surface-800/60 space-y-2">
                 <h3 className="text-base font-bold text-ink dark:text-white flex items-center gap-2">
-                  <span>🍛</span>
+                  <FontAwesomeIcon icon={faUtensils} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>Personalized For Indian Diets</span>
                 </h3>
                 <p>
@@ -82,7 +92,7 @@ export default function AboutPage() {
 
               <div className="bg-surface-50 dark:bg-surface-900/50 p-5 rounded-2xl border border-surface-200/60 dark:border-surface-800/60 space-y-2">
                 <h3 className="text-base font-bold text-ink dark:text-white flex items-center gap-2">
-                  <span>🔒</span>
+                  <FontAwesomeIcon icon={faShieldHalved} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>Privacy-First Architecture</span>
                 </h3>
                 <p>
@@ -96,8 +106,9 @@ export default function AboutPage() {
                 <p className="text-sm font-semibold text-ink dark:text-white">Ready to know your body?</p>
                 <p className="text-xs text-ink-muted dark:text-surface-400">Take the 2-minute quick assessment.</p>
               </div>
-              <Button href="/details" className="w-full sm:w-auto">
-                Start Your Assessment
+              <Button href="/details" className="w-full sm:w-auto gap-2">
+                <span>Start Your Assessment</span>
+                <FontAwesomeIcon icon={faArrowRight} className="w-3.5 h-3.5" />
               </Button>
             </div>
           </Card>
@@ -119,9 +130,10 @@ export default function AboutPage() {
                 </div>
               </div>
               <div className="space-y-2 text-center md:text-left flex-1">
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                  <span>●</span> Blaze Gym Owner &amp; Head Coach
-                </div>
+                <Badge variant="emerald" className="gap-1.5 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  <FontAwesomeIcon icon={faCertificate} className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                  <span>Blaze Gym Owner &amp; Head Coach</span>
+                </Badge>
                 <h2 className="text-2xl font-black text-ink dark:text-white">
                   Meet Coach Naveen
                 </h2>

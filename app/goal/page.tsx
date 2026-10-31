@@ -6,6 +6,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiteHeader } from "@/components/layout/site-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import {
+  FontAwesomeIcon,
+  faCheckCircle,
+  faArrowRight,
+  faBullseye,
+} from "@/components/ui/font-awesome-icons";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { saveDraftGoal, loadDraftGoal } from "@/features/assessment/session-store";
 import type { FitnessGoal } from "@/types/fitness";
 
@@ -449,7 +457,7 @@ export default function GoalPage() {
                 className="w-full py-4 px-6 rounded-2xl bg-[#022319] hover:bg-[#033022] text-white font-black text-sm flex items-center justify-center gap-3 shadow-lg shadow-emerald-950/20 active:scale-98 transition-all cursor-pointer group"
               >
                 <span>Continue to Body Details</span>
-                <span className="text-[#00e676] text-base group-hover:translate-x-1 transition-transform">→</span>
+                <FontAwesomeIcon icon={faArrowRight} className="text-[#00e676] text-base group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </div>
@@ -457,7 +465,7 @@ export default function GoalPage() {
           {/* Right Column: Visual Goal Preview & Coach Naveen Note (md:col-span-5) */}
           <div className="hidden md:flex flex-col gap-5 md:col-span-5 sticky top-24">
             {/* Dynamic Goal Card */}
-            <div className="relative rounded-3xl overflow-hidden shadow-xl border border-emerald-950/40 bg-[#060b09] text-white group">
+            <Card className="p-0 overflow-hidden rounded-3xl shadow-xl border border-emerald-950/40 bg-[#060b09] text-white group">
               <div className="relative w-full aspect-[16/10]">
                 <Image
                   src={activeHero.desktopImage || activeHero.image}
@@ -467,8 +475,11 @@ export default function GoalPage() {
                   className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#060b09] via-black/40 to-transparent" />
-                <div className="absolute top-4 left-4 bg-emerald-950/80 backdrop-blur-md border border-emerald-500/40 px-3 py-1 rounded-full text-[11px] font-black uppercase text-[#00e676]">
-                  Selected Focus
+                <div className="absolute top-4 left-4">
+                  <Badge variant="emerald" className="gap-1.5 px-3 py-1 text-[11px] font-black uppercase tracking-wider backdrop-blur-md bg-emerald-950/80 border-emerald-500/40 text-[#00e676]">
+                    <FontAwesomeIcon icon={faBullseye} className="w-3 h-3 text-[#00e676]" />
+                    <span>Selected Focus</span>
+                  </Badge>
                 </div>
               </div>
 
@@ -486,19 +497,17 @@ export default function GoalPage() {
                   <ul className="space-y-1.5">
                     {activeHero.benefits.map((b, idx) => (
                       <li key={idx} className="flex items-center gap-2 text-xs text-gray-200">
-                        <span className="w-4 h-4 rounded-full bg-[#00e676]/20 text-[#00e676] flex items-center justify-center text-[10px] font-bold">
-                          ✓
-                        </span>
+                        <FontAwesomeIcon icon={faCheckCircle} className="w-3.5 h-3.5 text-[#00e676] shrink-0" />
                         <span>{b}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Coach Tip Card */}
-            <div className="p-5 rounded-2xl bg-gray-50 border border-gray-200 space-y-2">
+            <Card className="p-5 rounded-2xl bg-gray-50 border border-gray-200 space-y-2">
               <div className="flex items-center gap-3">
                 <div className="relative w-10 h-10 rounded-full overflow-hidden border border-emerald-500 shrink-0">
                   <Image
@@ -516,7 +525,7 @@ export default function GoalPage() {
               <p className="text-xs text-gray-600 leading-relaxed italic">
                 &ldquo;Do not worry about being perfect on day one. Selecting your true starting point gives us the exact metabolic baseline to design meals you will actually enjoy eating.&rdquo;
               </p>
-            </div>
+            </Card>
           </div>
         </div>
 

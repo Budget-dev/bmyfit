@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { config } from "@fortawesome/fontawesome-svg-core";
+import "@fortawesome/fontawesome-svg-core/styles.css";
+config.autoAddCss = false;
 import { SiteStructuredData } from "@/components/seo/json-ld";
 import { GlobalCoachChat } from "@/components/chat/global-coach-chat";
 import { APP_CONFIG } from "@/lib/config";
