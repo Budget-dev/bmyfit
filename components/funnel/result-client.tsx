@@ -707,6 +707,21 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
               </div>
 
             </div>
+
+            {/* Free Lead 1-on-1 Consultation Trigger with Coach Naveen */}
+            <div className="mt-2 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(new CustomEvent("bmyfit_open_chat"));
+                  }
+                }}
+                className="w-full py-2 px-3 rounded-full bg-emerald-50 hover:bg-emerald-100 text-[#075E54] border border-emerald-300/80 font-bold text-[11px] min-[390px]:text-xs flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+              >
+                <span>💬 Questions about your score? Chat with Coach Naveen</span>
+              </button>
+            </div>
           </div>
 
           </div>

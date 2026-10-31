@@ -317,8 +317,16 @@ export function AdminChatView({
           {filteredThreads.map((thread) => {
             const isSelected = thread.userId === activeUserId;
             const hasUnread = thread.unreadCountCoach > 0;
-            const isPaid = thread.membershipCategory === "purchased";
-            const isMembership = thread.membershipCategory === "membership";
+            const matchedUser = users.find(
+              (u) =>
+                u.id === thread.userId ||
+                u.assessmentId === thread.userId ||
+                (u.email && thread.userEmail && u.email.toLowerCase() === thread.userEmail.toLowerCase())
+            );
+            const userCategory = matchedUser?.membershipCategory || thread.membershipCategory || "free";
+            const isPaid = userCategory === "purchased";
+            const isMembership = userCategory === "membership";
+            const displayGoal = matchedUser?.goalDisplay || thread.planGoal;
 
             return (
               <button
@@ -367,9 +375,9 @@ export function AdminChatView({
                         FREE LEAD
                       </span>
                     )}
-                    {thread.planGoal && (
+                    {displayGoal && (
                       <span className="text-[10px] text-gray-400 truncate max-w-[120px]">
-                        {thread.planGoal}
+                        {displayGoal}
                       </span>
                     )}
                   </div>

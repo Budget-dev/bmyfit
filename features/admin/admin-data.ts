@@ -133,7 +133,7 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
                 bmi: asm.bmi || 24.5,
                 bmiCategory: asm.bmiCategory || "normal",
                 bodyFatPercent: asm.bodyFatPercent ?? 22.0,
-                bodyFatCategory: (asm.bodyFatCategory as any) || "average",
+                bodyFatCategory: (asm.bodyFatCategory as UserBiometrics["bodyFatCategory"]) || "average",
                 bmr,
                 tdee,
                 caloricTarget: tdee - 400,
@@ -697,8 +697,11 @@ export async function pushPlanToUserDashboard(
 export interface RegisterPurchasedClientParams {
   userId: string;
   assessmentId: string;
-  razorpayOrderId: string;
-  razorpayPaymentId: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  utr?: string;
+  paymentMethod?: "phonepe" | "razorpay" | "upi_manual";
+  paymentScreenshot?: string;
   amountPaise: number;
   customerName?: string;
   customerEmail?: string;
@@ -787,9 +790,13 @@ export async function registerPurchasedClient(
     existing.membershipTitle = subscription.packageTitle;
     existing.needsPlanReview = true;
     existing.subscription = subscription;
+    const effectiveOrderId = params.razorpayOrderId || params.utr || `ord_${Date.now()}`;
     existing.order = {
-      orderId: params.razorpayOrderId,
+      orderId: effectiveOrderId,
       razorpayPaymentId: params.razorpayPaymentId,
+      utr: params.utr,
+      paymentMethod: params.paymentMethod || (params.utr ? "phonepe" : "razorpay"),
+      paymentScreenshot: params.paymentScreenshot,
       amountPaise: params.amountPaise,
       amountFormatted: `₹${Math.round(params.amountPaise / 100)}`,
       currency: "INR",
@@ -880,6 +887,8 @@ export async function registerPurchasedClient(
       : undefined,
   });
 
+  const effectiveOrderId = params.razorpayOrderId || params.utr || `ord_${Date.now()}`;
+
   const newRecord: AdminUserRecord = {
     id,
     name: params.customerName || "Fit Member",
@@ -920,8 +929,11 @@ export async function registerPurchasedClient(
       dailyStepGoal: params.biometrics?.dailyStepGoal || 10000,
     },
     order: {
-      orderId: params.razorpayOrderId,
+      orderId: effectiveOrderId,
       razorpayPaymentId: params.razorpayPaymentId,
+      utr: params.utr,
+      paymentMethod: params.paymentMethod || (params.utr ? "phonepe" : "razorpay"),
+      paymentScreenshot: params.paymentScreenshot,
       amountPaise: params.amountPaise,
       amountFormatted: `₹${Math.round(params.amountPaise / 100)}`,
       currency: "INR",

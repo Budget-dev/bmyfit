@@ -127,6 +127,19 @@ export function PlanLockScreen({
             <span className="text-base font-black">→</span>
           </button>
 
+          {/* Direct Coach Naveen Chat Trigger for Free / Curious Athletes */}
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("bmyfit_open_chat"));
+              }
+            }}
+            className="w-full mt-2.5 py-2.5 px-4 rounded-full bg-[#075E54] hover:bg-[#064e46] text-white font-bold text-xs flex items-center justify-center gap-2 border border-emerald-500/30 shadow-xs active:scale-95 transition-all cursor-pointer"
+          >
+            <span>💬 Have questions before joining? Chat with Coach Naveen</span>
+          </button>
+
           {/* Trust badges */}
           <div className="flex items-center justify-center gap-3 text-[10px] text-gray-300 font-medium mt-3 select-none">
             <span className="flex items-center gap-1">

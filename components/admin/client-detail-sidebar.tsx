@@ -278,7 +278,11 @@ export function ClientDetailSidebar({
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-base font-bold text-slate-900 truncate">{user.name}</h2>
-                  {isPending ? (
+                  {user.membershipCategory === "free" ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                      <span>Free Lead</span>
+                    </span>
+                  ) : isPending ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
                       <Clock className="w-3 h-3 text-amber-600 animate-pulse" />
                       <span>₹99 Paid · Needs Plan</span>
@@ -300,11 +304,10 @@ export function ClientDetailSidebar({
               <button
                 type="button"
                 onClick={() => setActiveTab("chat")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs transition cursor-pointer ${
-                  activeTab === "chat"
+                className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs transition cursor-pointer ${activeTab === "chat"
                     ? "bg-[#075E54] text-white"
                     : "bg-[#25D366] hover:bg-[#20bd5a] text-black"
-                }`}
+                  }`}
                 title="Open 1-on-1 Chat with Client"
               >
                 <MessageCircle className="w-3.5 h-3.5 fill-current" />
@@ -414,6 +417,65 @@ export function ClientDetailSidebar({
             {/* ---------------- TAB 1: SEND PLAN & VIDEO ---------------- */}
             {activeTab === "dispatch" && (
               <div className="space-y-6">
+
+                {/* Section 0: Payment & UTR Verification Dossier (Direct PhonePe / Razorpay) */}
+                {user.order && (
+                  <div className="bg-emerald-50/70 rounded-2xl p-4 border border-emerald-200/80 space-y-2.5 text-xs text-left">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">💳</span>
+                        <span className="font-bold text-slate-900">
+                          Payment Verification ({user.order.amountFormatted || "₹99"})
+                        </span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        {user.order.paymentMethod === "phonepe"
+                          ? "🟣 PhonePe Direct UPI"
+                          : user.order.paymentMethod === "upi_manual"
+                          ? "🟢 Direct UPI"
+                          : "Razorpay Gateway"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-700 pt-1">
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">
+                          UTR / Transaction ID
+                        </span>
+                        <span className="font-mono font-bold text-slate-900 select-all">
+                          {user.order.utr || user.order.razorpayPaymentId || user.order.orderId}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">
+                          Transaction Date
+                        </span>
+                        <span className="text-slate-900 font-medium">
+                          {user.order.purchasedAt
+                            ? new Date(user.order.purchasedAt).toLocaleString()
+                            : "Active Today"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {user.order.paymentScreenshot && (
+                      <div className="pt-2 border-t border-emerald-200/60 flex items-center justify-between">
+                        <span className="text-slate-600 font-medium text-[11px]">
+                          Payment Screenshot / Receipt:
+                        </span>
+                        <a
+                          href={user.order.paymentScreenshot}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 rounded-lg bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-50 text-[11px] font-bold transition flex items-center gap-1 shadow-2xs"
+                        >
+                          <span>View Receipt Image</span>
+                          <span>↗</span>
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Section A: Personalized Video Instruction */}
                 <div className="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80 space-y-4">
@@ -1083,11 +1145,10 @@ export function ClientDetailSidebar({
                       return (
                         <div key={msg.id} className={`flex ${isCoach ? "justify-end" : "justify-start"}`}>
                           <div
-                            className={`max-w-[85%] rounded-2xl p-2.5 text-xs shadow-xs relative text-left leading-relaxed ${
-                              isCoach
+                            className={`max-w-[85%] rounded-2xl p-2.5 text-xs shadow-xs relative text-left leading-relaxed ${isCoach
                                 ? "bg-[#d9fdd3] text-gray-900 rounded-tr-xs border border-emerald-200/50"
                                 : "bg-white text-gray-900 rounded-tl-xs border border-gray-200/70"
-                            }`}
+                              }`}
                           >
                             <p className={`text-[10px] font-black mb-0.5 ${isCoach ? "text-[#075E54]" : "text-emerald-800"}`}>
                               {isCoach ? "Coach Naveen" : (msg.senderName || user.name)}
@@ -1145,11 +1206,10 @@ export function ClientDetailSidebar({
                   <button
                     type="submit"
                     disabled={!chatInputText.trim() || chatSending}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition shadow-xs shrink-0 ${
-                      chatInputText.trim()
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition shadow-xs shrink-0 ${chatInputText.trim()
                         ? "bg-[#25D366] hover:bg-[#1faa53] text-white cursor-pointer"
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    }`}
+                      }`}
                   >
                     <Send className="w-3.5 h-3.5 translate-x-0.2" />
                   </button>

@@ -39,10 +39,13 @@ export interface UserBiometrics {
 export interface UserPurchaseOrder {
   orderId: string;
   razorpayPaymentId?: string;
+  utr?: string;
+  paymentMethod?: "phonepe" | "razorpay" | "upi_manual";
+  paymentScreenshot?: string;
   amountPaise: number;
   amountFormatted: string;
   currency: "INR";
-  status: "paid" | "created" | "refunded";
+  status: "paid" | "created" | "refunded" | "pending_verification";
   packageTitle: string;
   durationWeeks: number;
   purchasedAt: string;

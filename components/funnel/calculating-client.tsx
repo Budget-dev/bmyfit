@@ -53,42 +53,34 @@ export function CalculatingClient() {
 
   // 1. Smooth Progress & Point-by-point Animation
   useEffect(() => {
-    const totalDurationMs = 3800;
+    let hasNavigated = false;
     const intervalMs = 40;
-    const increment = 100 / (totalDurationMs / intervalMs);
+    const increment = 100 / (2800 / intervalMs); // 2.8s smooth animation
 
     const timer = setInterval(() => {
       setProgress((prev) => {
-        // If calculation is done, allow ticking all the way to 100
-        if (calculationFinishedRef.current) {
-          const nextVal = Math.min(prev + increment * 1.5, 100);
-          if (nextVal >= 100) {
-            clearInterval(timer);
-            // Navigate to results
+        const nextVal = prev + increment;
+        if (nextVal >= 100) {
+          clearInterval(timer);
+          if (!hasNavigated) {
+            hasNavigated = true;
             setTimeout(() => {
-              if (targetResultUrlRef.current) {
-                router.push(targetResultUrlRef.current);
-              }
-            }, 300);
+              const target = targetResultUrlRef.current || "/result";
+              router.push(target);
+            }, 200);
           }
-          return Math.round(nextVal);
+          return 100;
         }
-
-        // If still waiting on calculation, slow down near 92%
-        if (prev >= 92) {
-          return 92;
-        }
-
-        return Math.round(prev + increment);
+        return Math.round(nextVal);
       });
     }, intervalMs);
 
     return () => clearInterval(timer);
   }, [router]);
 
-  // 2. Fire Calculation in Background
+  // 2. Fire Calculation Immediately (Never blocks on auth)
   useEffect(() => {
-    if (!hydrated || authLoading || requestSentRef.current) return;
+    if (!hydrated || requestSentRef.current) return;
 
     const fullInput = getFullInput() ?? {
       gender: "male" as const,
@@ -102,29 +94,29 @@ export function CalculatingClient() {
       dietPreference: "vegetarian" as const,
     };
     const currentInput = fullInput;
-
     requestSentRef.current = true;
 
-    async function executeCalculation() {
-      try {
-        const calculated = calculateAssessment(currentInput);
-        const generatedId = `asm_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
-        let finalAssessmentId = generatedId;
+    // Instant local calculation (0ms) so result is ALWAYS ready
+    try {
+      const calculated = calculateAssessment(currentInput);
+      const generatedId = `asm_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+      targetResultUrlRef.current = `/result/${generatedId}`;
+      calculationFinishedRef.current = true;
 
-        // Persist to session storage immediately so result is always instant
-        if (typeof window !== "undefined") {
-          const localAssessment = {
-            id: generatedId,
-            uid: "anonymous-user",
-            ...currentInput,
-            ...calculated,
-            createdAt: new Date().toISOString(),
-          };
-          sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(localAssessment));
-          sessionStorage.setItem("bmyfit_local_calculated", JSON.stringify(calculated));
-        }
+      if (typeof window !== "undefined") {
+        const localAssessment = {
+          id: generatedId,
+          uid: "anonymous-user",
+          ...currentInput,
+          ...calculated,
+          createdAt: new Date().toISOString(),
+        };
+        sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(localAssessment));
+        sessionStorage.setItem("bmyfit_local_calculated", JSON.stringify(calculated));
+      }
 
-        // Persist to Firestore client SDK directly
+      // Background persist to Firestore and API
+      void (async () => {
         try {
           if (typeof window !== "undefined") {
             const firestorePayload = {
@@ -134,56 +126,45 @@ export function CalculatingClient() {
               ...calculated,
               createdAt: new Date().toISOString(),
             };
-            void setDoc(doc(db, "assessments", generatedId), firestorePayload).catch((e) => {
-              console.warn("Client assessment firestore notice:", e);
-            });
+            void setDoc(doc(db, "assessments", generatedId), firestorePayload).catch(() => {});
           }
-        } catch (e) {
-          console.warn("Direct Firestore assessment error:", e);
-        }
 
-        const token = await getIdToken();
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-        };
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
+          const token = await getIdToken().catch(() => null);
+          const headers: Record<string, string> = { "Content-Type": "application/json" };
+          if (token) headers["Authorization"] = `Bearer ${token}`;
 
-        const res = await fetch("/api/assessments", {
-          method: "POST",
-          headers,
-          body: JSON.stringify(currentInput),
-        }).catch(() => null);
+          const res = await fetch("/api/assessments", {
+            method: "POST",
+            headers,
+            body: JSON.stringify(currentInput),
+          }).catch(() => null);
 
-        if (res && res.ok) {
-          const data = await res.json().catch(() => ({}));
-          if (data.assessmentId) {
-            finalAssessmentId = data.assessmentId;
-            if (typeof window !== "undefined") {
-              const updated = {
-                id: finalAssessmentId,
-                uid: "anonymous-user",
-                ...currentInput,
-                ...calculated,
-                createdAt: new Date().toISOString(),
-              };
-              sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(updated));
+          if (res && res.ok) {
+            const data = await res.json().catch(() => ({}));
+            if (data.assessmentId) {
+              targetResultUrlRef.current = `/result/${data.assessmentId}`;
+              if (typeof window !== "undefined") {
+                const updated = {
+                  id: data.assessmentId,
+                  uid: "anonymous-user",
+                  ...currentInput,
+                  ...calculated,
+                  createdAt: new Date().toISOString(),
+                };
+                sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(updated));
+              }
             }
           }
+        } catch (e) {
+          console.warn("Background assessment sync notice:", e);
         }
-
-        targetResultUrlRef.current = `/result/${finalAssessmentId}`;
-        calculationFinishedRef.current = true;
-      } catch (err) {
-        console.warn("Calculation fallback:", err);
-        targetResultUrlRef.current = "/result/local";
-        calculationFinishedRef.current = true;
-      }
+      })();
+    } catch (err) {
+      console.warn("Instant calculation fallback:", err);
+      targetResultUrlRef.current = "/result/local";
+      calculationFinishedRef.current = true;
     }
-
-    void executeCalculation();
-  }, [hydrated, authLoading, getIdToken, getFullInput, router]);
+  }, [hydrated, getIdToken, getFullInput, router]);
 
   // Circle SVG metrics
   const radius = 54;

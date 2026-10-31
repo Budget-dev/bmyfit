@@ -1,64 +1,464 @@
 import React from "react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
-import { Card } from "@/components/ui/card";
 import { APP_CONFIG } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "Terms and Conditions · BMYFIT",
-  description: "Terms of service, digital license, and medical disclaimer for BMYFIT.",
+  description:
+    "Official Terms and Conditions, digital service license, Razorpay payment guidelines, medical disclaimers, and public merchant details for BMYFIT.",
+  alternates: {
+    canonical: "/terms",
+  },
 };
 
 export default function TermsPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-surface-50 dark:bg-surface-950">
+    <div className="flex min-h-screen flex-col bg-[#fafafa] text-gray-900 selection:bg-emerald-500 selection:text-white">
       <SiteHeader />
-      <main className="flex-1 py-12 sm:py-16">
-        <div className="container max-w-3xl">
-          <Card className="p-8 sm:p-12 space-y-6">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">
-                Agreement
+
+      <main className="flex-1 py-10 sm:py-16">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
+          {/* Header Card */}
+          <div className="bg-white rounded-3xl p-6 sm:p-10 border border-gray-200/80 shadow-xs mb-8">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-6 border-b border-gray-100">
+              <span className="text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                Official Merchant Terms &amp; Conditions
               </span>
-              <h1 className="text-3xl font-black text-ink dark:text-white mt-1">
-                Terms &amp; Conditions
+              <span className="text-xs text-gray-500 font-medium">
+                Last Updated: October 31, 2026 · Effective Date: Immediate
+              </span>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <h1 className="text-2xl sm:text-4xl font-black text-gray-950 tracking-tight">
+                Terms and Conditions of Service
               </h1>
-              <p className="text-xs text-ink-muted dark:text-surface-400 mt-1">
-                Last updated: October 2026
+              <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+                Welcome to <strong>BMYFIT</strong>. These Terms and Conditions constitute a legally binding
+                agreement between you (&ldquo;User&rdquo;, &ldquo;Athlete&rdquo;, or &ldquo;You&rdquo;) and{" "}
+                <strong>BMYFIT Health Technologies</strong> (&ldquo;BMYFIT&rdquo;, &ldquo;We&rdquo;,
+                &ldquo;Us&rdquo;, or &ldquo;Our&rdquo;), governing your access to and use of{" "}
+                <Link href="/" className="text-emerald-700 underline font-semibold">
+                  https://bmyfit.in
+                </Link>{" "}
+                and all associated digital fitness tools, nutrition assessments, and coaching services.
               </p>
             </div>
 
-            <div className="space-y-4 text-sm text-ink-muted dark:text-surface-300 leading-relaxed border-t border-surface-200 dark:border-surface-800 pt-6">
-              <h3 className="text-base font-bold text-ink dark:text-white">1. Service Description</h3>
-              <p>
-                BMYFIT provides algorithmic body composition estimates (BMI and US Navy Body Fat %) and generates personalized digital fitness and nutrition recommendations based on user-submitted measurements.
-              </p>
-
-              <h3 className="text-base font-bold text-ink dark:text-white pt-2">2. Medical &amp; Health Disclaimer</h3>
-              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-300 font-medium">
-                <strong className="block text-sm font-bold mb-1">Non-Medical Advisory:</strong>
-                {APP_CONFIG.medicalDisclaimer}
+            {/* Quick Public Merchant Notice Box */}
+            <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-gray-700 space-y-2">
+              <div className="flex items-center gap-2 text-slate-900 font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>Public Merchant &amp; Service Provider Summary</span>
               </div>
-
-              <h3 className="text-base font-bold text-ink dark:text-white pt-2">3. Digital Purchase License</h3>
-              <p>
-                Upon payment of the one-time fee of {APP_CONFIG.pricing.formatted}, you are granted a personal, non-exclusive, non-transferable license to view, use, and download your personalized fitness and nutrition plan.
-              </p>
-
-              <h3 className="text-base font-bold text-ink dark:text-white pt-2">4. User Age Requirement</h3>
-              <p>
-                BMYFIT is intended exclusively for adults aged 18 years and above. If you are under 18, please consult with your parent, guardian, or healthcare provider before following any nutritional or exercise adjustments.
-              </p>
-
-              <h3 className="text-base font-bold text-ink dark:text-white pt-2">5. Governing Law</h3>
-              <p>
-                These terms are governed by and construed in accordance with the laws of India, and any disputes shall be subject to the exclusive jurisdiction of the competent courts in India.
+              <p className="leading-relaxed">
+                <strong>Legal Entity:</strong> BMYFIT Health Technologies / Coach Naveen &bull;{" "}
+                <strong>Operational Address:</strong> #42, 2nd Cross, 5th Main, 100 Feet Ring Road, BTM
+                Layout 2nd Stage, Bengaluru, Karnataka 560076, India &bull;{" "}
+                <strong>Support Desk:</strong>{" "}
+                <a href="mailto:support@bmyfit.in" className="text-emerald-700 underline font-semibold">
+                  support@bmyfit.in
+                </a>{" "}
+                &bull; <strong>Helpline &amp; WhatsApp:</strong> +91 98490 12345
               </p>
             </div>
-          </Card>
+          </div>
+
+          {/* Main Legal Clauses */}
+          <div className="bg-white rounded-3xl p-6 sm:p-12 border border-gray-200/80 shadow-xs space-y-10 text-sm text-gray-700 leading-relaxed">
+            {/* Section 1 */}
+            <section className="space-y-3">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-950 flex items-center gap-2.5">
+                <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-black">
+                  1
+                </span>
+                <span>Preamble &amp; Electronic Record Compliance</span>
+              </h2>
+              <p>
+                This document is an electronic record published in accordance with the provisions of Rule 3(1) of
+                the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021,
+                and generated by a computer system. It does not require any physical or digital signatures.
+              </p>
+              <p>
+                By navigating our website, submitting your body measurements, creating an account, or completing a
+                payment of <strong>₹99</strong> via Razorpay, you explicitly confirm that you have read,
+                understood, and agree to be bound by these Terms, along with our{" "}
+                <Link href="/privacy" className="text-emerald-700 font-bold hover:underline">
+                  Privacy Policy
+                </Link>
+                ,{" "}
+                <Link href="/refund-policy" className="text-emerald-700 font-bold hover:underline">
+                  Refund &amp; Cancellation Policy
+                </Link>
+                , and{" "}
+                <Link href="/shipping-policy" className="text-emerald-700 font-bold hover:underline">
+                  Shipping &amp; Delivery Policy
+                </Link>
+                . If you do not agree, you must refrain from using the platform immediately.
+              </p>
+            </section>
+
+            {/* Section 2 */}
+            <section className="space-y-3 pt-6 border-t border-gray-100">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-950 flex items-center gap-2.5">
+                <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-black">
+                  2
+                </span>
+                <span>Public Merchant Identity &amp; Contact Details</span>
+              </h2>
+              <p>
+                In compliance with Rule 5(1) of the Consumer Protection (E-Commerce) Rules, 2020 and Indian
+                e-commerce merchant disclosure requirements, our public business and merchant details are
+                provided below:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-gray-50 border border-gray-200/70 text-xs">
+                <div>
+                  <span className="text-gray-400 font-semibold block uppercase tracking-wider text-[10px]">
+                    Legal Business Name
+                  </span>
+                  <span className="text-gray-900 font-bold text-sm">
+                    BMYFIT Health Technologies / Coach Naveen
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 font-semibold block uppercase tracking-wider text-[10px]">
+                    Operating Headquarters
+                  </span>
+                  <span className="text-gray-900 font-bold">
+                    Bengaluru, Karnataka, India (560076)
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 font-semibold block uppercase tracking-wider text-[10px]">
+                    Customer Support Email
+                  </span>
+                  <a
+                    href="mailto:support@bmyfit.in"
+                    className="text-emerald-700 font-bold hover:underline text-sm"
+                  >
+                    support@bmyfit.in
+                  </a>
+                </div>
+                <div>
+                  <span className="text-gray-400 font-semibold block uppercase tracking-wider text-[10px]">
+                    Customer Desk &amp; WhatsApp
+                  </span>
+                  <span className="text-gray-900 font-bold text-sm">+91 98490 12345</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 font-semibold block uppercase tracking-wider text-[10px]">
+                    Working Hours
+                  </span>
+                  <span className="text-gray-900 font-medium">
+                    Monday to Saturday, 9:00 AM – 7:00 PM IST
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 font-semibold block uppercase tracking-wider text-[10px]">
+                    Grievance Officer
+                  </span>
+                  <a href="mailto:grievance@bmyfit.in" className="text-emerald-700 font-bold hover:underline">
+                    grievance@bmyfit.in
+                  </a>
+                </div>
+              </div>
+            </section>
+
+            {/* Section 3 */}
+            <section className="space-y-3 pt-6 border-t border-gray-100">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-950 flex items-center gap-2.5">
+                <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-black">
+                  3
+                </span>
+                <span>User Eligibility &amp; Age Requirements (18+)</span>
+              </h2>
+              <p>
+                BMYFIT services are designed and intended exclusively for individuals who are 18 years of age or
+                older, and who are legally capable of entering into binding contracts under the Indian Contract
+                Act, 1872.
+              </p>
+              <p>
+                If you are under 18 years of age, you may only access the platform and follow its nutritional
+                suggestions under the active supervision, consent, and guidance of a parent, legal guardian, or
+                certified physician. BMYFIT reserves the right to terminate access if it is discovered that a
+                user is underage without requisite guardian consent.
+              </p>
+            </section>
+
+            {/* Section 4 */}
+            <section className="space-y-3 pt-6 border-t border-gray-100">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-950 flex items-center gap-2.5">
+                <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-black">
+                  4
+                </span>
+                <span>Description of Services &amp; The ₹99 Transformation Plan</span>
+              </h2>
+              <p>
+                BMYFIT provides algorithmic body composition estimates (including Body Mass Index according to
+                WHO/Asian-Indian standards and US Navy Body Fat estimation methods) alongside calibrated digital
+                fitness recommendations.
+              </p>
+              <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-gray-600">
+                <li>
+                  <strong>Free Assessment:</strong> Instant computation of estimated body fat percentage, BMI
+                  category, BMR (Basal Metabolic Rate), TDEE, and daily caloric requirements.
+                </li>
+                <li>
+                  <strong>Personalized 8-Week Plan (₹99):</strong> Complete week-by-week progressive workout
+                  split (gym/home options with video demonstrations), personalized Indian meal matrices
+                  (vegetarian, eggetarian, and non-vegetarian splits), macro nutrient targets, hydration guidelines,
+                  and daily compliance task checklists.
+                </li>
+                <li>
+                  <strong>Direct Coach Support:</strong> 1-on-1 digital chat channel with Head Coach Naveen via
+                  in-app messaging and official WhatsApp sync for weekly questions and habit adherence.
+                </li>
+              </ul>
+            </section>
+
+            {/* Section 5 */}
+            <section className="space-y-3 pt-6 border-t border-gray-100">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-950 flex items-center gap-2.5">
+                <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-black">
+                  5
+                </span>
+                <span>Pricing, Taxes &amp; Razorpay Payment Terms</span>
+              </h2>
+              <p>
+                The purchase price for the 8-Week Personalized Transformation Plan is a fixed, one-time fee of{" "}
+                <strong>₹99 (Ninety-Nine Indian Rupees)</strong>, inclusive of all applicable taxes.
+              </p>
+              <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 text-xs text-emerald-950 space-y-1.5">
+                <p className="font-bold">Transparent Indian Pricing Guarantee:</p>
+                <p>
+                  &bull; <strong>No Recurring Subscriptions:</strong> There are strictly no hidden auto-debits,
+                  standing instructions, or automatic recurring charges.
+                </p>
+                <p>
+                  &bull; <strong>Secure Processing:</strong> Payments are processed securely in compliance with RBI
+                  guidelines through our authorized payment aggregator, <strong>Razorpay Software Private Limited</strong>.
+                  We support UPI (GPay, PhonePe, Paytm, BHIM, CRED), Net Banking across 50+ Indian banks, Debit/Credit
+                  Cards, and authorized wallets.
+                </p>
+                <p>
+                  &bull; <strong>Payment Security:</strong> BMYFIT does not collect or store raw card numbers, CVVs,
+                  or banking credentials on our servers. All transactions are protected by 256-bit bank-grade SSL
+                  encryption.
+                </p>
+              </div>
+            </section>
+
+            {/* Section 6 */}
+            <section className="space-y-3 pt-6 border-t border-gray-100">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-950 flex items-center gap-2.5">
+                <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-black">
+                  6
+                </span>
+                <span>Instant Digital Delivery &amp; License Grant</span>
+              </h2>
+              <p>
+                Because BMYFIT is an entirely digital product, no physical shipping takes place. Upon successful
+                authorization and receipt of your ₹99 payment by Razorpay:
+              </p>
+              <p>
+                1. Your personalized plan is instantly unlocked on your live client dashboard at{" "}
+                <Link href="/plan" className="text-emerald-700 underline font-semibold">
+                  https://bmyfit.in/plan
+                </Link>
+                .
+              </p>
+              <p>
+                2. You are granted a limited, personal, non-exclusive, non-transferable, revocable license to
+                access, view, and utilize the customized meal plans and workout routines for your personal fitness
+                journey. You agree not to resell, redistribute, sub-license, or commercialize any content or
+                workout material provided by BMYFIT.
+              </p>
+            </section>
+
+            {/* Section 7 - Medical Disclaimer */}
+            <section className="space-y-3 pt-6 border-t border-gray-100">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-950 flex items-center gap-2.5">
+                <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-rose-100 text-rose-800 text-xs font-black">
+                  7
+                </span>
+                <span>Mandatory Medical &amp; Clinical Health Disclaimer</span>
+              </h2>
+              <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 border border-amber-300/80 text-amber-950 text-xs sm:text-sm space-y-2">
+                <strong className="block text-amber-900 font-extrabold uppercase tracking-wider text-xs">
+                  Important Health &amp; Safety Notice:
+                </strong>
+                <p className="leading-relaxed">
+                  {APP_CONFIG.medicalDisclaimer}
+                </p>
+                <p className="leading-relaxed">
+                  BMYFIT and Coach Naveen provide general fitness, lifestyle coaching, and nutritional education.
+                  Our algorithms, metrics, and coaching chats do <strong>NOT</strong> constitute medical advice,
+                  diagnosis, medical prescription, or physical therapy.
+                </p>
+                <p className="leading-relaxed">
+                  Always consult with a qualified medical doctor, physician, or certified health practitioner before
+                  making significant dietary changes or embarking on any exercise regimen, especially if you have a
+                  history of heart disease, hypertension, diabetes, thyroid disorders, back/joint injuries, or are
+                  pregnant or nursing. You undertake all physical workouts and dietary modifications at your own risk.
+                </p>
+              </div>
+            </section>
+
+            {/* Section 8 */}
+            <section className="space-y-3 pt-6 border-t border-gray-100">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-950 flex items-center gap-2.5">
+                <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-black">
+                  8
+                </span>
+                <span>User Representations &amp; Accuracy of Data</span>
+              </h2>
+              <p>
+                You represent and warrant that all information, bodily measurements (height, weight, waist, neck,
+                hip), age, gender, and medical notes provided during the intake assessment are accurate, current, and
+                truthful. Because your nutritional calorie targets and exercise volumes are calculated based upon
+                your inputs, providing inaccurate metrics may lead to unsuitable recommendations for which BMYFIT
+                disclaims all liability.
+              </p>
+            </section>
+
+            {/* Section 9 */}
+            <section className="space-y-3 pt-6 border-t border-gray-100">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-950 flex items-center gap-2.5">
+                <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-black">
+                  9
+                </span>
+                <span>Refund &amp; Cancellation Policy</span>
+              </h2>
+              <p>
+                Due to the immediate digital fulfillment and consumable nature of our personalized fitness data and
+                custom meal blueprints, standard returns do not apply. However, we maintain athlete-first protections:
+              </p>
+              <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-gray-600">
+                <li>
+                  <strong>Payment Debited but Plan Locked:</strong> If an amount of ₹99 was debited from your bank or
+                  UPI handle but a technical error prevented your plan from unlocking, email{" "}
+                  <a href="mailto:support@bmyfit.in" className="text-emerald-700 font-bold hover:underline">
+                    support@bmyfit.in
+                  </a>{" "}
+                  with your Razorpay Payment ID within 7 days. Upon verification with Razorpay logs, we will
+                  immediately unlock your plan manually or issue a 100% full refund.
+                </li>
+                <li>
+                  <strong>Refund Settlement Timeline:</strong> Approved refunds are credited directly back to the
+                  original source account (same UPI ID, card, or bank account) within <strong>5 to 7 business days</strong>,
+                  in accordance with standard RBI and Razorpay banking cycles.
+                </li>
+              </ul>
+              <p className="text-xs text-gray-500">
+                Please review our comprehensive{" "}
+                <Link href="/refund-policy" className="text-emerald-700 underline font-semibold">
+                  Refund &amp; Cancellation Policy
+                </Link>{" "}
+                for full details.
+              </p>
+            </section>
+
+            {/* Section 10 */}
+            <section className="space-y-3 pt-6 border-t border-gray-100">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-950 flex items-center gap-2.5">
+                <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-black">
+                  10
+                </span>
+                <span>Intellectual Property Rights</span>
+              </h2>
+              <p>
+                All content on BMYFIT—including but not limited to software code, algorithms, workout templates, Indian
+                diet meal plans, exercise video demonstrations, graphics, logos, and UI designs—is the exclusive
+                intellectual property of BMYFIT Health Technologies and Coach Naveen, protected under the Indian
+                Copyright Act, 1957, and relevant international intellectual property treaties.
+              </p>
+              <p>
+                You may not copy, reverse engineer, scrape, reproduce, publish, broadcast, or distribute any portion of
+                our website or plans without prior written consent from BMYFIT.
+              </p>
+            </section>
+
+            {/* Section 11 */}
+            <section className="space-y-3 pt-6 border-t border-gray-100">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-950 flex items-center gap-2.5">
+                <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-black">
+                  11
+                </span>
+                <span>Limitation of Liability &amp; Indemnity</span>
+              </h2>
+              <p>
+                To the maximum extent permitted by applicable law in India, BMYFIT, its coaches, directors, and
+                affiliates shall not be liable for any indirect, incidental, punitive, or consequential damages
+                arising out of or in connection with your use of our services, workouts, or nutritional plans.
+              </p>
+              <p>
+                In any case, BMYFIT&rsquo;s aggregate liability for all claims arising under these Terms shall be strictly
+                limited to the total amount paid by you to BMYFIT during the transaction giving rise to liability (i.e.,
+                maximum ₹99).
+              </p>
+              <p>
+                You agree to defend, indemnify, and hold harmless BMYFIT and its personnel from any claims, losses,
+                or liabilities arising from your violation of these Terms or your negligent performance of physical
+                exercises.
+              </p>
+            </section>
+
+            {/* Section 12 */}
+            <section className="space-y-3 pt-6 border-t border-gray-100">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-950 flex items-center gap-2.5">
+                <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-black">
+                  12
+                </span>
+                <span>Governing Law, Jurisdiction &amp; Grievance Redressal</span>
+              </h2>
+              <p>
+                These Terms shall be governed by, interpreted, and construed in accordance with the substantive laws of
+                the <strong>Republic of India</strong>. Any dispute, claim, or controversy arising out of or relating to
+                these Terms shall be subject to the exclusive jurisdiction of the competent courts situated in{" "}
+                <strong>Bengaluru, Karnataka, India</strong>.
+              </p>
+              <p>
+                In accordance with the Information Technology Act, 2000 and the Consumer Protection (E-Commerce) Rules,
+                2020, if you have any questions, concerns, or grievances regarding these terms or your purchase, you
+                may write to our designated Grievance Officer:
+              </p>
+              <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-xs space-y-1">
+                <p><strong>Designation:</strong> Grievance Redressal Officer</p>
+                <p><strong>Entity:</strong> BMYFIT Health Technologies</p>
+                <p><strong>Email:</strong> <a href="mailto:grievance@bmyfit.in" className="text-emerald-700 underline font-semibold">grievance@bmyfit.in</a></p>
+                <p><strong>Postal Address:</strong> #42, 2nd Cross, 5th Main, 100 Feet Ring Road, BTM Layout 2nd Stage, Bengaluru, Karnataka 560076, India</p>
+                <p className="text-gray-500 text-[11px] pt-1">We acknowledge grievances within 48 hours and resolve them within 30 days as mandated by law.</p>
+              </div>
+            </section>
+          </div>
+
+          {/* Quick Action Navigation at Bottom */}
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-4 p-6 rounded-3xl bg-white border border-gray-200/80">
+            <div>
+              <h3 className="text-sm font-bold text-gray-950">Have questions about our terms?</h3>
+              <p className="text-xs text-gray-500">Our customer desk is ready to answer any inquiries.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/contact"
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs"
+              >
+                Public Contact Details →
+              </Link>
+              <Link
+                href="/"
+                className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold transition"
+              >
+                Return to Home
+              </Link>
+            </div>
+          </div>
         </div>
       </main>
+
       <SiteFooter />
     </div>
   );

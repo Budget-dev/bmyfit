@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { SiteStructuredData } from "@/components/seo/json-ld";
+import { GlobalCoachChat } from "@/components/chat/global-coach-chat";
 import { APP_CONFIG } from "@/lib/config";
 
 const inter = Inter({
@@ -105,7 +106,10 @@ export default function RootLayout({
       <head>
         <SiteStructuredData />
       </head>
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        {children}
+        <GlobalCoachChat />
+      </body>
     </html>
   );
 }

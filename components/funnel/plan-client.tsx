@@ -72,22 +72,25 @@ export function PlanClient({ id }: { id: string }) {
         });
       }
 
-      // Check stored admin users list (covers newly purchased users with customized months)
+      // Check stored admin users list for the specific authenticated user
       const storedAdminUsers = getStoredAdminUsers();
       const matchedUser = storedAdminUsers.find(
         (u) =>
-          u.id === id ||
-          u.assessmentId === id ||
-          (userProfile?.uid && (u.id === userProfile.uid || u.email === userProfile.email)) ||
-          (id === "local" && u.membershipCategory === "purchased")
+          (userProfile?.uid && (u.id === userProfile.uid || (u.email && u.email.toLowerCase() === userProfile.email?.toLowerCase()))) ||
+          (id !== "local" && id !== "demo" && (u.id === id || u.assessmentId === id))
       );
 
-      const isPaidFromAdmin =
-        matchedUser?.membershipCategory === "purchased" ||
-        matchedUser?.membershipCategory === "membership" ||
-        matchedUser?.order?.status === "paid";
+      // Only mark paid from admin if this specific user profile is genuinely purchased
+      const isPaidFromAdmin = Boolean(
+        userProfile?.uid &&
+          matchedUser &&
+          (matchedUser.id === userProfile.uid || (matchedUser.email && matchedUser.email.toLowerCase() === userProfile.email?.toLowerCase())) &&
+          (matchedUser.membershipCategory === "purchased" ||
+            matchedUser.membershipCategory === "membership" ||
+            matchedUser.order?.status === "paid")
+      );
 
-      // 2. If user is NOT subscribed and NOT Coach Naveen, lock access immediately
+      // 2. Lock access immediately unless user is Coach Naveen or genuinely paid ₹99
       const userEntitled = isCoach || hasPurchasedProfile || isPaidLocal || isPaidFromAdmin;
 
       // 3. Try to fetch direct plan if entitled or looking up a specific id

@@ -143,10 +143,15 @@ export function SiteHeader() {
                         <span>My 8-Week Plan</span>
                         <span className="text-[#00c853]">→</span>
                       </Link>
-                      <Link
-                        href="/plan#coach-chat"
-                        onClick={() => setIsProfileOpen(false)}
-                        className="flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-bold text-emerald-800 hover:bg-emerald-50 transition-colors"
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsProfileOpen(false);
+                          if (typeof window !== "undefined") {
+                            window.dispatchEvent(new CustomEvent("bmyfit_open_chat"));
+                          }
+                        }}
+                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-bold text-emerald-800 hover:bg-emerald-50 transition-colors text-left cursor-pointer"
                       >
                         <span className="flex items-center gap-1.5">
                           <span>💬</span>
@@ -155,7 +160,7 @@ export function SiteHeader() {
                         <span className="text-[9px] font-black uppercase bg-[#25D366] text-black px-1.5 rounded-full">
                           ONLINE
                         </span>
-                      </Link>
+                      </button>
                       <Link
                         href="/admin"
                         onClick={() => setIsProfileOpen(false)}
@@ -356,6 +361,24 @@ export function SiteHeader() {
                       <span>Body Calculator</span>
                       <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">FREE</span>
                     </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        if (typeof window !== "undefined") {
+                          window.dispatchEvent(new CustomEvent("bmyfit_open_chat"));
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-emerald-800 hover:bg-emerald-50 font-bold transition-colors flex items-center justify-between text-left cursor-pointer"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span>💬</span>
+                        <span>Chat with Coach Naveen</span>
+                      </span>
+                      <span className="text-[9px] font-black uppercase bg-[#25D366] text-black px-1.5 rounded-full">
+                        ONLINE
+                      </span>
+                    </button>
                     <Link
                       href="/#goals-section"
                       onClick={() => setIsMenuOpen(false)}

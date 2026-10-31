@@ -26,6 +26,7 @@ interface ClientChatWidgetProps {
   initiallyOpen?: boolean;
   isOpenControlled?: boolean;
   onOpenChange?: (open: boolean) => void;
+  membershipCategory?: "purchased" | "membership" | "free";
 }
 
 export function ClientChatWidget({
@@ -36,6 +37,7 @@ export function ClientChatWidget({
   initiallyOpen = false,
   isOpenControlled,
   onOpenChange,
+  membershipCategory = "free",
 }: ClientChatWidgetProps) {
   const [internalOpen, setInternalOpen] = useState<boolean>(initiallyOpen);
   const isOpen = isOpenControlled !== undefined ? isOpenControlled : internalOpen;
@@ -50,6 +52,22 @@ export function ClientChatWidget({
   const [hasUnreadFromCoach, setHasUnreadFromCoach] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Listen to open chat event or hash #coach-chat
+  useEffect(() => {
+    const handleOpenChat = () => {
+      setIsOpen(true);
+    };
+    window.addEventListener("bmyfit_open_chat", handleOpenChat);
+
+    if (typeof window !== "undefined" && window.location.hash === "#coach-chat") {
+      setIsOpen(true);
+    }
+
+    return () => {
+      window.removeEventListener("bmyfit_open_chat", handleOpenChat);
+    };
+  }, []);
 
   // Subscribe to real-time messages
   useEffect(() => {
@@ -78,6 +96,8 @@ export function ClientChatWidget({
     }
   }, [isOpen, userId, messages.length]);
 
+  const isPaid = membershipCategory === "purchased" || membershipCategory === "membership";
+
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const trimmed = inputText.trim();
@@ -97,12 +117,16 @@ export function ClientChatWidget({
       // Simulated instant coach acknowledgement if this is the first message
       if (messages.length <= 1) {
         setTimeout(async () => {
+          const autoReplyText = isPaid
+            ? `Noted, ${userName.split(" ")[0]}! I received your message. I am actively tailoring your upcoming week's meal and workout adjustments. Keep your water and protein logged!`
+            : `Namaste ${userName.split(" ")[0]}! Coach Naveen here from BMYFIT. I've received your query about your assessment. I review every athlete's metrics personally. Feel free to ask anything about your diet or the ₹99 plan!`;
+
           await sendChatMessage({
             userId,
             senderRole: "coach",
             senderId: "coach_naveen",
             senderName: "Coach Naveen",
-            text: `Noted, ${userName.split(" ")[0]}! I received your message. I am actively tailoring your upcoming week's meal and workout adjustments. Keep your water and protein logged!`,
+            text: autoReplyText,
           });
         }, 1500);
       }
@@ -213,10 +237,12 @@ export function ClientChatWidget({
           <div className="bg-[#128C7E] text-emerald-50 px-3.5 py-1.5 text-[11px] font-semibold flex items-center justify-between border-t border-emerald-600/30">
             <div className="flex items-center gap-1.5 truncate">
               <Sparkles className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
-              <span className="truncate">₹99 Transformation Plan · {planGoal}</span>
+              <span className="truncate">
+                {isPaid ? `₹99 Transformation Plan · ${planGoal}` : `Free Fitness Consultation · ${planGoal}`}
+              </span>
             </div>
             <span className="bg-emerald-950/40 text-emerald-200 px-2 py-0.5 rounded text-[10px] font-mono shrink-0">
-              Direct Sync
+              {isPaid ? "Direct Sync" : "Free Lead"}
             </span>
           </div>
 
@@ -234,7 +260,9 @@ export function ClientChatWidget({
               <div className="bg-amber-100/90 text-amber-900 border border-amber-200/60 rounded-xl px-3 py-1.5 text-[10px] font-semibold text-center max-w-[90%] shadow-xs flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-amber-700 shrink-0" />
                 <span>
-                  Direct 1-on-1 channel with Coach Naveen. Ask about meal swaps, weight logs, or workout tweaks.
+                  {isPaid
+                    ? "Direct 1-on-1 channel with Coach Naveen. Ask about meal swaps, weight logs, or workout tweaks."
+                    : "Direct 1-on-1 consultation with Coach Naveen. Ask questions about your body metrics or the ₹99 transformation plan."}
                 </span>
               </div>
             </div>
@@ -286,17 +314,25 @@ export function ClientChatWidget({
           {/* Quick Reply Suggestions Chips */}
           <div className="bg-[#f0f2f5] px-3 py-2 border-t border-gray-200 overflow-x-auto flex items-center gap-1.5 scrollbar-none">
             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider shrink-0">Ask:</span>
-            {[
-              "⚖️ Logged my morning weight!",
-              "🥗 Can I swap brown rice?",
-              "💪 Leg workout soreness tip?",
-              "💧 Finished 3.5L water target!",
-            ].map((chip) => (
+            {(isPaid
+              ? [
+                  "⚖️ Logged my morning weight!",
+                  "🥗 Can I swap brown rice?",
+                  "💪 Leg workout soreness tip?",
+                  "💧 Finished 3.5L water target!",
+                ]
+              : [
+                  "🔥 How does the ₹99 plan work?",
+                  "🥗 Can I get a pure vegetarian diet?",
+                  "🏋️‍♂️ Can I workout at home?",
+                  "⏱️ How fast will I see results?",
+                ]
+            ).map((chip) => (
               <button
                 key={chip}
                 type="button"
                 onClick={() => handleQuickQuestion(chip)}
-                className="shrink-0 bg-white hover:bg-emerald-50 text-gray-700 hover:text-emerald-800 border border-gray-200 rounded-full px-2.5 py-1 text-[11px] font-medium transition shadow-xs active:scale-95"
+                className="shrink-0 bg-white hover:bg-emerald-50 text-gray-700 hover:text-emerald-800 border border-gray-200 rounded-full px-2.5 py-1 text-[11px] font-medium transition shadow-xs active:scale-95 cursor-pointer"
               >
                 {chip}
               </button>
