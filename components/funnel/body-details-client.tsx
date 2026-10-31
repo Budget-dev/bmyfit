@@ -948,8 +948,8 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
               )}
             </div>
 
-            {/* "How to measure correctly?" Section matching screenshot */}
-            <div className="mt-4 rounded-2xl bg-[#eaf7ee] border border-emerald-200/70 p-3 text-left">
+            {/* "How to measure correctly?" Section matching screenshot (Mobile only, desktop uses rich sidebar) */}
+            <div className="md:hidden mt-4 rounded-2xl bg-[#eaf7ee] border border-emerald-200/70 p-3 text-left">
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

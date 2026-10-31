@@ -46,19 +46,19 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-sm border-b border-gray-100">
-        <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-2.5 flex items-center justify-between">
+      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 py-2 sm:py-2.5 md:py-3.5 flex items-center justify-between">
           {/* Brand Logo */}
           <BmyFitLogo />
 
           {/* Desktop Navigation Links (Visible on screens >= 768px) */}
-          <nav className="hidden md:flex items-center gap-5 lg:gap-7 text-xs font-semibold text-gray-700">
+          <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-sm font-semibold text-gray-700">
             <Link href="/" className="hover:text-emerald-600 transition-colors">
               Home
             </Link>
-            <Link href="/#calculator-card" className="hover:text-emerald-600 transition-colors flex items-center gap-1.5">
+            <Link href="/details" className="hover:text-emerald-600 transition-colors flex items-center gap-1.5">
               <span>Calculator</span>
-              <span className="text-[9px] font-extrabold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full">
+              <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
                 FREE
               </span>
             </Link>
@@ -80,7 +80,7 @@ export function SiteHeader() {
           </nav>
 
           {/* Right Header Buttons: Auth / CTA + Notification Bell + Mobile Hamburger */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
             {/* User Profile Dropdown (when authenticated) */}
             {isAuthenticated && userProfile ? (
               <div className="relative" ref={profileRef}>
@@ -197,8 +197,8 @@ export function SiteHeader() {
 
             {/* Desktop CTA Button */}
             <Link
-              href="/#calculator-card"
-              className="hidden sm:inline-flex items-center gap-1.5 bg-[#00e676] hover:bg-[#00c864] text-black font-extrabold text-xs py-1.5 px-3.5 rounded-full shadow-sm hover:shadow transition-all active:scale-95"
+              href="/details"
+              className="hidden sm:inline-flex items-center gap-1.5 bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-xs md:text-sm py-1.5 md:py-2 px-3.5 md:px-5 rounded-full shadow-sm hover:shadow-md transition-all active:scale-95"
             >
               <span>Calculate Free</span>
               <span>→</span>

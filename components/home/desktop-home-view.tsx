@@ -46,17 +46,19 @@ export function DesktopHomeView() {
     setCalculatedBmi(computedBmi);
 
     // Approximate body fat & calories for Indian baseline
-    const approxBodyFat = gender === "male"
-      ? Math.round((1.2 * computedBmi + 0.23 * age - 16.2) * 10) / 10
-      : Math.round((1.2 * computedBmi + 0.23 * age - 5.4) * 10) / 10;
+    const approxBodyFat =
+      gender === "male"
+        ? Math.round((1.2 * computedBmi + 0.23 * age - 16.2) * 10) / 10
+        : Math.round((1.2 * computedBmi + 0.23 * age - 5.4) * 10) / 10;
     setBodyFat(Math.max(10, Math.min(45, approxBodyFat)));
 
     const approxLean = Math.round((weight * (1 - approxBodyFat / 100)) * 10) / 10;
     setLeanMass(approxLean);
 
-    const bmr = gender === "male"
-      ? Math.round(10 * weight + 6.25 * height - 5 * age + 5)
-      : Math.round(10 * weight + 6.25 * height - 5 * age - 161);
+    const bmr =
+      gender === "male"
+        ? Math.round(10 * weight + 6.25 * height - 5 * age + 5)
+        : Math.round(10 * weight + 6.25 * height - 5 * age - 161);
     setDailyCalories(Math.round(bmr * 1.35));
 
     saveDraftDetails({
@@ -121,53 +123,59 @@ export function DesktopHomeView() {
   ];
 
   return (
-    <div className="w-full bg-[#ffffff] text-gray-900 selection:bg-[#00e676] selection:text-black">
-      {/* ================= 1. DESKTOP HERO SECTION (Dark Athletic Gym Background) ================= */}
-      <section className="relative w-full bg-[#080e0b] text-white pt-10 sm:pt-14 pb-16 sm:pb-20 overflow-hidden border-b border-emerald-950/40">
+    <div className="w-full bg-[#07100b] text-white selection:bg-[#00e676] selection:text-black">
+      {/* ================= 1. DESKTOP HERO SECTION ================= */}
+      <section className="relative w-full bg-gradient-to-b from-[#060c09] via-[#08140e] to-[#04120a] text-white pt-12 lg:pt-16 pb-16 lg:pb-24 overflow-hidden border-b border-emerald-950/60">
         {/* Radial Ambient Glow */}
-        <div className="absolute top-1/4 right-1/4 w-[600px] h-[600px] bg-gradient-to-br from-[#00e676]/15 via-emerald-700/5 to-transparent rounded-full blur-[140px] pointer-events-none" />
-        <div className="absolute -bottom-20 -left-20 w-[450px] h-[450px] bg-[#00c853]/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute top-1/4 right-1/4 w-[650px] h-[650px] bg-gradient-to-br from-[#00e676]/20 via-emerald-600/10 to-transparent rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-[500px] h-[500px] bg-[#00c853]/15 rounded-full blur-[130px] pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Content Column (7 cols) */}
-            <div className="lg:col-span-7 space-y-6 text-left z-10">
+            <div className="lg:col-span-7 space-y-7 text-left">
               {/* Pill Badge */}
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-950/60 px-3.5 py-1 text-xs font-black tracking-wider text-[#00e676] uppercase shadow-inner">
-                <span className="w-2 h-2 rounded-full bg-[#00e676] animate-pulse" />
-                <span>PERSONALIZED FOR INDIAN BODIES</span>
+              <div className="inline-flex items-center gap-2.5 rounded-full border border-emerald-400/40 bg-emerald-950/80 px-4 py-1.5 text-xs font-black tracking-wider text-[#00e676] uppercase shadow-lg shadow-emerald-950/50">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#00e676] animate-pulse" />
+                <span>EVIDENCE-BASED FOR INDIAN BODIES</span>
               </div>
 
               {/* Main Headline */}
-              <h1 className="text-4xl sm:text-5xl lg:text-[62px] font-black uppercase text-white leading-[1.04] tracking-tight">
+              <h1 className="text-4xl sm:text-5xl lg:text-[64px] font-black uppercase text-white leading-[1.03] tracking-tight">
                 TRAIN SMART.
                 <br />
                 GET RESULTS.
                 <br />
-                <span className="text-[#00e676] drop-shadow-[0_2px_20px_rgba(0,230,118,0.4)]">
+                <span className="text-[#00e676] drop-shadow-[0_4px_30px_rgba(0,230,118,0.5)]">
                   FEEL UNSTOPPABLE.
                 </span>
               </h1>
 
               {/* Subtitle */}
-              <p className="text-gray-300 text-base sm:text-lg max-w-xl font-normal leading-relaxed">
-                Your fitness journey should be simple, scientific and sustainable. Get a personalized Indian fitness plan based on your body, goal and lifestyle.
+              <p className="text-gray-300 text-lg lg:text-xl max-w-xl font-normal leading-relaxed">
+                Your fitness journey should be simple, scientific and sustainable. Get a personalized Indian fitness and nutrition plan based on your exact body data, goal, and daily lifestyle.
               </p>
 
-              {/* CTA Button */}
-              <div className="pt-2">
+              {/* Action Buttons */}
+              <div className="flex items-center gap-4 pt-2">
                 <button
                   type="button"
                   onClick={scrollToCalculator}
-                  className="inline-flex items-center gap-3 bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-base px-8 py-4 rounded-full shadow-lg shadow-emerald-500/30 hover:shadow-xl transition-all duration-300 active:scale-95 group"
+                  className="inline-flex items-center gap-3 bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-base px-8 py-4 rounded-full shadow-xl shadow-emerald-500/25 hover:shadow-2xl transition-all duration-300 active:scale-95 group cursor-pointer"
                 >
-                  <span>Start Your Journey</span>
+                  <span>Start Free Body Analysis</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
+                <Link
+                  href="/about"
+                  className="inline-flex items-center gap-2 border border-emerald-500/30 hover:border-emerald-400/60 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 font-bold text-base px-6 py-4 rounded-full transition-all duration-300"
+                >
+                  <span>Meet Coach Naveen</span>
+                </Link>
               </div>
 
               {/* Trust Features Row */}
-              <div className="flex flex-wrap items-center gap-6 pt-4 text-xs font-bold text-gray-300">
+              <div className="flex flex-wrap items-center gap-6 pt-3 text-xs font-bold text-gray-300">
                 <div className="flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-[#00e676] flex items-center justify-center text-xs">
                     ✓
@@ -178,20 +186,20 @@ export function DesktopHomeView() {
                   <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-[#00e676] flex items-center justify-center text-xs">
                     ✓
                   </span>
-                  <span>Made for Indian Bodies</span>
+                  <span>Made for Indian Diets</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-[#00e676] flex items-center justify-center text-xs">
                     ✓
                   </span>
-                  <span>Simple &amp; Practical</span>
+                  <span>No Starvation Diets</span>
                 </div>
               </div>
             </div>
 
             {/* Right Photography Column (5 cols) */}
             <div className="lg:col-span-5 relative flex justify-center lg:justify-end">
-              <div className="relative w-full max-w-[480px] aspect-[4/4.8] rounded-3xl overflow-hidden shadow-2xl border border-emerald-950/60 bg-gradient-to-tr from-black via-gray-950 to-emerald-950/30 group">
+              <div className="relative w-full max-w-[480px] aspect-[4/4.8] rounded-3xl overflow-hidden shadow-2xl border border-emerald-500/30 bg-gradient-to-tr from-black via-gray-950 to-emerald-950/40 group">
                 <Image
                   src="/images/hero-model.jpg"
                   alt="Athletic Indian bodybuilder curling dumbbell"
@@ -200,11 +208,11 @@ export function DesktopHomeView() {
                   className="object-cover object-[center_12%] group-hover:scale-105 transition-transform duration-700"
                   sizes="(max-width: 1024px) 100vw, 480px"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#080e0b] via-transparent to-transparent pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#060c09] via-transparent to-transparent pointer-events-none" />
 
                 {/* Better Stronger Healthier You script overlay */}
                 <div className="absolute top-6 right-6 text-right select-none pointer-events-none z-20">
-                  <div className="font-serif italic text-2xl lg:text-3xl text-white font-bold leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
+                  <div className="font-serif italic text-2xl lg:text-3xl text-white font-bold leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
                     <div>Better</div>
                     <div>Stronger</div>
                     <div>Healthier</div>
@@ -219,105 +227,105 @@ export function DesktopHomeView() {
       </section>
 
       {/* ================= 2. FOUR STATS BANNER ================= */}
-      <section className="bg-[#04120a] border-b border-emerald-950/60 py-6 text-white">
+      <section className="bg-[#03150c] border-b border-emerald-900/40 py-8 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-center divide-x-0 lg:divide-x divide-white/10">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-center divide-x-0 lg:divide-x divide-emerald-800/30">
             {/* Stat 1 */}
             <div className="space-y-1">
               <div className="text-3xl sm:text-4xl font-black text-[#00e676]">3+</div>
               <div className="text-xs font-black uppercase tracking-wider text-white">CERTIFIED TRAINER</div>
-              <p className="text-[11px] text-gray-400">Expert fitness &amp; nutrition coaching</p>
+              <p className="text-xs text-emerald-200/70">Expert fitness &amp; sports nutrition</p>
             </div>
 
             {/* Stat 2 */}
             <div className="space-y-1">
               <div className="text-3xl sm:text-4xl font-black text-[#00e676]">7+</div>
               <div className="text-xs font-black uppercase tracking-wider text-white">YEARS OF EXPERIENCE</div>
-              <p className="text-[11px] text-gray-400">Helping 1000+ people transform</p>
+              <p className="text-xs text-emerald-200/70">Transforming 1000+ Indian adults</p>
             </div>
 
             {/* Stat 3 */}
             <div className="space-y-1">
-              <div className="text-3xl sm:text-4xl font-black text-[#00e676]">384+</div>
-              <div className="text-xs font-black uppercase tracking-wider text-white">CLIENTS TRAINED</div>
-              <p className="text-[11px] text-gray-400">Real people. Real results.</p>
+              <div className="text-3xl sm:text-4xl font-black text-[#00e676]">1000+</div>
+              <div className="text-xs font-black uppercase tracking-wider text-white">CLIENTS TRANSFORMED</div>
+              <p className="text-xs text-emerald-200/70">Real people. Real results.</p>
             </div>
 
             {/* Stat 4 */}
             <div className="space-y-1">
               <div className="text-3xl sm:text-4xl font-black text-[#00e676]">95%</div>
-              <div className="text-xs font-black uppercase tracking-wider text-white">GOAL SUCCESS</div>
-              <p className="text-[11px] text-gray-400">Clients achieve their goals</p>
+              <div className="text-xs font-black uppercase tracking-wider text-white">GOAL SUCCESS RATE</div>
+              <p className="text-xs text-emerald-200/70">Clients reach their target weight</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ================= 3. CALCULATOR & MEET COACH SIDE-BY-SIDE ================= */}
-      <section id="calculator-section" className="py-12 sm:py-16 bg-[#fafafa]">
+      {/* ================= 3. CALCULATOR & MEET COACH SECTION ================= */}
+      <section id="calculator-section" className="py-16 lg:py-20 bg-gradient-to-b from-[#04120a] via-[#06190f] to-[#04120a] border-b border-emerald-950/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
             {/* Left Card: Know Your Body & Calculator (7 cols) */}
-            <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 border border-gray-200/90 shadow-sm flex flex-col justify-between text-left">
+            <div className="lg:col-span-7 bg-[#0b1d14] rounded-3xl p-8 lg:p-10 border border-emerald-500/25 shadow-2xl flex flex-col justify-between text-left">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">
-                    CALCULATE YOUR BMI
+                  <span className="text-[11px] font-black uppercase tracking-wider bg-emerald-500/20 text-[#00e676] border border-emerald-500/40 px-3 py-1 rounded-full">
+                    CLINICAL ANTHROPOMETRY
                   </span>
-                  <span className="text-xs font-bold text-gray-400">Clinical Formula</span>
+                  <span className="text-xs font-bold text-emerald-300/80">WHO &amp; US Navy Formula</span>
                 </div>
 
-                <h2 className="text-2xl sm:text-3xl font-black text-gray-950 tracking-tight">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
                   Know Your Body.
                   <br />
-                  Start Your Transformation.
+                  <span className="text-[#00e676]">Start Your Transformation.</span>
                 </h2>
-                <p className="text-xs sm:text-sm text-gray-500 font-medium">
-                  Get your clinical BMI, estimated body fat and a personalized Indian fitness plan in just a few seconds.
+                <p className="text-sm text-gray-300 font-medium">
+                  Get your clinical BMI, estimated body fat % and personalized daily calories calibrated for South Asian genetics in seconds.
                 </p>
               </div>
 
               {/* Form & Gauge Layout */}
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center my-6">
                 {/* Inputs (7 cols) */}
-                <form onSubmit={handleCalculate} className="sm:col-span-7 space-y-3">
+                <form onSubmit={handleCalculate} className="sm:col-span-7 space-y-3.5">
                   {/* Age */}
-                  <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-xl border border-gray-200">
-                    <span className="text-xs font-bold text-gray-700">Age</span>
+                  <div className="flex items-center justify-between bg-emerald-950/60 p-3 rounded-xl border border-emerald-500/30">
+                    <span className="text-xs font-bold text-gray-200">Age</span>
                     <div className="flex items-center gap-1.5">
                       <input
                         type="number"
                         value={age}
                         onChange={(e) => setAge(Number(e.target.value))}
-                        className="w-16 bg-white border border-gray-300 rounded-lg px-2 py-1 text-center font-bold text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        className="w-16 bg-[#04120a] border border-emerald-500/40 rounded-lg px-2 py-1 text-center font-bold text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-400"
                       />
                       <span className="text-xs text-gray-400 font-semibold">years</span>
                     </div>
                   </div>
 
                   {/* Height */}
-                  <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-xl border border-gray-200">
-                    <span className="text-xs font-bold text-gray-700">Height</span>
+                  <div className="flex items-center justify-between bg-emerald-950/60 p-3 rounded-xl border border-emerald-500/30">
+                    <span className="text-xs font-bold text-gray-200">Height</span>
                     <div className="flex items-center gap-1.5">
                       <input
                         type="number"
                         value={height}
                         onChange={(e) => setHeight(Number(e.target.value))}
-                        className="w-16 bg-white border border-gray-300 rounded-lg px-2 py-1 text-center font-bold text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        className="w-16 bg-[#04120a] border border-emerald-500/40 rounded-lg px-2 py-1 text-center font-bold text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-400"
                       />
                       <span className="text-xs text-gray-400 font-semibold">cm</span>
                     </div>
                   </div>
 
                   {/* Weight */}
-                  <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-xl border border-gray-200">
-                    <span className="text-xs font-bold text-gray-700">Weight</span>
+                  <div className="flex items-center justify-between bg-emerald-950/60 p-3 rounded-xl border border-emerald-500/30">
+                    <span className="text-xs font-bold text-gray-200">Weight</span>
                     <div className="flex items-center gap-1.5">
                       <input
                         type="number"
                         value={weight}
                         onChange={(e) => setWeight(Number(e.target.value))}
-                        className="w-16 bg-white border border-gray-300 rounded-lg px-2 py-1 text-center font-bold text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        className="w-16 bg-[#04120a] border border-emerald-500/40 rounded-lg px-2 py-1 text-center font-bold text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-400"
                       />
                       <span className="text-xs text-gray-400 font-semibold">kg</span>
                     </div>
@@ -328,20 +336,22 @@ export function DesktopHomeView() {
                     <button
                       type="button"
                       onClick={() => setGender("male")}
-                      className={`py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 ${gender === "male"
-                          ? "bg-gray-950 text-white shadow-xs"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        }`}
+                      className={`py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        gender === "male"
+                          ? "bg-[#00e676] text-gray-950 shadow-md"
+                          : "bg-emerald-950/80 text-gray-300 border border-emerald-800/40 hover:bg-emerald-900/60"
+                      }`}
                     >
                       <span>👨 Male</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setGender("female")}
-                      className={`py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 ${gender === "female"
-                          ? "bg-gray-950 text-white shadow-xs"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        }`}
+                      className={`py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        gender === "female"
+                          ? "bg-[#00e676] text-gray-950 shadow-md"
+                          : "bg-emerald-950/80 text-gray-300 border border-emerald-800/40 hover:bg-emerald-900/60"
+                      }`}
                     >
                       <span>👩 Female</span>
                     </button>
@@ -350,7 +360,7 @@ export function DesktopHomeView() {
                   {/* Calculate CTA */}
                   <button
                     type="submit"
-                    className="w-full py-3 bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-xs sm:text-sm rounded-xl shadow-md transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer mt-2"
+                    className="w-full py-3.5 bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-sm rounded-xl shadow-lg shadow-emerald-500/30 transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer mt-3"
                   >
                     <span>Calculate My Body</span>
                     <ArrowRight className="w-4 h-4" />
@@ -358,15 +368,15 @@ export function DesktopHomeView() {
                 </form>
 
                 {/* Circular Gauge Display (5 cols) */}
-                <div className="sm:col-span-5 flex flex-col items-center justify-center text-center p-3 bg-emerald-50/40 rounded-2xl border border-emerald-100/80">
+                <div className="sm:col-span-5 flex flex-col items-center justify-center text-center p-4 bg-[#05170e] rounded-2xl border border-emerald-500/30">
                   {/* SVG Circular Gauge */}
-                  <div className="relative w-36 h-36 flex items-center justify-center">
+                  <div className="relative w-40 h-40 flex items-center justify-center">
                     <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                       <circle
                         cx="50"
                         cy="50"
                         r="40"
-                        stroke="#e5e7eb"
+                        stroke="#0a2a1b"
                         strokeWidth="8"
                         fill="transparent"
                       />
@@ -374,7 +384,7 @@ export function DesktopHomeView() {
                         cx="50"
                         cy="50"
                         r="40"
-                        stroke="#00c853"
+                        stroke="#00e676"
                         strokeWidth="8"
                         strokeDasharray="251.2"
                         strokeDashoffset={251.2 - (251.2 * Math.min(100, (calculatedBmi / 35) * 100)) / 100}
@@ -383,26 +393,26 @@ export function DesktopHomeView() {
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-2xl font-black text-gray-950 leading-none">{calculatedBmi}</span>
-                      <span className="text-[10px] font-black uppercase text-emerald-700 mt-1">BMI</span>
+                      <span className="text-3xl font-black text-white leading-none">{calculatedBmi}</span>
+                      <span className="text-xs font-black uppercase text-[#00e676] mt-1">BMI SCORE</span>
                     </div>
                   </div>
 
-                  <span className="text-xs font-bold text-gray-800 mt-2">Normal Weight 18.5 – 24.9</span>
+                  <span className="text-xs font-bold text-emerald-200 mt-2">Normal Range: 18.5 – 24.9</span>
 
                   {/* 3 Pill Stats */}
-                  <div className="grid grid-cols-3 gap-1.5 w-full mt-3 pt-3 border-t border-emerald-100 text-center">
-                    <div className="bg-white p-1.5 rounded-lg border border-gray-100 shadow-2xs">
-                      <div className="text-xs font-black text-emerald-700">{bodyFat}%</div>
-                      <div className="text-[9px] text-gray-400 font-semibold">Body Fat</div>
+                  <div className="grid grid-cols-3 gap-2 w-full mt-3 pt-3 border-t border-emerald-900/60 text-center">
+                    <div className="bg-[#0b1f14] p-2 rounded-xl border border-emerald-800/40">
+                      <div className="text-sm font-black text-[#00e676]">{bodyFat}%</div>
+                      <div className="text-[10px] text-gray-400 font-semibold">Body Fat</div>
                     </div>
-                    <div className="bg-white p-1.5 rounded-lg border border-gray-100 shadow-2xs">
-                      <div className="text-xs font-black text-teal-700">{leanMass} kg</div>
-                      <div className="text-[9px] text-gray-400 font-semibold">Lean Mass</div>
+                    <div className="bg-[#0b1f14] p-2 rounded-xl border border-emerald-800/40">
+                      <div className="text-sm font-black text-teal-400">{leanMass} kg</div>
+                      <div className="text-[10px] text-gray-400 font-semibold">Lean Mass</div>
                     </div>
-                    <div className="bg-white p-1.5 rounded-lg border border-gray-100 shadow-2xs">
-                      <div className="text-xs font-black text-orange-600">{dailyCalories}</div>
-                      <div className="text-[9px] text-gray-400 font-semibold">Calories</div>
+                    <div className="bg-[#0b1f14] p-2 rounded-xl border border-emerald-800/40">
+                      <div className="text-sm font-black text-amber-400">{dailyCalories}</div>
+                      <div className="text-[10px] text-gray-400 font-semibold">Calories</div>
                     </div>
                   </div>
                 </div>
@@ -410,58 +420,62 @@ export function DesktopHomeView() {
             </div>
 
             {/* Right Card: Meet Coach Naveen (5 cols) */}
-            <div className="lg:col-span-5 bg-[#032e1c] text-white rounded-3xl p-6 sm:p-8 border border-emerald-900/60 shadow-sm flex flex-col justify-between relative overflow-hidden text-left">
-              <div className="space-y-3 z-10">
-                <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-400/20 text-[#00e676] px-2.5 py-0.5 rounded-full inline-block">
+            <div className="lg:col-span-5 bg-gradient-to-b from-[#052416] to-[#02180e] text-white rounded-3xl p-8 lg:p-10 border border-emerald-500/30 shadow-2xl flex flex-col justify-between relative overflow-hidden text-left">
+              <div className="space-y-4 z-10">
+                <span className="text-[11px] font-black uppercase tracking-wider bg-emerald-500/20 text-[#00e676] border border-emerald-500/40 px-3 py-1 rounded-full inline-block">
                   MEET YOUR COACH
                 </span>
 
                 <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                  Hi, I&apos;m Coach Naveen
+                  Coach Naveen
                 </h2>
 
-                <p className="text-xs sm:text-sm text-emerald-100/90 font-normal leading-relaxed">
-                  Owner of Blaze Gym &amp; several fitness centers. As a Certified Fitness Coach &amp; Sports Nutritionist, I help Indian adults achieve sustainable body transformation through tailored nutrition and evidence-based training.
+                <p className="text-sm text-emerald-100/90 font-normal leading-relaxed">
+                  Owner of Blaze Gym &amp; multiple fitness hubs. Certified Fitness Coach &amp; Sports Nutritionist with 7+ years of clinical transformation experience tailored for Indian adults.
                 </p>
 
                 {/* Bullets */}
-                <div className="space-y-2.5 pt-2">
-                  <div className="flex items-center gap-2.5 text-xs font-bold text-white">
-                    <div className="w-5 h-5 rounded-full bg-[#00e676]/20 text-[#00e676] flex items-center justify-center text-xs">
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center gap-3 text-xs font-bold text-white">
+                    <div className="w-6 h-6 rounded-full bg-[#00e676]/20 text-[#00e676] flex items-center justify-center text-xs">
                       🏋️
                     </div>
-                    <span>Blaze Gym Owner</span>
+                    <span>Blaze Gym Founder &amp; Head Coach</span>
                   </div>
-                  <div className="flex items-center gap-2.5 text-xs font-bold text-white">
-                    <div className="w-5 h-5 rounded-full bg-[#00e676]/20 text-[#00e676] flex items-center justify-center text-xs">
+                  <div className="flex items-center gap-3 text-xs font-bold text-white">
+                    <div className="w-6 h-6 rounded-full bg-[#00e676]/20 text-[#00e676] flex items-center justify-center text-xs">
                       🎓
                     </div>
-                    <span>Certified Nutritionist</span>
+                    <span>Certified Sports Nutritionist (ISSA / ACSM)</span>
                   </div>
-                  <div className="flex items-center gap-2.5 text-xs font-bold text-white">
-                    <div className="w-5 h-5 rounded-full bg-[#00e676]/20 text-[#00e676] flex items-center justify-center text-xs">
+                  <div className="flex items-center gap-3 text-xs font-bold text-white">
+                    <div className="w-6 h-6 rounded-full bg-[#00e676]/20 text-[#00e676] flex items-center justify-center text-xs">
                       ⏳
                     </div>
-                    <span>7+ Years Experience</span>
+                    <span>7+ Years Experience · 1000+ Transformations</span>
                   </div>
-                  <div className="flex items-center gap-2.5 text-xs font-bold text-white">
-                    <div className="w-5 h-5 rounded-full bg-[#00e676]/20 text-[#00e676] flex items-center justify-center text-xs">
-                      🎯
+                  <div className="flex items-center gap-3 text-xs font-bold text-white">
+                    <div className="w-6 h-6 rounded-full bg-[#00e676]/20 text-[#00e676] flex items-center justify-center text-xs">
+                      🍛
                     </div>
-                    <span>Body Recomposition Expert</span>
+                    <span>Specialist in Indian Food Macros &amp; Diets</span>
                   </div>
                 </div>
               </div>
 
-              {/* Cutout Photo of Coach Naveen in Green T-Shirt */}
-              <div className="relative w-full h-44 sm:h-52 mt-4 flex justify-end items-end z-0">
-                <div className="relative w-44 sm:w-52 h-full">
+              {/* Framed Coach Portrait */}
+              <div className="mt-6 p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/30 flex items-center gap-4 z-10">
+                <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-[#00e676]">
                   <Image
-                    src="/images/coach-naveen-original.png"
-                    alt="Coach Naveen in gym t-shirt"
+                    src="/images/coach-portrait.jpg"
+                    alt="Coach Naveen"
                     fill
-                    className="object-contain object-bottom"
+                    className="object-cover object-[center_35%]"
                   />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-white">1-on-1 Direct Support</h4>
+                  <p className="text-xs text-gray-300 mt-0.5">Every ₹99 plan includes direct WhatsApp chat access to Coach Naveen.</p>
                 </div>
               </div>
             </div>
@@ -470,70 +484,70 @@ export function DesktopHomeView() {
       </section>
 
       {/* ================= 4. TAILORED TRAINING EXPERIENCE (4 Horizontal Cards) ================= */}
-      <section className="py-14 sm:py-20 bg-[#04120a] text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-10">
-          <div className="space-y-2 max-w-2xl mx-auto">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#00e676] bg-emerald-950/80 border border-emerald-500/30 px-3 py-1 rounded-full">
-              WHAT YOU GET
+      <section className="py-16 sm:py-20 bg-[#031109] text-white border-b border-emerald-950/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-12">
+          <div className="space-y-3 max-w-2xl mx-auto">
+            <span className="text-[11px] font-black uppercase tracking-widest text-[#00e676] bg-emerald-950/80 border border-emerald-500/30 px-3.5 py-1 rounded-full">
+              COMPLETE TRANSFORMATION
             </span>
-            <h2 className="text-3xl sm:text-4xl font-black uppercase text-white tracking-tight mt-2">
+            <h2 className="text-3xl sm:text-4xl font-black uppercase text-white tracking-tight">
               <span className="text-[#00e676]">TAILORED</span> TRAINING EXPERIENCE
             </h2>
-            <p className="text-xs sm:text-sm text-gray-400 font-medium leading-relaxed">
-              Whether your goal is to build strength, lose fat or level up your performance, our programs are built around your body, lifestyle and Indian food habits.
+            <p className="text-sm text-gray-300 font-medium leading-relaxed">
+              Whether your goal is to build strength, lose stubborn visceral fat or increase daily energy, our blueprints fit your body, schedule, and Indian food preferences.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
             {/* Card 1 */}
-            <div className="bg-[#081f14] p-6 rounded-3xl border border-emerald-900/60 shadow-sm space-y-3 hover:border-emerald-500/50 transition">
-              <div className="w-12 h-12 rounded-2xl bg-[#00e676]/10 text-[#00e676] flex items-center justify-center border border-[#00e676]/30">
+            <div className="bg-[#081f14] p-6 lg:p-7 rounded-3xl border border-emerald-800/40 shadow-lg space-y-4 hover:border-emerald-500/60 transition group">
+              <div className="w-12 h-12 rounded-2xl bg-[#00e676]/10 text-[#00e676] flex items-center justify-center border border-[#00e676]/30 group-hover:scale-110 transition-transform">
                 <Dumbbell className="w-6 h-6" />
               </div>
-              <h3 className="text-sm font-black text-white uppercase tracking-wide">
-                PERSONAL TRAINING PLAN
+              <h3 className="text-base font-black text-white uppercase tracking-wide">
+                PERSONAL TRAINING SPLIT
               </h3>
-              <p className="text-xs text-gray-400 leading-relaxed font-normal">
-                Customized workouts based on your goal, body and available time.
+              <p className="text-xs text-gray-300 leading-relaxed font-normal">
+                Custom workout splits based on whether you train at gym, home dumbbells, or bodyweight.
               </p>
             </div>
 
             {/* Card 2 */}
-            <div className="bg-[#081f14] p-6 rounded-3xl border border-emerald-900/60 shadow-sm space-y-3 hover:border-emerald-500/50 transition">
-              <div className="w-12 h-12 rounded-2xl bg-[#00e676]/10 text-[#00e676] flex items-center justify-center border border-[#00e676]/30">
+            <div className="bg-[#081f14] p-6 lg:p-7 rounded-3xl border border-emerald-800/40 shadow-lg space-y-4 hover:border-emerald-500/60 transition group">
+              <div className="w-12 h-12 rounded-2xl bg-[#00e676]/10 text-[#00e676] flex items-center justify-center border border-[#00e676]/30 group-hover:scale-110 transition-transform">
                 <Video className="w-6 h-6" />
               </div>
-              <h3 className="text-sm font-black text-white uppercase tracking-wide">
-                ONLINE COACHING
+              <h3 className="text-base font-black text-white uppercase tracking-wide">
+                1-ON-1 COACH ACCESS
               </h3>
-              <p className="text-xs text-gray-400 leading-relaxed font-normal">
-                Get expert guidance, progress tracking and continuous support.
+              <p className="text-xs text-gray-300 leading-relaxed font-normal">
+                Direct WhatsApp helpline with Coach Naveen for exercise form checks and meal swaps.
               </p>
             </div>
 
             {/* Card 3 */}
-            <div className="bg-[#081f14] p-6 rounded-3xl border border-emerald-900/60 shadow-sm space-y-3 hover:border-emerald-500/50 transition">
-              <div className="w-12 h-12 rounded-2xl bg-[#00e676]/10 text-[#00e676] flex items-center justify-center border border-[#00e676]/30">
+            <div className="bg-[#081f14] p-6 lg:p-7 rounded-3xl border border-emerald-800/40 shadow-lg space-y-4 hover:border-emerald-500/60 transition group">
+              <div className="w-12 h-12 rounded-2xl bg-[#00e676]/10 text-[#00e676] flex items-center justify-center border border-[#00e676]/30 group-hover:scale-110 transition-transform">
                 <Utensils className="w-6 h-6" />
               </div>
-              <h3 className="text-sm font-black text-white uppercase tracking-wide">
-                NUTRITION &amp; MEAL GUIDANCE
+              <h3 className="text-base font-black text-white uppercase tracking-wide">
+                INDIAN MEAL CALIBRATION
               </h3>
-              <p className="text-xs text-gray-400 leading-relaxed font-normal">
-                Indian food based diet plans that fit your lifestyle and taste.
+              <p className="text-xs text-gray-300 leading-relaxed font-normal">
+                Dal, roti, rice, paneer, eggs, and chicken calibrated to meet protein and fiber targets.
               </p>
             </div>
 
             {/* Card 4 */}
-            <div className="bg-[#081f14] p-6 rounded-3xl border border-emerald-900/60 shadow-sm space-y-3 hover:border-emerald-500/50 transition">
-              <div className="w-12 h-12 rounded-2xl bg-[#00e676]/10 text-[#00e676] flex items-center justify-center border border-[#00e676]/30">
+            <div className="bg-[#081f14] p-6 lg:p-7 rounded-3xl border border-emerald-800/40 shadow-lg space-y-4 hover:border-emerald-500/60 transition group">
+              <div className="w-12 h-12 rounded-2xl bg-[#00e676]/10 text-[#00e676] flex items-center justify-center border border-[#00e676]/30 group-hover:scale-110 transition-transform">
                 <Target className="w-6 h-6" />
               </div>
-              <h3 className="text-sm font-black text-white uppercase tracking-wide">
-                SPECIALIZED PROGRAMS
+              <h3 className="text-base font-black text-white uppercase tracking-wide">
+                PROGRESS WEIGH-IN CHECKS
               </h3>
-              <p className="text-xs text-gray-400 leading-relaxed font-normal">
-                Fat loss, muscle gain, body recomposition and general fitness programs.
+              <p className="text-xs text-gray-300 leading-relaxed font-normal">
+                Weekly check-ins and mid-plan milestone adaptations to keep fat loss steady and safe.
               </p>
             </div>
           </div>
@@ -541,24 +555,24 @@ export function DesktopHomeView() {
       </section>
 
       {/* ================= 5. ABOUT YOUR COACH FEATURE ================= */}
-      <section className="py-16 sm:py-20 bg-white">
+      <section className="py-16 sm:py-24 bg-gradient-to-b from-[#04120a] to-[#071910] text-white border-b border-emerald-950/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Big Photo (5 cols) */}
             <div className="lg:col-span-5 relative">
-              <div className="relative w-full aspect-[4/4.5] rounded-3xl overflow-hidden shadow-2xl border border-gray-200">
+              <div className="relative w-full aspect-[4/4.5] rounded-3xl overflow-hidden shadow-2xl border border-emerald-500/30 bg-emerald-950/40">
                 <Image
                   src="/images/coach-portrait.jpg"
                   alt="Coach Naveen in the gym"
                   fill
-                  className="object-cover object-top"
+                  className="object-cover object-[center_35%]"
                   sizes="(max-width: 1024px) 100vw, 500px"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 <div className="absolute bottom-6 left-6 text-white text-left">
-                  <div className="text-2xl font-black text-[#00e676]">7+ YEARS</div>
+                  <div className="text-3xl font-black text-[#00e676]">7+ YEARS</div>
                   <div className="text-xs font-bold uppercase tracking-wider text-gray-200">
-                    OF EXPERIENCE
+                    TRANSFORMING 1000+ INDIAN CLIENTS
                   </div>
                 </div>
               </div>
@@ -566,55 +580,67 @@ export function DesktopHomeView() {
 
             {/* Right Bio & Credentials (7 cols) */}
             <div className="lg:col-span-7 space-y-6 text-left">
-              <div className="space-y-2">
-                <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full inline-block">
+              <div className="space-y-3">
+                <span className="text-[11px] font-black uppercase tracking-wider bg-emerald-500/20 text-[#00e676] border border-emerald-500/30 px-3.5 py-1 rounded-full inline-block">
                   ABOUT YOUR COACH
                 </span>
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-950 uppercase tracking-tight">
-                  COACH <span className="text-[#00c853]">NAVEEN</span>
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white uppercase tracking-tight">
+                  COACH <span className="text-[#00e676]">NAVEEN</span>
                 </h2>
-                <p className="text-sm sm:text-base text-gray-600 font-normal leading-relaxed pt-1">
-                  I&apos;m Naveen, a Certified Fitness Coach &amp; Sports Nutritionist with 7+ years of experience in helping Indian adults transform their bodies. My approach is simple — science, consistency and habits that actually fit real life.
+                <p className="text-base text-gray-300 font-normal leading-relaxed pt-1">
+                  I&apos;m Naveen, a Certified Fitness Coach &amp; Sports Nutritionist with 7+ years of experience helping Indian adults transform their bodies. My approach is simple — evidence-based science, progressive consistency, and dietary habits that fit your actual daily life.
                 </p>
               </div>
 
               {/* 2x2 Feature Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-200/80">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-black">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div className="flex items-center gap-3.5 p-4 bg-[#082015] rounded-2xl border border-emerald-800/40">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-900/60 text-[#00e676] flex items-center justify-center text-lg font-black border border-emerald-500/30">
                     🛡️
                   </div>
-                  <span className="text-xs font-bold text-gray-900">Certified Fitness Coach</span>
+                  <div>
+                    <span className="text-sm font-bold text-white block">Certified Fitness Coach</span>
+                    <span className="text-xs text-gray-400">ISSA / ACSM Standards</span>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-200/80">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-black">
+                <div className="flex items-center gap-3.5 p-4 bg-[#082015] rounded-2xl border border-emerald-800/40">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-900/60 text-[#00e676] flex items-center justify-center text-lg font-black border border-emerald-500/30">
                     🥗
                   </div>
-                  <span className="text-xs font-bold text-gray-900">Sports Nutritionist</span>
+                  <div>
+                    <span className="text-sm font-bold text-white block">Sports Nutritionist</span>
+                    <span className="text-xs text-gray-400">South Asian Metabolism</span>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-200/80">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-black">
+                <div className="flex items-center gap-3.5 p-4 bg-[#082015] rounded-2xl border border-emerald-800/40">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-900/60 text-[#00e676] flex items-center justify-center text-lg font-black border border-emerald-500/30">
                     👥
                   </div>
-                  <span className="text-xs font-bold text-gray-900">1000+ Clients Guided</span>
+                  <div>
+                    <span className="text-sm font-bold text-white block">1000+ Clients Guided</span>
+                    <span className="text-xs text-gray-400">Blaze Gym Founder</span>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-200/80">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-black">
+                <div className="flex items-center gap-3.5 p-4 bg-[#082015] rounded-2xl border border-emerald-800/40">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-900/60 text-[#00e676] flex items-center justify-center text-lg font-black border border-emerald-500/30">
                     🍛
                   </div>
-                  <span className="text-xs font-bold text-gray-900">Specialist in Indian Diet Plans</span>
+                  <div>
+                    <span className="text-sm font-bold text-white block">Specialist in Indian Food</span>
+                    <span className="text-xs text-gray-400">Zero Western Meal Force</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="pt-2">
+              <div className="pt-3">
                 <Link
                   href="/about"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-xs sm:text-sm rounded-xl shadow-md transition active:scale-95"
+                  className="inline-flex items-center gap-2 px-7 py-3.5 bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-sm rounded-xl shadow-lg shadow-emerald-500/25 transition active:scale-95"
                 >
-                  <span>Know More About Me</span>
+                  <span>Read Coach Naveen&apos;s Full Story</span>
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -623,124 +649,124 @@ export function DesktopHomeView() {
         </div>
       </section>
 
-      {/* ================= 6. WHAT OUR CLIENTS SAY (5 Horizontal Cards) ================= */}
-      <section className="py-14 sm:py-20 bg-[#fafafa] border-y border-gray-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      {/* ================= 6. WHAT OUR CLIENTS SAY ================= */}
+      <section className="py-16 sm:py-24 bg-[#031109] border-b border-emerald-950/60 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 text-left">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
-                REAL PEOPLE. REAL RESULTS.
+              <span className="text-[11px] font-black uppercase tracking-wider text-[#00e676] bg-emerald-950 border border-emerald-500/30 px-3.5 py-1 rounded-full">
+                VERIFIED CLIENT TRANSFORMATIONS
               </span>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-950 tracking-tight mt-2">
+              <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight mt-2.5">
                 What Our Clients Say
               </h2>
-              <p className="text-xs sm:text-sm text-gray-500 font-medium mt-1">
-                Thousands of people have already started their transformation with BMYFIT.
+              <p className="text-sm text-gray-300 font-medium mt-1">
+                Real feedback from clients who unlocked their 8-week transformation blueprint.
               </p>
             </div>
 
             <Link
               href="/details"
-              className="text-xs font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 group shrink-0"
+              className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 group shrink-0"
             >
-              <span>View All Reviews</span>
+              <span>Start Your Transformation</span>
               <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
 
           {/* 5 Horizontal Testimonial Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 text-left">
             {/* Review 1 */}
-            <div className="bg-white p-5 rounded-3xl border border-gray-200/80 shadow-xs flex flex-col justify-between space-y-4">
+            <div className="bg-[#081e13] p-6 rounded-3xl border border-emerald-800/40 shadow-md flex flex-col justify-between space-y-4">
               <div className="space-y-2">
-                <div className="text-emerald-500 text-xs">★★★★★</div>
-                <p className="text-xs text-gray-700 font-medium leading-relaxed italic">
-                  &ldquo;Lost 12 kg in 4 months with a simple plan. So easy to follow!&rdquo;
+                <div className="text-[#00e676] text-xs">★★★★★</div>
+                <p className="text-xs text-gray-200 font-medium leading-relaxed italic">
+                  &ldquo;Lost 12 kg in 4 months with home-cooked Indian meals. No bizarre meal prep!&rdquo;
                 </p>
               </div>
-              <div className="flex items-center gap-2.5 pt-2 border-t border-gray-100">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-2.5 pt-3 border-t border-emerald-900/50">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-[#00e676] font-bold text-xs flex items-center justify-center shrink-0">
                   RK
                 </div>
                 <div>
-                  <div className="text-xs font-black text-gray-950">Rahul K.</div>
-                  <div className="text-[10px] text-gray-400">Software Engineer</div>
+                  <div className="text-xs font-black text-white">Rahul K.</div>
+                  <div className="text-[10px] text-gray-400">Software Engineer, BLR</div>
                 </div>
               </div>
             </div>
 
             {/* Review 2 */}
-            <div className="bg-white p-5 rounded-3xl border border-gray-200/80 shadow-xs flex flex-col justify-between space-y-4">
+            <div className="bg-[#081e13] p-6 rounded-3xl border border-emerald-800/40 shadow-md flex flex-col justify-between space-y-4">
               <div className="space-y-2">
-                <div className="text-emerald-500 text-xs">★★★★★</div>
-                <p className="text-xs text-gray-700 font-medium leading-relaxed italic">
-                  &ldquo;Best coach! Diet plan is practical and suits Indian food. Very effective.&rdquo;
+                <div className="text-[#00e676] text-xs">★★★★★</div>
+                <p className="text-xs text-gray-200 font-medium leading-relaxed italic">
+                  &ldquo;Diet plan has real dal, roti, and curd. I never felt fatigued during workouts.&rdquo;
                 </p>
               </div>
-              <div className="flex items-center gap-2.5 pt-2 border-t border-gray-100">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-2.5 pt-3 border-t border-emerald-900/50">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-[#00e676] font-bold text-xs flex items-center justify-center shrink-0">
                   PS
                 </div>
                 <div>
-                  <div className="text-xs font-black text-gray-950">Priya S.</div>
-                  <div className="text-[10px] text-gray-400">Working Professional</div>
+                  <div className="text-xs font-black text-white">Priya S.</div>
+                  <div className="text-[10px] text-gray-400">Consultant, Pune</div>
                 </div>
               </div>
             </div>
 
             {/* Review 3 */}
-            <div className="bg-white p-5 rounded-3xl border border-gray-200/80 shadow-xs flex flex-col justify-between space-y-4">
+            <div className="bg-[#081e13] p-6 rounded-3xl border border-emerald-800/40 shadow-md flex flex-col justify-between space-y-4">
               <div className="space-y-2">
-                <div className="text-emerald-500 text-xs">★★★★★</div>
-                <p className="text-xs text-gray-700 font-medium leading-relaxed italic">
-                  &ldquo;Gained strength and confidence. Training plans are amazing.&rdquo;
+                <div className="text-[#00e676] text-xs">★★★★★</div>
+                <p className="text-xs text-gray-200 font-medium leading-relaxed italic">
+                  &ldquo;Gained 3.5 kg lean muscle and improved my compound lifts. Amazing structure!&rdquo;
                 </p>
               </div>
-              <div className="flex items-center gap-2.5 pt-2 border-t border-gray-100">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-2.5 pt-3 border-t border-emerald-900/50">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-[#00e676] font-bold text-xs flex items-center justify-center shrink-0">
                   AM
                 </div>
                 <div>
-                  <div className="text-xs font-black text-gray-950">Arjun M.</div>
-                  <div className="text-[10px] text-gray-400">College Student</div>
+                  <div className="text-xs font-black text-white">Arjun M.</div>
+                  <div className="text-[10px] text-gray-400">Student, Hyderabad</div>
                 </div>
               </div>
             </div>
 
             {/* Review 4 */}
-            <div className="bg-white p-5 rounded-3xl border border-gray-200/80 shadow-xs flex flex-col justify-between space-y-4">
+            <div className="bg-[#081e13] p-6 rounded-3xl border border-emerald-800/40 shadow-md flex flex-col justify-between space-y-4">
               <div className="space-y-2">
-                <div className="text-emerald-500 text-xs">★★★★★</div>
-                <p className="text-xs text-gray-700 font-medium leading-relaxed italic">
-                  &ldquo;Results are real. No crash diets, just proper guidance and support.&rdquo;
+                <div className="text-[#00e676] text-xs">★★★★★</div>
+                <p className="text-xs text-gray-200 font-medium leading-relaxed italic">
+                  &ldquo;Results are real. Zero crash diets, just calibrated macros and WhatsApp support.&rdquo;
                 </p>
               </div>
-              <div className="flex items-center gap-2.5 pt-2 border-t border-gray-100">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-2.5 pt-3 border-t border-emerald-900/50">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-[#00e676] font-bold text-xs flex items-center justify-center shrink-0">
                   SR
                 </div>
                 <div>
-                  <div className="text-xs font-black text-gray-950">Sneha R.</div>
-                  <div className="text-[10px] text-gray-400">Homemaker</div>
+                  <div className="text-xs font-black text-white">Sneha R.</div>
+                  <div className="text-[10px] text-gray-400">Homemaker, Mumbai</div>
                 </div>
               </div>
             </div>
 
             {/* Review 5 */}
-            <div className="bg-white p-5 rounded-3xl border border-gray-200/80 shadow-xs flex flex-col justify-between space-y-4">
+            <div className="bg-[#081e13] p-6 rounded-3xl border border-emerald-800/40 shadow-md flex flex-col justify-between space-y-4">
               <div className="space-y-2">
-                <div className="text-emerald-500 text-xs">★★★★★</div>
-                <p className="text-xs text-gray-700 font-medium leading-relaxed italic">
-                  &ldquo;My energy levels are so much better now. Highly recommended!&rdquo;
+                <div className="text-[#00e676] text-xs">★★★★★</div>
+                <p className="text-xs text-gray-200 font-medium leading-relaxed italic">
+                  &ldquo;My energy levels and stamina improved tremendously. The best ₹99 investment!&rdquo;
                 </p>
               </div>
-              <div className="flex items-center gap-2.5 pt-2 border-t border-gray-100">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-2.5 pt-3 border-t border-emerald-900/50">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-[#00e676] font-bold text-xs flex items-center justify-center shrink-0">
                   VT
                 </div>
                 <div>
-                  <div className="text-xs font-black text-gray-950">Vikram T.</div>
-                  <div className="text-[10px] text-gray-400">Business Owner</div>
+                  <div className="text-xs font-black text-white">Vikram T.</div>
+                  <div className="text-[10px] text-gray-400">Founder, Delhi</div>
                 </div>
               </div>
             </div>
@@ -749,53 +775,53 @@ export function DesktopHomeView() {
       </section>
 
       {/* ================= 7. BUILT FOR INDIAN BODIES BANNER ================= */}
-      <section className="py-14 sm:py-16 bg-[#04120a] text-white">
+      <section className="py-16 sm:py-20 bg-gradient-to-b from-[#04120a] to-[#071d11] text-white border-b border-emerald-950/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center text-left">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center text-left">
             {/* Left Col (5 cols) */}
-            <div className="lg:col-span-5 space-y-4">
-              <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-950 text-[#00e676] px-3 py-1 rounded-full border border-emerald-500/30">
+            <div className="lg:col-span-5 space-y-5">
+              <span className="text-[11px] font-black uppercase tracking-wider bg-emerald-950 text-[#00e676] px-3.5 py-1 rounded-full border border-emerald-500/40">
                 WHY BMYFIT?
               </span>
-              <h2 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tight">
-                Built for Indian Bodies
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white uppercase tracking-tight">
+                Built for <span className="text-[#00e676]">Indian Bodies</span>
               </h2>
-              <p className="text-xs sm:text-sm text-gray-300 font-normal leading-relaxed">
-                We combine global fitness science with Indian food habits, lifestyle and real-world practicality to give you a plan that actually works.
+              <p className="text-sm text-gray-300 font-normal leading-relaxed">
+                South Asian genetics present unique metabolic profiles — higher visceral adiposity and lower natural muscle mass. We combine global exercise physiology with Indian food habits and real-world practicality.
               </p>
               <button
                 type="button"
                 onClick={scrollToCalculator}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-xs sm:text-sm rounded-xl shadow-md transition active:scale-95"
+                className="inline-flex items-center gap-3 px-8 py-4 bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-sm rounded-xl shadow-lg shadow-emerald-500/25 transition active:scale-95 cursor-pointer"
               >
-                <span>Start Your Transformation</span>
+                <span>Calculate Your Target Today</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
 
             {/* Right Col: 3 Pillars (7 cols) */}
-            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-[#081f14] p-5 rounded-2xl border border-emerald-900/60 space-y-2">
-                <div className="text-2xl">📄</div>
-                <h3 className="text-sm font-black text-white">Scientifically Backed</h3>
-                <p className="text-xs text-gray-400 leading-relaxed font-normal">
-                  Based on WHO &amp; ICMR research tailored for South Asian body compositions.
+            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <div className="bg-[#082216] p-6 rounded-2xl border border-emerald-800/40 space-y-3">
+                <div className="text-3xl">📄</div>
+                <h3 className="text-base font-black text-white">Scientifically Backed</h3>
+                <p className="text-xs text-gray-300 leading-relaxed font-normal">
+                  Based on WHO &amp; ICMR research specifically calibrated for South Asian anthropometric cutoffs.
                 </p>
               </div>
 
-              <div className="bg-[#081f14] p-5 rounded-2xl border border-emerald-900/60 space-y-2">
-                <div className="text-2xl">👤</div>
-                <h3 className="text-sm font-black text-white">Personalized Plans</h3>
-                <p className="text-xs text-gray-400 leading-relaxed font-normal">
-                  No generic templates. 100% tailored to your biometrics and daily routine.
+              <div className="bg-[#082216] p-6 rounded-2xl border border-emerald-800/40 space-y-3">
+                <div className="text-3xl">👤</div>
+                <h3 className="text-base font-black text-white">100% Personalized</h3>
+                <p className="text-xs text-gray-300 leading-relaxed font-normal">
+                  No copy-pasted templates. Every workout split and macro breakdown matches your biometrics.
                 </p>
               </div>
 
-              <div className="bg-[#081f14] p-5 rounded-2xl border border-emerald-900/60 space-y-2">
-                <div className="text-2xl">📈</div>
-                <h3 className="text-sm font-black text-white">Long-Term Results</h3>
-                <p className="text-xs text-gray-400 leading-relaxed font-normal">
-                  Build healthy, sustainable habits for a stronger, leaner, better you.
+              <div className="bg-[#082216] p-6 rounded-2xl border border-emerald-800/40 space-y-3">
+                <div className="text-3xl">📈</div>
+                <h3 className="text-base font-black text-white">Sustainable Results</h3>
+                <p className="text-xs text-gray-300 leading-relaxed font-normal">
+                  Build habits you can maintain lifelong without feeling deprived or giving up family dinners.
                 </p>
               </div>
             </div>
@@ -803,283 +829,225 @@ export function DesktopHomeView() {
         </div>
       </section>
 
-      {/* ================= 8. SIMPLE PRICING (Centered on ₹99 Subscription) ================= */}
-      <section className="py-16 sm:py-20 bg-white text-center">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-          <div className="space-y-2 max-w-2xl mx-auto">
-            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full">
-              CHOOSE YOUR PLAN
+      {/* ================= 8. FLAGSHIP PRICING (Single Clear ₹99 Plan Showcase) ================= */}
+      <section className="py-20 lg:py-24 bg-[#031109] text-center border-b border-emerald-950/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          <div className="space-y-3 max-w-2xl mx-auto">
+            <span className="text-[11px] font-black uppercase tracking-widest text-[#00e676] bg-emerald-950 border border-emerald-500/40 px-4 py-1.5 rounded-full">
+              SIMPLE &amp; TRANSPARENT
             </span>
-            <h2 className="text-3xl sm:text-4xl font-black text-gray-950 tracking-tight mt-2">
-              Simple Pricing. Real Results.
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mt-3">
+              One Plan. <span className="text-[#00e676]">Real Transformation.</span>
             </h2>
-            <p className="text-xs sm:text-sm text-gray-500 font-medium">
-              Choose the plan that fits your goal and get full support on your fitness journey.
+            <p className="text-sm text-gray-300 font-medium">
+              Everything you need for your 8-week body recomposition — zero recurring charges, zero hidden subscriptions.
             </p>
           </div>
 
-          {/* Pricing Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-center text-left">
-            {/* Starter Plan */}
-            <div className="bg-gray-50 p-6 sm:p-7 rounded-3xl border border-gray-200/90 space-y-5">
-              <div>
-                <span className="text-xs font-black uppercase tracking-wider text-gray-500">Starter</span>
-                <div className="flex items-baseline gap-1 mt-2">
-                  <span className="text-4xl font-black text-gray-950">₹29</span>
-                  <span className="text-xs text-gray-400 font-bold">/ 1 week trial</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Quick trial assessment &amp; baseline meal guide.</p>
-              </div>
-
-              <ul className="space-y-2.5 text-xs text-gray-700 font-medium">
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-600 font-bold">✓</span> Basic workout plan
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-600 font-bold">✓</span> General diet guidance
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-600 font-bold">✓</span> Access to free resources
-                </li>
-              </ul>
-
-              <button
-                type="button"
-                onClick={scrollToCalculator}
-                className="w-full py-2.5 rounded-xl border border-gray-300 bg-white hover:bg-gray-100 text-gray-800 text-xs font-bold transition"
-              >
-                Start Trial
-              </button>
+          {/* Centered Flagship Card */}
+          <div className="max-w-2xl mx-auto bg-gradient-to-b from-[#052517] via-[#041d12] to-[#02140c] text-white p-8 lg:p-12 rounded-3xl border-2 border-[#00e676] shadow-2xl space-y-8 relative text-left">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#00e676] text-gray-950 text-xs font-black uppercase tracking-wider px-5 py-1.5 rounded-full shadow-lg shadow-emerald-500/40">
+              FLAGSHIP BLUEPRINT · 8 WEEKS
             </div>
 
-            {/* Core Hero Plan: ₹99 8-Week Personalized Transformation (MOST POPULAR) */}
-            <div className="bg-[#032e1c] text-white p-7 sm:p-8 rounded-3xl border-2 border-[#00e676] shadow-2xl space-y-6 relative transform md:-translate-y-2">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#00e676] text-gray-950 text-[10px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full shadow-md">
-                MOST POPULAR · 8 WEEKS
-              </div>
-
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-emerald-900/60 pb-6">
               <div>
-                <span className="text-xs font-black uppercase tracking-wider text-emerald-400">Complete Transformation</span>
-                <div className="flex items-baseline gap-1.5 mt-2">
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-400">Complete Personalized Roadmap</span>
+                <h3 className="text-2xl font-black text-white mt-1">BMYFIT 8-Week Transformation</h3>
+              </div>
+              <div className="text-left sm:text-right">
+                <div className="flex items-baseline gap-1.5">
                   <span className="text-5xl font-black text-white">₹99</span>
-                  <span className="text-xs text-emerald-300 font-bold">one-time payment</span>
+                  <span className="text-xs text-emerald-300 font-bold">one-time</span>
                 </div>
-                <p className="text-xs text-emerald-100 mt-1">
-                  Full 8-week customized roadmap + direct WhatsApp access to Coach Naveen.
-                </p>
+                <span className="text-[11px] text-gray-400">Includes all 8 weeks</span>
               </div>
-
-              <ul className="space-y-3 text-xs text-emerald-50 font-medium">
-                <li className="flex items-center gap-2.5">
-                  <span className="w-4 h-4 rounded-full bg-[#00e676] text-gray-950 flex items-center justify-center text-[10px] font-black">
-                    ✓
-                  </span>
-                  <span>Personalized 8-week workout progression</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <span className="w-4 h-4 rounded-full bg-[#00e676] text-gray-950 flex items-center justify-center text-[10px] font-black">
-                    ✓
-                  </span>
-                  <span>Customized Indian diet plan (Dal, Roti, Rice)</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <span className="w-4 h-4 rounded-full bg-[#00e676] text-gray-950 flex items-center justify-center text-[10px] font-black">
-                    ✓
-                  </span>
-                  <span>Clinical medical review for joint/back pain</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <span className="w-4 h-4 rounded-full bg-[#00e676] text-gray-950 flex items-center justify-center text-[10px] font-black">
-                    ✓
-                  </span>
-                  <span>Direct 1-on-1 WhatsApp &amp; In-App Coach chat</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <span className="w-4 h-4 rounded-full bg-[#00e676] text-gray-950 flex items-center justify-center text-[10px] font-black">
-                    ✓
-                  </span>
-                  <span>Progress weigh-in updates every 4 weeks</span>
-                </li>
-              </ul>
-
-              <button
-                type="button"
-                onClick={scrollToCalculator}
-                className="w-full py-3.5 bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-xs sm:text-sm rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>Get Started for ₹99</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
             </div>
 
-            {/* Premium Plan */}
-            <div className="bg-gray-50 p-6 sm:p-7 rounded-3xl border border-gray-200/90 space-y-5">
-              <div>
-                <span className="text-xs font-black uppercase tracking-wider text-gray-500">Premium Pro</span>
-                <div className="flex items-baseline gap-1 mt-2">
-                  <span className="text-4xl font-black text-gray-950">₹179</span>
-                  <span className="text-xs text-gray-400 font-bold">/ 16 weeks</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Extended 4-month advanced hypertrophy package.</p>
+            {/* Checklist */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-medium text-emerald-100">
+              <div className="flex items-start gap-3">
+                <span className="w-5 h-5 rounded-full bg-[#00e676] text-gray-950 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">
+                  ✓
+                </span>
+                <span>Personalized 8-Week Progressive Workout Routine</span>
               </div>
+              <div className="flex items-start gap-3">
+                <span className="w-5 h-5 rounded-full bg-[#00e676] text-gray-950 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">
+                  ✓
+                </span>
+                <span>Indian Meal Plan with Roti, Dal, Rice &amp; High Protein</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="w-5 h-5 rounded-full bg-[#00e676] text-gray-950 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">
+                  ✓
+                </span>
+                <span>Direct 1-on-1 WhatsApp &amp; In-App Coach Naveen Chat</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="w-5 h-5 rounded-full bg-[#00e676] text-gray-950 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">
+                  ✓
+                </span>
+                <span>Medical review for knee, lower back &amp; joint safety</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="w-5 h-5 rounded-full bg-[#00e676] text-gray-950 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">
+                  ✓
+                </span>
+                <span>Progress weigh-in recalibration every 4 weeks</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="w-5 h-5 rounded-full bg-[#00e676] text-gray-950 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">
+                  ✓
+                </span>
+                <span>100% Money-Back Guarantee if no results</span>
+              </div>
+            </div>
 
-              <ul className="space-y-2.5 text-xs text-gray-700 font-medium">
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-600 font-bold">✓</span> Advanced periodization workouts
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-600 font-bold">✓</span> Supplement stack guidance
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-600 font-bold">✓</span> Bi-weekly video review
-                </li>
-              </ul>
+            <button
+              type="button"
+              onClick={scrollToCalculator}
+              className="w-full py-4 bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-base rounded-2xl shadow-xl shadow-emerald-500/30 transition active:scale-95 flex items-center justify-center gap-3 cursor-pointer"
+            >
+              <span>Get Your 8-Week Plan for ₹99</span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
 
-              <button
-                type="button"
-                onClick={scrollToCalculator}
-                className="w-full py-2.5 rounded-xl border border-gray-300 bg-white hover:bg-gray-100 text-gray-800 text-xs font-bold transition"
-              >
-                Choose Premium
-              </button>
+            <div className="text-center text-xs text-gray-400 font-medium">
+              Instant digital access after intake · 100% safe &amp; encrypted
             </div>
           </div>
         </div>
       </section>
 
       {/* ================= 9. STILL HAVE QUESTIONS (FAQ) ================= */}
-      <section className="py-16 sm:py-20 bg-[#fafafa] border-t border-gray-200/80">
+      <section className="py-20 lg:py-24 bg-[#05150d] text-white border-b border-emerald-950/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start text-left">
-            {/* Left Col (4 cols) */}
-            <div className="lg:col-span-4 space-y-4">
-              <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">
-                FAQ
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start text-left">
+            <div className="lg:col-span-5 space-y-4">
+              <span className="text-[11px] font-black uppercase tracking-wider text-[#00e676] bg-emerald-950 border border-emerald-500/30 px-3.5 py-1 rounded-full">
+                COMMON QUESTIONS
               </span>
-              <h2 className="text-3xl sm:text-4xl font-black text-gray-950 tracking-tight">
-                Still Have Questions?
+              <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                Frequently Asked <span className="text-[#00e676]">Questions</span>
               </h2>
-              <p className="text-xs sm:text-sm text-gray-500 font-medium leading-relaxed">
-                Find answers to common questions about our fitness plans, coaching and results.
+              <p className="text-sm text-gray-300 font-medium leading-relaxed">
+                Everything you need to know about our assessments, personalized routines, and coaching.
               </p>
-              <Link
-                href="/faq"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-xs rounded-xl shadow-xs transition"
-              >
-                <span>View All FAQs</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+              <div className="pt-2">
+                <Link
+                  href="/faq"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-emerald-500/30 bg-emerald-950/60 hover:bg-emerald-900/60 text-[#00e676] font-bold text-xs transition"
+                >
+                  <span>View All FAQs</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </div>
 
-            {/* Right Col: Accordion Items (8 cols) */}
-            <div className="lg:col-span-8 space-y-3">
-              {faqs.map((faq, index) => {
-                const isOpen = openFaqIndex === index;
-                return (
-                  <div
-                    key={index}
-                    className="bg-white rounded-2xl border border-gray-200/90 overflow-hidden shadow-xs transition"
+            <div className="lg:col-span-7 space-y-3">
+              {faqs.map((faq, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-2xl border border-emerald-800/40 bg-[#082015] overflow-hidden transition"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
+                    className="w-full flex items-center justify-between p-5 text-left font-bold text-sm text-white hover:text-[#00e676] transition-colors cursor-pointer"
                   >
-                    <button
-                      type="button"
-                      onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                      className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-sm text-gray-950 hover:bg-gray-50 transition"
-                    >
-                      <span>{faq.q}</span>
-                      <span className="text-gray-400 shrink-0">
-                        {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                      </span>
-                    </button>
-                    {isOpen && (
-                      <div className="px-4 pb-4 sm:px-5 sm:pb-5 text-xs text-gray-600 font-normal leading-relaxed border-t border-gray-100 pt-3">
-                        {faq.a}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                    <span>{faq.q}</span>
+                    <span className="text-[#00e676] ml-3">
+                      {openFaqIndex === idx ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </span>
+                  </button>
+                  {openFaqIndex === idx && (
+                    <div className="px-5 pb-5 text-xs text-gray-300 leading-relaxed border-t border-emerald-900/50 pt-3">
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* ================= 10. READY TO FEEL UNSTOPPABLE? (CTA + Contact Form) ================= */}
-      <section className="py-16 sm:py-20 bg-[#06100a] text-white relative overflow-hidden">
+      {/* ================= 10. DROP A MESSAGE / SUPPORT ================= */}
+      <section className="py-20 lg:py-24 bg-gradient-to-b from-[#04120a] to-[#020b06] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center text-left">
-            {/* Left Details (7 cols) */}
-            <div className="lg:col-span-7 space-y-5">
-              <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-950 text-[#00e676] px-3 py-1 rounded-full border border-emerald-500/30">
-                START YOUR JOURNEY TODAY
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center text-left">
+            <div className="lg:col-span-6 space-y-6">
+              <span className="text-[11px] font-black uppercase tracking-wider text-[#00e676] bg-emerald-950 border border-emerald-500/40 px-3.5 py-1 rounded-full">
+                DIRECT ACCESS
               </span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white leading-tight">
-                READY TO FEEL
-                <br />
-                <span className="text-[#00e676]">UNSTOPPABLE?</span>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white uppercase tracking-tight">
+                Ready to Feel <span className="text-[#00e676]">Unstoppable?</span>
               </h2>
-              <p className="text-xs sm:text-sm text-gray-300 font-normal max-w-lg leading-relaxed">
-                Let&apos;s build a stronger, healthier and happier you with a plan made just for you.
+              <p className="text-base text-gray-300 font-normal leading-relaxed">
+                Connect with our team or Coach Naveen directly with any questions about intake or payment.
               </p>
-
-              {/* Contact Pills */}
-              <div className="space-y-3 pt-2 text-xs font-semibold text-gray-300">
+              <div className="space-y-3 text-sm text-gray-200">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-[#00e676]">
-                    📞
-                  </div>
-                  <span>+91 98765 43210</span>
+                  <span className="text-[#00e676]">📍</span>
+                  <span>Blaze Fitness Hub, BTM Layout 2nd Stage, Bengaluru, India</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-[#00e676]">
-                    ✉️
-                  </div>
+                  <span className="text-[#00e676]">📞</span>
+                  <span>WhatsApp Helpline: +91 98490 12345</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[#00e676]">✉️</span>
                   <span>support@bmyfit.in</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-[#00e676]">
-                    📍
-                  </div>
-                  <span>Bengaluru, Karnataka, India</span>
                 </div>
               </div>
             </div>
 
-            {/* Right Contact Form (5 cols) */}
-            <div className="lg:col-span-5 bg-[#091a11] p-6 sm:p-8 rounded-3xl border border-emerald-900/60 shadow-xl space-y-4">
-              <h3 className="text-base font-black text-white">Drop Me a Message</h3>
-              <form onSubmit={handleContactSubmit} className="space-y-3">
-                <input
-                  type="text"
-                  value={contactName}
-                  onChange={(e) => setContactName(e.target.value)}
-                  placeholder="Your Name"
-                  required
-                  className="w-full bg-[#051009] text-white text-xs rounded-xl p-3 border border-emerald-900/60 focus:outline-none focus:border-[#00e676] transition"
-                />
-                <input
-                  type="email"
-                  value={contactEmail}
-                  onChange={(e) => setContactEmail(e.target.value)}
-                  placeholder="Your Email"
-                  required
-                  className="w-full bg-[#051009] text-white text-xs rounded-xl p-3 border border-emerald-900/60 focus:outline-none focus:border-[#00e676] transition"
-                />
-                <textarea
-                  rows={3}
-                  value={contactMessage}
-                  onChange={(e) => setContactMessage(e.target.value)}
-                  placeholder="Your Message..."
-                  required
-                  className="w-full bg-[#051009] text-white text-xs rounded-xl p-3 border border-emerald-900/60 focus:outline-none focus:border-[#00e676] transition"
-                />
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-xs sm:text-sm rounded-xl shadow-md transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Send className="w-4 h-4" />
-                  <span>{contactSent ? "Message Sent!" : "Send Message"}</span>
-                </button>
-              </form>
+            {/* Quick Contact Box */}
+            <div className="lg:col-span-6 bg-[#082015] p-8 rounded-3xl border border-emerald-500/30 shadow-2xl">
+              <h3 className="text-lg font-black text-white mb-4">Send a Message</h3>
+              {contactSent ? (
+                <div className="p-4 rounded-xl bg-emerald-900/60 border border-emerald-500/50 text-[#00e676] text-sm font-bold">
+                  ✓ Thank you! Coach Naveen&apos;s desk will respond shortly.
+                </div>
+              ) : (
+                <form onSubmit={handleContactSubmit} className="space-y-4">
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Your Name"
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      className="w-full bg-[#04120a] border border-emerald-800/60 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="email"
+                      placeholder="Your Email Address"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      className="w-full bg-[#04120a] border border-emerald-800/60 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                    />
+                  </div>
+                  <div>
+                    <textarea
+                      placeholder="Your Message..."
+                      rows={3}
+                      value={contactMessage}
+                      onChange={(e) => setContactMessage(e.target.value)}
+                      className="w-full bg-[#04120a] border border-emerald-800/60 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full py-3.5 bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-sm rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>Send Message</span>
+                    <Send className="w-4 h-4" />
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </div>

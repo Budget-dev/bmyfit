@@ -615,15 +615,15 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
               </div>
 
           {/* Dual Offer Comparison Cards */}
-          <div className="grid grid-cols-2 gap-2 mt-2">
+          <div className="grid grid-cols-2 gap-2 md:gap-5 mt-2 md:mt-4">
             {/* Card 1: Your Plan Includes */}
-            <div className="bg-white rounded-xl border border-gray-150 p-2 shadow-2xs flex flex-col justify-between">
+            <div className="bg-white rounded-xl md:rounded-2xl border border-gray-150 md:border-gray-200 p-2 md:p-5 shadow-2xs md:shadow-sm flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between gap-1 mb-1.5">
-                  <h2 className="font-bold text-gray-900 text-[9.5px] sm:text-[10.5px] leading-tight">
+                <div className="flex items-center justify-between gap-1 mb-1.5 md:mb-3">
+                  <h2 className="font-bold text-gray-900 text-[9.5px] sm:text-[10.5px] md:text-base leading-tight">
                     Your Plan Includes
                   </h2>
-                  <span className="text-[7px] sm:text-[7.5px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded-full whitespace-nowrap">
+                  <span className="text-[7px] sm:text-[7.5px] md:text-xs font-bold text-emerald-700 bg-emerald-50 px-1 md:px-2.5 py-0.5 rounded-full whitespace-nowrap">
                     8 WEEK PLAN
                   </span>
                 </div>
@@ -710,41 +710,41 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
               </div>
 
               {/* 3 Phone Screens Showcase */}
-              <div className="mt-1.5 rounded-md overflow-hidden border border-gray-100 bg-gray-50">
+              <div className="mt-1.5 md:mt-3 rounded-md md:rounded-xl overflow-hidden border border-gray-100 bg-gray-50">
                 <Image
                   src="/images/plan-triple-screens.jpg"
                   alt="Meal Plan, Workout Plan and Progress Tracker"
-                  width={300}
-                  height={190}
-                  className="w-full h-[62px] sm:h-[70px] object-cover"
+                  width={400}
+                  height={250}
+                  className="w-full h-[62px] sm:h-[70px] md:h-[135px] object-cover md:object-contain bg-white"
                 />
               </div>
             </div>
 
             {/* Card 2: BMYFIT Personalized Plan */}
-            <div className="bg-white rounded-xl border border-gray-150 p-2 shadow-2xs flex flex-col justify-between">
+            <div className="bg-white rounded-xl md:rounded-2xl border border-gray-150 md:border-gray-200 p-2 md:p-5 shadow-2xs md:shadow-sm flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between gap-1 mb-0.5">
-                  <h2 className="font-bold text-gray-900 text-[9.5px] sm:text-[10.5px] leading-tight">
+                <div className="flex items-center justify-between gap-1 mb-0.5 md:mb-2">
+                  <h2 className="font-bold text-gray-900 text-[9.5px] sm:text-[10.5px] md:text-base leading-tight">
                     BMYFIT<br />Personalized Plan
                   </h2>
-                  <span className="text-[7px] sm:text-[7.5px] font-bold text-white bg-[#00c853] px-1.5 py-0.5 rounded-full whitespace-nowrap self-start">
+                  <span className="text-[7px] sm:text-[7.5px] md:text-xs font-bold text-white bg-[#00c853] px-1.5 md:px-2.5 py-0.5 rounded-full whitespace-nowrap self-start">
                     BEST VALUE
                   </span>
                 </div>
 
                 {/* Price */}
-                <div className="mt-0.5">
-                  <div className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight leading-none">
+                <div className="mt-0.5 md:mt-2">
+                  <div className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tight leading-none">
                     ₹99
                   </div>
-                  <div className="text-[7.5px] sm:text-[8px] text-gray-500 font-medium">
+                  <div className="text-[7.5px] sm:text-[8px] md:text-xs text-gray-500 font-medium mt-0.5">
                     One-time payment
                   </div>
                 </div>
 
                 {/* 7 Checklist Points */}
-                <div className="bg-[#f8fafc] rounded-lg p-1.5 space-y-1 mt-1 border border-gray-100">
+                <div className="bg-[#f8fafc] rounded-lg md:rounded-xl p-1.5 md:p-3 space-y-1 md:space-y-2 mt-1 md:mt-3 border border-gray-100">
                   {[
                     "Daily calorie target",
                     "Protein target",
@@ -754,13 +754,13 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
                     "Progress tracking",
                     "Lifetime access to your plan",
                   ].map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-[#00c853] text-white flex items-center justify-center shrink-0">
-                        <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <div key={idx} className="flex items-center gap-1.5 md:gap-2">
+                      <div className="w-3 h-3 md:w-4 md:h-4 rounded-full bg-[#00c853] text-white flex items-center justify-center shrink-0">
+                        <svg className="w-2.5 h-2.5 md:w-3 md:h-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M2.5 6.5l2.5 2.5 4.5-5" />
                         </svg>
                       </div>
-                      <span className="text-[7.5px] sm:text-[8px] text-gray-700 font-medium leading-none">
+                      <span className="text-[7.5px] sm:text-[8px] md:text-xs text-gray-700 font-medium leading-none">
                         {item}
                       </span>
                     </div>
@@ -769,9 +769,9 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
               </div>
 
               {/* Gift Box Guarantee callout */}
-              <div className="mt-1 flex items-center gap-1 p-1 rounded-md bg-emerald-50/70 border border-emerald-100/60">
-                <div className="w-4 h-4 rounded bg-emerald-100 text-[#00c853] flex items-center justify-center shrink-0">
-                  <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <div className="mt-1 md:mt-3 flex items-center gap-1 md:gap-2 p-1 md:p-2.5 rounded-md md:rounded-xl bg-emerald-50/70 border border-emerald-100/60">
+                <div className="w-4 h-4 md:w-6 md:h-6 rounded bg-emerald-100 text-[#00c853] flex items-center justify-center shrink-0">
+                  <svg className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <polyline points="20 12 20 22 4 22 4 12" />
                     <rect x="2" y="7" width="20" height="5" />
                     <line x1="12" y1="22" x2="12" y2="7" />
@@ -779,7 +779,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
                     <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
                   </svg>
                 </div>
-                <p className="text-[6.5px] sm:text-[7.5px] text-gray-600 leading-tight">
+                <p className="text-[6.5px] sm:text-[7.5px] md:text-xs text-gray-600 leading-tight">
                   No subscription. No hidden charges. Just your personalized plan.
                 </p>
               </div>
@@ -829,58 +829,60 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         <div className="md:col-span-5 space-y-4 md:sticky md:top-20">
 
           {/* Contact Details summary / edit row */}
-          <div className="mt-2 bg-gray-50 border border-gray-200 rounded-lg p-2">
+          <div className="mt-2 md:mt-3 bg-gray-50 border border-gray-200 rounded-lg md:rounded-xl p-2 md:p-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <div className="w-4 h-4 rounded-full bg-[#00c853]/15 text-[#00c853] flex items-center justify-center text-[10px] font-bold">
+              <div className="flex items-center gap-1.5 md:gap-2.5">
+                <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-[#00c853]/15 text-[#00c853] flex items-center justify-center text-[10px] md:text-xs font-bold">
                   ✓
                 </div>
                 <div>
-                  <div className="text-[9.5px] font-bold text-gray-900 leading-tight">
-                    Deliver Plan &amp; Receipt To: {customerDetails.name}
+                  <div className="text-[9.5px] md:text-sm font-bold text-gray-900 leading-tight">
+                    {customerDetails.name ? `Deliver Plan & Receipt To: ${customerDetails.name}` : "Deliver Plan & Instant Digital Receipt"}
                   </div>
-                  <div className="text-[7.5px] text-gray-500 leading-tight">
-                    {customerDetails.email} • {customerDetails.phone}
+                  <div className="text-[7.5px] md:text-xs text-gray-500 leading-tight mt-0.5">
+                    {customerDetails.email && customerDetails.phone
+                      ? `${customerDetails.email} • ${customerDetails.phone}`
+                      : (customerDetails.email || customerDetails.phone || "Instant delivery to WhatsApp & Email upon payment")}
                   </div>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowEditContact(!showEditContact)}
-                className="text-[8px] font-bold text-[#00c853] hover:underline"
+                className="text-[8px] md:text-xs font-bold text-[#00c853] hover:underline"
               >
                 {showEditContact ? "Done" : "Edit Details"}
               </button>
             </div>
 
             {showEditContact && (
-              <div className="mt-2 pt-2 border-t border-gray-200 grid grid-cols-1 gap-1.5">
+              <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-200 grid grid-cols-1 gap-1.5 md:gap-2.5">
                 <div>
-                  <label className="text-[7.5px] font-semibold text-gray-600 block mb-0.5">Your Full Name</label>
+                  <label className="text-[7.5px] md:text-xs font-semibold text-gray-600 block mb-0.5">Your Full Name</label>
                   <input
                     type="text"
                     value={customerDetails.name}
                     onChange={(e) => setCustomerDetails({ ...customerDetails, name: e.target.value })}
-                    className="w-full text-[9px] px-2 py-1 border border-gray-300 rounded bg-white text-gray-900 focus:outline-none focus:border-[#00c853]"
+                    className="w-full text-[9px] md:text-sm px-2 md:px-3 py-1 md:py-2 border border-gray-300 rounded md:rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[#00c853]"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-2 gap-1.5 md:gap-2.5">
                   <div>
-                    <label className="text-[7.5px] font-semibold text-gray-600 block mb-0.5">Email Address</label>
+                    <label className="text-[7.5px] md:text-xs font-semibold text-gray-600 block mb-0.5">Email Address</label>
                     <input
                       type="email"
                       value={customerDetails.email}
                       onChange={(e) => setCustomerDetails({ ...customerDetails, email: e.target.value })}
-                      className="w-full text-[9px] px-2 py-1 border border-gray-300 rounded bg-white text-gray-900 focus:outline-none focus:border-[#00c853]"
+                      className="w-full text-[9px] md:text-sm px-2 md:px-3 py-1 md:py-2 border border-gray-300 rounded md:rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[#00c853]"
                     />
                   </div>
                   <div>
-                    <label className="text-[7.5px] font-semibold text-gray-600 block mb-0.5">WhatsApp / Phone</label>
+                    <label className="text-[7.5px] md:text-xs font-semibold text-gray-600 block mb-0.5">WhatsApp / Phone</label>
                     <input
                       type="tel"
                       value={customerDetails.phone}
                       onChange={(e) => setCustomerDetails({ ...customerDetails, phone: e.target.value })}
-                      className="w-full text-[9px] px-2 py-1 border border-gray-300 rounded bg-white text-gray-900 focus:outline-none focus:border-[#00c853]"
+                      className="w-full text-[9px] md:text-sm px-2 md:px-3 py-1 md:py-2 border border-gray-300 rounded md:rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[#00c853]"
                     />
                   </div>
                 </div>

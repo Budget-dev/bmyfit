@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -33,41 +34,61 @@ export default function AboutPage() {
   return (
     <div className="flex min-h-screen flex-col bg-surface-50 dark:bg-surface-950">
       <SiteHeader />
-      <main className="flex-1 py-12 sm:py-16">
-        <div className="container max-w-3xl space-y-8">
-          <Card className="p-8 sm:p-12 space-y-6">
+      <main className="flex-1 py-12 lg:py-16">
+        <div className="container max-w-3xl lg:max-w-5xl space-y-8 lg:space-y-12">
+          <Card className="p-8 lg:p-12 space-y-6">
             <div>
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">
                 Our Story &amp; Mission
               </span>
-              <h1 className="text-3xl font-black text-ink dark:text-white mt-1">
+              <h1 className="text-3xl lg:text-4xl font-black text-ink dark:text-white mt-1">
                 About {APP_CONFIG.brandName}
               </h1>
-              <p className="text-sm text-ink-muted dark:text-surface-400 mt-1">
+              <p className="text-sm lg:text-base text-ink-muted dark:text-surface-400 mt-1">
                 {APP_CONFIG.tagline}
               </p>
             </div>
 
-            <div className="space-y-4 text-sm text-ink-muted dark:text-surface-300 leading-relaxed border-t border-surface-200 dark:border-surface-800 pt-6">
-              <h3 className="text-base font-bold text-ink dark:text-white">Our Mission</h3>
-              <p>
-                {APP_CONFIG.description} Most fitness programs in India are either expensive personal training packages or generic generic charts that ignore South Asian body compositions. We built {APP_CONFIG.brandName} to democratize science-backed fitness insights at an affordable, one-time price of just {APP_CONFIG.pricing.formatted}.
-              </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-ink-muted dark:text-surface-300 leading-relaxed border-t border-surface-200 dark:border-surface-800 pt-6">
+              <div className="bg-surface-50 dark:bg-surface-900/50 p-5 rounded-2xl border border-surface-200/60 dark:border-surface-800/60 space-y-2">
+                <h3 className="text-base font-bold text-ink dark:text-white flex items-center gap-2">
+                  <span>🎯</span>
+                  <span>Our Mission</span>
+                </h3>
+                <p>
+                  {APP_CONFIG.description} Most fitness programs in India are either expensive personal training packages or generic generic charts that ignore South Asian body compositions. We built {APP_CONFIG.brandName} to democratize science-backed fitness insights at an affordable, one-time price of just {APP_CONFIG.pricing.formatted}.
+                </p>
+              </div>
 
-              <h3 className="text-base font-bold text-ink dark:text-white pt-2">Why Body Fat % &amp; BMI Matter</h3>
-              <p>
-                Standard BMI scales often fail to differentiate between lean muscle mass and visceral fat. By combining standard Clinical BMI with the established US Navy Body Circumference method, {APP_CONFIG.brandName} provides a clearer picture of your body fat percentage and true metabolic health.
-              </p>
+              <div className="bg-surface-50 dark:bg-surface-900/50 p-5 rounded-2xl border border-surface-200/60 dark:border-surface-800/60 space-y-2">
+                <h3 className="text-base font-bold text-ink dark:text-white flex items-center gap-2">
+                  <span>📊</span>
+                  <span>Why Body Fat % &amp; BMI Matter</span>
+                </h3>
+                <p>
+                  Standard BMI scales often fail to differentiate between lean muscle mass and visceral fat. By combining standard Clinical BMI with the established US Navy Body Circumference method, {APP_CONFIG.brandName} provides a clearer picture of your body fat percentage and true metabolic health.
+                </p>
+              </div>
 
-              <h3 className="text-base font-bold text-ink dark:text-white pt-2">Personalized For Indian Diets</h3>
-              <p>
-                Whether you follow a traditional Indian Vegetarian diet, Eggetarian, Vegan, or Non-Vegetarian lifestyle, our tailored nutrition recommendations match authentic Indian meal choices while hitting ideal macronutrient ratios.
-              </p>
+              <div className="bg-surface-50 dark:bg-surface-900/50 p-5 rounded-2xl border border-surface-200/60 dark:border-surface-800/60 space-y-2">
+                <h3 className="text-base font-bold text-ink dark:text-white flex items-center gap-2">
+                  <span>🍛</span>
+                  <span>Personalized For Indian Diets</span>
+                </h3>
+                <p>
+                  Whether you follow a traditional Indian Vegetarian diet, Eggetarian, Vegan, or Non-Vegetarian lifestyle, our tailored nutrition recommendations match authentic Indian meal choices while hitting ideal macronutrient ratios.
+                </p>
+              </div>
 
-              <h3 className="text-base font-bold text-ink dark:text-white pt-2">Privacy-First Architecture</h3>
-              <p>
-                We believe your health metrics belong to you. We do not sell your personal data, spam your inbox, or lock your metrics behind recurring monthly subscriptions.
-              </p>
+              <div className="bg-surface-50 dark:bg-surface-900/50 p-5 rounded-2xl border border-surface-200/60 dark:border-surface-800/60 space-y-2">
+                <h3 className="text-base font-bold text-ink dark:text-white flex items-center gap-2">
+                  <span>🔒</span>
+                  <span>Privacy-First Architecture</span>
+                </h3>
+                <p>
+                  We believe your health metrics belong to you. We do not sell your personal data, spam your inbox, or lock your metrics behind recurring monthly subscriptions.
+                </p>
+              </div>
             </div>
 
             <div className="pt-6 border-t border-surface-200 dark:border-surface-800 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -85,9 +106,11 @@ export default function AboutPage() {
             <div className="flex flex-col md:flex-row gap-6 items-center">
               <div className="relative shrink-0">
                 <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl overflow-hidden ring-4 ring-emerald-500/30 shadow-xl bg-surface-900">
-                  <img
+                  <Image
                     src="/images/coach-naveen.jpg"
                     alt="Coach Naveen - Blaze Gym Owner & Head Coach"
+                    width={144}
+                    height={144}
                     className="w-full h-full object-cover object-top"
                   />
                 </div>

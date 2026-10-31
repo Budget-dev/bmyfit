@@ -16,6 +16,7 @@ const GOAL_HERO_CARDS: Record<
   FocusOption,
   {
     image: string;
+    desktopImage: string;
     alt: string;
     title: string;
     subtitle: string;
@@ -25,6 +26,7 @@ const GOAL_HERO_CARDS: Record<
 > = {
   "lose-fat": {
     image: "/images/goal-card-lose-fat.png",
+    desktopImage: "/images/model-lose-fat.jpg",
     alt: "Selected Goal: Lose Body Fat - Reduce fat & keep muscle",
     title: "Lose Body Fat",
     subtitle: "Reduce fat & keep muscle.",
@@ -38,6 +40,7 @@ const GOAL_HERO_CARDS: Record<
   },
   "build-strength": {
     image: "/images/goal-card-build-strength.png",
+    desktopImage: "/images/model-build-strength.jpg",
     alt: "Selected Goal: Build Strength - Get stronger & lift better",
     title: "Build Strength",
     subtitle: "Get stronger & lift better.",
@@ -51,6 +54,7 @@ const GOAL_HERO_CARDS: Record<
   },
   "improve-fitness": {
     image: "/images/goal-card-improve-fitness.png",
+    desktopImage: "/images/model-improve-fitness.jpg",
     alt: "Selected Goal: Improve Fitness - Increase stamina & energy",
     title: "Improve Fitness",
     subtitle: "Increase stamina & energy.",
@@ -64,6 +68,7 @@ const GOAL_HERO_CARDS: Record<
   },
   "build-consistency": {
     image: "/images/goal-card-build-consistency.png",
+    desktopImage: "/images/model-build-consistency.jpg",
     alt: "Selected Goal: Build Consistency - Sustainable routine plan",
     title: "Build Consistency",
     subtitle: "Sustainable routine plan.",
@@ -455,7 +460,7 @@ export default function GoalPage() {
             <div className="relative rounded-3xl overflow-hidden shadow-xl border border-emerald-950/40 bg-[#060b09] text-white group">
               <div className="relative w-full aspect-[16/10]">
                 <Image
-                  src={activeHero.image}
+                  src={activeHero.desktopImage || activeHero.image}
                   alt={activeHero.alt}
                   fill
                   priority
