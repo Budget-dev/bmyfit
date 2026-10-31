@@ -16,6 +16,7 @@ import {
   Layers,
   ArrowRight,
   BellRing,
+  Sparkles,
 } from "@/components/ui/icons";
 import type { AdminUserRecord } from "@/types/admin";
 import { calculateDetailedAdherence } from "@/features/plan/dashboard-data";
@@ -30,8 +31,32 @@ interface ClientHealthDashboardProps {
   isSyncing?: boolean;
 }
 
-type FilterTab = "all" | "attention" | "on_track" | "medical";
+type FilterTab = "all" | "attention" | "on_track" | "medical" | "free_leads";
 type ViewMode = "table" | "cards";
+
+function SafeClientAvatar({ name, avatar }: { name: string; avatar?: string }) {
+  const [imageError, setImageError] = useState(false);
+  const initial = (name || "U").charAt(0).toUpperCase();
+
+  if (!avatar || imageError) {
+    return (
+      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-700 to-emerald-500 text-white font-black text-xs flex items-center justify-center shrink-0 border border-emerald-600 shadow-2xs">
+        {initial}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 shrink-0 border border-gray-200 shadow-2xs">
+      <img
+        src={avatar}
+        alt={name}
+        className="w-full h-full object-cover"
+        onError={() => setImageError(true)}
+      />
+    </div>
+  );
+}
 
 export function ClientHealthDashboard({
   users,
@@ -57,6 +82,7 @@ export function ClientHealthDashboard({
         u.medicalAssessment?.hasDisease ||
         (u.biometrics?.medicalConditions && u.biometrics.medicalConditions.trim().length > 0)
       );
+      const isFreeLead = u.membershipCategory === "free";
 
       return {
         user: u,
@@ -65,6 +91,7 @@ export function ClientHealthDashboard({
         isModerate,
         isFallingBehind,
         hasMedical,
+        isFreeLead,
       };
     });
   }, [users]);
@@ -73,6 +100,7 @@ export function ClientHealthDashboard({
   const onTrackClients = useMemo(() => analyzedUsers.filter((a) => a.isDoingGood), [analyzedUsers]);
   const needsAttentionClients = useMemo(() => analyzedUsers.filter((a) => a.isFallingBehind), [analyzedUsers]);
   const medicalClients = useMemo(() => analyzedUsers.filter((a) => a.hasMedical), [analyzedUsers]);
+  const freeLeadClients = useMemo(() => analyzedUsers.filter((a) => a.isFreeLead), [analyzedUsers]);
 
   const onTrackPercent = totalClients > 0 ? Math.round((onTrackClients.length / totalClients) * 100) : 0;
   const attentionPercent = totalClients > 0 ? Math.round((needsAttentionClients.length / totalClients) * 100) : 0;
@@ -84,6 +112,7 @@ export function ClientHealthDashboard({
       if (activeFilter === "on_track" && !item.isDoingGood) return false;
       if (activeFilter === "attention" && !item.isFallingBehind) return false;
       if (activeFilter === "medical" && !item.hasMedical) return false;
+      if (activeFilter === "free_leads" && !item.isFreeLead) return false;
 
       // 2. Search query filter
       if (!searchQuery.trim()) return true;
@@ -115,13 +144,40 @@ export function ClientHealthDashboard({
 
   return (
     <div className="space-y-6">
+      {/* ================= TOP HEADER BAR WITH ACTION BUTTONS ================= */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-gray-200/80 shadow-xs">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#00e676] animate-pulse" />
+            <h2 className="text-lg font-black text-gray-950 tracking-tight">Status &amp; Client Adherence Intelligence</h2>
+          </div>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Real-time compliance monitoring across ₹99 purchased members and intake assessment leads.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={isSyncing}
+              className="px-4 py-2 rounded-xl bg-gray-900 hover:bg-black text-white font-bold text-xs flex items-center gap-2 shadow-xs transition active:scale-95 disabled:opacity-60 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-emerald-400" : ""}`} />
+              <span>{isSyncing ? "Syncing Live Firestore..." : "Sync Live Firestore"}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* ================= KPI METRIC CARDS (SHADCN STYLE) ================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Enrolled Clients */}
         <div className="bg-white rounded-2xl p-5 border border-gray-200/80 shadow-xs hover:border-gray-300 transition">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
-              Enrolled Clients
+              Total Client Pool
             </span>
             <div className="w-9 h-9 rounded-xl bg-gray-100 text-gray-700 flex items-center justify-center">
               <Users className="w-4 h-4 stroke-[2.2]" />
@@ -130,13 +186,13 @@ export function ClientHealthDashboard({
           <div className="flex items-baseline gap-2 mt-2">
             <span className="text-3xl font-black text-gray-950">{totalClients}</span>
             <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
-              Active Pool
+              Live DB
             </span>
           </div>
           <p className="text-[11px] text-gray-500 mt-1.5 flex items-center gap-1.5">
-            <span>{users.filter((u) => u.membershipCategory === "purchased").length} Paid Clients</span>
+            <span className="font-bold text-emerald-700">{users.filter((u) => u.membershipCategory === "purchased").length} Paid ₹99</span>
             <span>•</span>
-            <span>{users.filter((u) => u.membershipCategory === "free").length} Free Leads</span>
+            <span className="font-bold text-gray-600">{freeLeadClients.length} Free Leads</span>
           </p>
         </div>
 
@@ -178,7 +234,7 @@ export function ClientHealthDashboard({
             </span>
           </div>
           <p className="text-[11px] text-amber-700 font-medium mt-1.5">
-            New leads or clients with low weekly compliance
+            Free intake leads or clients needing adherence nudges
           </p>
         </div>
 
@@ -199,19 +255,19 @@ export function ClientHealthDashboard({
             </span>
           </div>
           <p className="text-[11px] text-blue-700 font-medium mt-1.5">
-            Joint pain, hypertension, diabetes, or report uploads
+            Joint pain, hypertension, diabetes, or consultation notes
           </p>
         </div>
       </div>
 
       {/* ================= CONTROLS & FILTER BAR ================= */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-gray-200/80 shadow-2xs">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-gray-200/80 shadow-2xs">
         {/* Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
           <button
             type="button"
             onClick={() => setActiveFilter("all")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeFilter === "all"
                 ? "bg-gray-900 text-white shadow-xs"
                 : "text-gray-600 hover:bg-gray-100"
@@ -228,7 +284,7 @@ export function ClientHealthDashboard({
           <button
             type="button"
             onClick={() => setActiveFilter("attention")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeFilter === "attention"
                 ? "bg-amber-600 text-white shadow-xs"
                 : "text-amber-800 hover:bg-amber-50"
@@ -245,7 +301,7 @@ export function ClientHealthDashboard({
           <button
             type="button"
             onClick={() => setActiveFilter("on_track")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeFilter === "on_track"
                 ? "bg-emerald-600 text-white shadow-xs"
                 : "text-emerald-800 hover:bg-emerald-50"
@@ -262,7 +318,7 @@ export function ClientHealthDashboard({
           <button
             type="button"
             onClick={() => setActiveFilter("medical")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeFilter === "medical"
                 ? "bg-blue-600 text-white shadow-xs"
                 : "text-blue-800 hover:bg-blue-50"
@@ -275,6 +331,23 @@ export function ClientHealthDashboard({
               {medicalClients.length}
             </span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter("free_leads")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeFilter === "free_leads"
+                ? "bg-purple-600 text-white shadow-xs"
+                : "text-purple-800 hover:bg-purple-50"
+            }`}
+          >
+            <span>Free Leads</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+              activeFilter === "free_leads" ? "bg-purple-700 text-white" : "bg-purple-100 text-purple-800"
+            }`}>
+              {freeLeadClients.length}
+            </span>
+          </button>
         </div>
 
         {/* Search & View Mode Switcher */}
@@ -283,7 +356,7 @@ export function ClientHealthDashboard({
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by name, goal, condition..."
+              placeholder="Search by name, email, goal..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-8 pr-3 py-1.5 rounded-xl text-xs bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 transition"
@@ -295,7 +368,7 @@ export function ClientHealthDashboard({
               type="button"
               onClick={() => setViewMode("table")}
               title="Table View"
-              className={`p-1.5 rounded-lg text-xs font-bold transition ${
+              className={`p-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                 viewMode === "table" ? "bg-white text-gray-950 shadow-2xs" : "text-gray-500 hover:text-gray-800"
               }`}
             >
@@ -305,7 +378,7 @@ export function ClientHealthDashboard({
               type="button"
               onClick={() => setViewMode("cards")}
               title="Card Grid View"
-              className={`p-1.5 rounded-lg text-xs font-bold transition ${
+              className={`p-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                 viewMode === "cards" ? "bg-white text-gray-950 shadow-2xs" : "text-gray-500 hover:text-gray-800"
               }`}
             >
@@ -331,7 +404,7 @@ export function ClientHealthDashboard({
               setActiveFilter("all");
               setSearchQuery("");
             }}
-            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-800 transition"
+            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-800 transition cursor-pointer"
           >
             Reset Filters
           </button>
@@ -365,15 +438,7 @@ export function ClientHealthDashboard({
                       {/* 1. Client Profile */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 shrink-0 border border-gray-200">
-                            {user.avatar ? (
-                              <Image src={user.avatar} alt={user.name} fill unoptimized className="object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center font-bold text-xs bg-emerald-700 text-white">
-                                {user.name.charAt(0)}
-                              </div>
-                            )}
-                          </div>
+                          <SafeClientAvatar name={user.name} avatar={user.avatar} />
                           <div>
                             <div className="font-bold text-gray-950 flex items-center gap-1.5">
                               <span>{user.name}</span>
@@ -474,9 +539,19 @@ export function ClientHealthDashboard({
                             type="button"
                             onClick={() => handleOpenWhatsApp(user)}
                             title="Chat on WhatsApp"
-                            className="p-1.5 rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition"
+                            className="p-1.5 rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer"
                           >
                             <MessageCircle className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* In-App Chat */}
+                          <button
+                            type="button"
+                            onClick={() => onOpenChat(user)}
+                            title="Open In-App Thread"
+                            className="p-1.5 rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition cursor-pointer"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
                           </button>
 
                           {/* Biometrics */}
@@ -484,7 +559,7 @@ export function ClientHealthDashboard({
                             type="button"
                             onClick={() => onOpenBiometrics(user)}
                             title="View Biometrics Dossier"
-                            className="p-1.5 rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 transition"
+                            className="p-1.5 rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 transition cursor-pointer"
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
@@ -494,7 +569,7 @@ export function ClientHealthDashboard({
                             type="button"
                             onClick={() => onOpenStudio(user)}
                             title="Edit / Customize Week Plan"
-                            className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-gray-800 bg-gray-100 hover:bg-gray-200 border border-gray-200/80 transition flex items-center gap-1"
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-gray-800 bg-gray-100 hover:bg-gray-200 border border-gray-200/80 transition flex items-center gap-1 cursor-pointer"
                           >
                             <Edit3 className="w-3 h-3 text-gray-600" />
                             <span>Plan</span>
@@ -505,7 +580,7 @@ export function ClientHealthDashboard({
                             type="button"
                             onClick={() => onSendAlert(user)}
                             title="Send Push Alert"
-                            className="p-1.5 rounded-lg text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition"
+                            className="p-1.5 rounded-lg text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition cursor-pointer"
                           >
                             <BellRing className="w-3.5 h-3.5" />
                           </button>
@@ -520,7 +595,7 @@ export function ClientHealthDashboard({
         </div>
       )}
 
-      {/* ================= VIEW MODE 2: MODERN SHADCN CARD GRID ================= */}
+      {/* ================= VIEW MODE 2: CARD GRID ================= */}
       {filteredClients.length > 0 && viewMode === "cards" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredClients.map(({ user, adherence, isDoingGood, isFallingBehind, hasMedical }) => {
@@ -543,15 +618,7 @@ export function ClientHealthDashboard({
                 {/* Header Row */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="relative w-11 h-11 rounded-full overflow-hidden bg-gray-100 shrink-0 border border-gray-200">
-                      {user.avatar ? (
-                        <Image src={user.avatar} alt={user.name} fill unoptimized className="object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center font-bold text-xs bg-emerald-700 text-white">
-                          {user.name.charAt(0)}
-                        </div>
-                      )}
-                    </div>
+                    <SafeClientAvatar name={user.name} avatar={user.avatar} />
                     <div>
                       <h3 className="font-bold text-gray-950 text-xs flex items-center gap-1.5">
                         <span>{user.name}</span>
@@ -625,7 +692,7 @@ export function ClientHealthDashboard({
                   <button
                     type="button"
                     onClick={() => handleOpenWhatsApp(user)}
-                    className="flex-1 py-1.5 px-2.5 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition flex items-center justify-center gap-1.5"
+                    className="flex-1 py-1.5 px-2.5 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <MessageCircle className="w-3.5 h-3.5" />
                     <span>WhatsApp</span>
@@ -634,7 +701,7 @@ export function ClientHealthDashboard({
                   <button
                     type="button"
                     onClick={() => onOpenStudio(user)}
-                    className="flex-1 py-1.5 px-2.5 rounded-xl text-xs font-bold bg-gray-900 hover:bg-gray-800 text-white shadow-2xs transition flex items-center justify-center gap-1.5"
+                    className="flex-1 py-1.5 px-2.5 rounded-xl text-xs font-bold bg-gray-900 hover:bg-gray-800 text-white shadow-2xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
                     <span>Edit Plan</span>
@@ -644,7 +711,7 @@ export function ClientHealthDashboard({
                     type="button"
                     onClick={() => onOpenChat(user)}
                     title="Direct In-App Chat"
-                    className="p-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
+                    className="p-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition cursor-pointer"
                   >
                     <MessageCircle className="w-3.5 h-3.5 text-gray-700" />
                   </button>
@@ -653,7 +720,7 @@ export function ClientHealthDashboard({
                     type="button"
                     onClick={() => onOpenBiometrics(user)}
                     title="View Full Biometrics"
-                    className="p-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
+                    className="p-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition cursor-pointer"
                   >
                     <Eye className="w-3.5 h-3.5" />
                   </button>

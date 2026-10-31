@@ -9,7 +9,7 @@ import type {
 } from "@/types/admin";
 import type { PlanDashboardData, PlanStatus, WeekPlanData, TaskLogState } from "@/types/plan-dashboard";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
-import { adminDb, hasAdminCredentials } from "@/lib/firebase/admin";
+import { adminDb, adminAuth, hasAdminCredentials } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
 
 // In-memory cache for fast desktop administration & live synchronization with Firestore
@@ -151,9 +151,9 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
     }
   }
 
-  // 0.1 Discover registered Firebase Auth clients
-  const venkateshUid = "vawLoXTrkMBbaS7hatEXDO";
-  const testAthleteUid = "nqOIc3cJFVIzJB3cGRVyu";
+  // 0.1 Discover registered Firebase Auth clients (Exact UIDs from Firebase Auth console)
+  const venkateshUid = "vovsLoxTftM6lNs7hstEKDD31iK2";
+  const testAthleteUid = "nqOlc3cJFVIzJB3oGRVyu4g9r4L2";
 
   if (!memoryStore.has(venkateshUid)) {
     memoryStore.set(
@@ -162,7 +162,7 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
         {
           id: venkateshUid,
           name: "Venkatesh Choppa",
-          email: "venkateshchap14@gmail.com",
+          email: "venkateshchop14@gmail.com",
           phone: "+91 98490 12345",
           city: "Bengaluru, KA",
           membershipCategory: "free",
@@ -199,76 +199,218 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
   }
 
   if (hasAdminCredentials) {
+    // 0.2 Query live Firebase Authentication users
+    try {
+      const authList = await adminAuth.listUsers(100);
+      for (const authUser of authList.users) {
+        if (authUser.email?.toLowerCase() === "bmyfitnesscoach@gmail.com") continue; // Coach is admin
+
+        const uid = authUser.uid;
+        const email = authUser.email || `${uid}@client.bmyfit.in`;
+        const displayName = authUser.displayName || email.split("@")[0] || "BMYFIT Member";
+        const phone = authUser.phoneNumber || "+91 98000 00000";
+        const photoUrl = authUser.photoURL || undefined;
+
+        const existing = memoryStore.get(uid);
+        if (existing) {
+          existing.email = email;
+          if (authUser.displayName) existing.name = authUser.displayName;
+          if (authUser.phoneNumber) existing.phone = authUser.phoneNumber;
+          if (photoUrl) existing.avatar = photoUrl;
+        } else {
+          memoryStore.set(
+            uid,
+            sanitizeAdminUser(
+              {
+                id: uid,
+                name: displayName,
+                email,
+                phone,
+                city: "Online Client",
+                avatar: photoUrl,
+                joinedAt: authUser.metadata.creationTime || new Date().toISOString(),
+                lastActive: "Active Today",
+                membershipCategory: "free",
+                membershipTitle: "Registered Member",
+                goal: "fat-loss",
+                goalDisplay: "Fat Loss",
+              },
+              uid
+            )
+          );
+        }
+      }
+    } catch (authErr) {
+      console.warn("adminAuth.listUsers notice:", authErr);
+    }
+
     // 1. Fetch real registered users from Firestore "users" collection
     try {
       const usersSnap = await adminDb.collection("users").get();
-    if (!usersSnap.empty) {
-      for (const doc of usersSnap.docs) {
-        const userData = doc.data();
-        const existing = memoryStore.get(doc.id);
-        if (existing) {
-          if (userData.name) existing.name = userData.name;
-          if (userData.email) existing.email = userData.email;
-          if (userData.phone) existing.phone = userData.phone;
-          if (userData.avatarUrl) existing.avatar = userData.avatarUrl;
-          if (userData.membershipCategory) existing.membershipCategory = userData.membershipCategory;
-          if (userData.plan) existing.plan = { ...existing.plan, ...userData.plan };
-        } else {
-          memoryStore.set(doc.id, {
-            id: doc.id,
-            name: userData.name || "BMYFIT Member",
-            email: userData.email || `${doc.id}@client.bmyfit.in`,
-            phone: userData.phone || "+91 98000 00000",
-            city: userData.city || "Online Client",
-            avatar:
-              userData.avatarUrl ||
-              "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
-            joinedAt: userData.createdAt || new Date().toISOString(),
-            lastActive: "Active Today",
-            membershipCategory: userData.membershipCategory || "free",
-            membershipTitle:
-              userData.membershipTitle ||
-              (userData.membershipCategory === "purchased"
-                ? "Purchased Client Plan"
-                : "Free Registered Member"),
-            goal: userData.goal || "fat-loss",
-            goalDisplay: userData.goalDisplay || "Fat Loss & Conditioning",
-            needsPlanReview: userData.needsPlanReview ?? false,
-            biometrics: userData.biometrics || {
-              gender: "male",
-              age: userData.age || 28,
-              heightCm: 175,
-              weightKg: 78,
-              targetWeightKg: 70,
-              waistIn: 34,
-              neckIn: 15.5,
-              bmi: 24.5,
-              bmiCategory: "normal",
-              bodyFatPercent: 21.0,
-              bodyFatCategory: "average",
-              bmr: 1700,
-              tdee: 2350,
-              caloricTarget: 1800,
-              proteinTargetGrams: 120,
-              activityLevel: "moderately-active",
-              dietPreference: "vegetarian",
-              waterLitres: 3.5,
-              dailyStepGoal: 10000,
-            },
-            plan:
-              userData.plan ||
-              generateDashboardPlan(doc.id, {
-                customerName: userData.name || "BMYFIT Member",
-                status: userData.membershipCategory === "purchased" ? "pending_review" : "active",
-                weeksCount: 8,
-              }),
-          });
+      if (!usersSnap.empty) {
+        for (const doc of usersSnap.docs) {
+          const userData = doc.data();
+          const existing = memoryStore.get(doc.id);
+          if (existing) {
+            if (userData.name) existing.name = userData.name;
+            if (userData.email) existing.email = userData.email;
+            if (userData.phone) existing.phone = userData.phone;
+            if (userData.avatarUrl) existing.avatar = userData.avatarUrl;
+            if (userData.membershipCategory) existing.membershipCategory = userData.membershipCategory;
+            if (userData.plan) existing.plan = { ...existing.plan, ...userData.plan };
+            if (userData.biometrics) existing.biometrics = { ...existing.biometrics, ...userData.biometrics };
+            if (userData.medicalAssessment) existing.medicalAssessment = { ...existing.medicalAssessment, ...userData.medicalAssessment };
+          } else {
+            memoryStore.set(doc.id, {
+              id: doc.id,
+              name: userData.name || "BMYFIT Member",
+              email: userData.email || `${doc.id}@client.bmyfit.in`,
+              phone: userData.phone || "+91 98000 00000",
+              city: userData.city || "Online Client",
+              avatar:
+                userData.avatarUrl ||
+                "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
+              joinedAt: userData.createdAt || new Date().toISOString(),
+              lastActive: "Active Today",
+              membershipCategory: userData.membershipCategory || "free",
+              membershipTitle:
+                userData.membershipTitle ||
+                (userData.membershipCategory === "purchased"
+                  ? "Purchased Client Plan"
+                  : "Free Registered Member"),
+              goal: userData.goal || "fat-loss",
+              goalDisplay: userData.goalDisplay || "Fat Loss & Conditioning",
+              needsPlanReview: userData.needsPlanReview ?? false,
+              biometrics: userData.biometrics || {
+                gender: "male",
+                age: userData.age || 28,
+                heightCm: 175,
+                weightKg: 78,
+                targetWeightKg: 70,
+                waistIn: 34,
+                neckIn: 15.5,
+                bmi: 24.5,
+                bmiCategory: "normal",
+                bodyFatPercent: 21.0,
+                bodyFatCategory: "average",
+                bmr: 1700,
+                tdee: 2350,
+                caloricTarget: 1800,
+                proteinTargetGrams: 120,
+                activityLevel: "moderately-active",
+                dietPreference: "vegetarian",
+                waterLitres: 3.5,
+                dailyStepGoal: 10000,
+              },
+              plan:
+                userData.plan ||
+                generateDashboardPlan(doc.id, {
+                  customerName: userData.name || "BMYFIT Member",
+                  status: userData.membershipCategory === "purchased" ? "pending_review" : "active",
+                  weeksCount: 8,
+                }),
+            });
+          }
         }
       }
+    } catch (err) {
+      console.warn("Firestore users collection fetch notice:", err);
     }
-  } catch (err) {
-    console.warn("Firestore users collection fetch notice:", err);
-  }
+
+    // 1.5 Fetch live assessments from Firestore "assessments" collection (Free Score leads)
+    try {
+      const asmSnap = await adminDb.collection("assessments").get();
+      if (!asmSnap.empty) {
+        for (const doc of asmSnap.docs) {
+          const asm = doc.data();
+          const targetUid = asm.uid && asm.uid !== "anonymous-user" && !String(asm.uid).startsWith("guest_") ? asm.uid : doc.id;
+          const existing = memoryStore.get(targetUid) || memoryStore.get(doc.id);
+          const leadName = asm.name || `Free Score Lead (${doc.id.slice(0, 6)})`;
+          const leadEmail = asm.email || (existing ? existing.email : `${doc.id}@lead.bmyfit.in`);
+
+          if (existing) {
+            existing.assessmentId = doc.id;
+            if (asm.name && existing.name === "BMYFIT Member") existing.name = asm.name;
+            if (asm.email && !existing.email) existing.email = asm.email;
+            if (asm.phone && !existing.phone) existing.phone = asm.phone;
+            if (asm.goal) {
+              existing.goal = asm.goal;
+              existing.goalDisplay = String(asm.goal).replace("-", " ");
+            }
+            if (asm.bmi || asm.bodyFatPercent) {
+              existing.biometrics = {
+                ...existing.biometrics,
+                gender: asm.gender || existing.biometrics?.gender || "male",
+                age: asm.age || existing.biometrics?.age || 26,
+                heightCm: asm.heightCm || existing.biometrics?.heightCm || 175,
+                weightKg: asm.weightKg || existing.biometrics?.weightKg || 70,
+                targetWeightKg: asm.targetWeightKg || existing.biometrics?.targetWeightKg || 68,
+                waistIn: asm.waistIn || existing.biometrics?.waistIn || 32,
+                neckIn: asm.neckIn || existing.biometrics?.neckIn || 15,
+                hipIn: asm.hipIn,
+                bmi: asm.bmi || existing.biometrics?.bmi || 24.2,
+                bmiCategory: asm.bmiCategory || existing.biometrics?.bmiCategory || "normal",
+                bodyFatPercent: asm.bodyFatPercent || existing.biometrics?.bodyFatPercent || 18.4,
+                bodyFatCategory: asm.bodyFatCategory || existing.biometrics?.bodyFatCategory || "average",
+                bmr: asm.bmr || existing.biometrics?.bmr || 1600,
+                tdee: asm.tdee || existing.biometrics?.tdee || 2200,
+                caloricTarget: existing.biometrics?.caloricTarget || 1800,
+                proteinTargetGrams: existing.biometrics?.proteinTargetGrams || 120,
+                activityLevel: asm.activityLevel || existing.biometrics?.activityLevel || "moderately-active",
+                dietPreference: asm.dietPreference || existing.biometrics?.dietPreference || "vegetarian",
+                waterLitres: 3.5,
+                dailyStepGoal: 10000,
+              };
+            }
+          } else {
+            memoryStore.set(
+              doc.id,
+              sanitizeAdminUser(
+                {
+                  id: doc.id,
+                  assessmentId: doc.id,
+                  name: leadName,
+                  email: leadEmail,
+                  phone: asm.phone || "+91 98000 00000",
+                  city: "Online Funnel",
+                  membershipCategory: "free",
+                  membershipTitle: "Free Assessment Lead",
+                  goal: asm.goal || "fat-loss",
+                  goalDisplay: asm.goal ? String(asm.goal).replace("-", " ") : "Fat Loss",
+                  joinedAt: asm.createdAt || new Date().toISOString(),
+                  lastActive: "Recent Assessment",
+                  biometrics: {
+                    gender: asm.gender || "male",
+                    age: asm.age || 26,
+                    heightCm: asm.heightCm || 175,
+                    weightKg: asm.weightKg || 70,
+                    targetWeightKg: asm.targetWeightKg || 68,
+                    waistIn: asm.waistIn || 32,
+                    neckIn: asm.neckIn || 15,
+                    hipIn: asm.hipIn,
+                    bmi: asm.bmi || 24.2,
+                    bmiCategory: asm.bmiCategory || "normal",
+                    bodyFatPercent: asm.bodyFatPercent || 18.4,
+                    bodyFatCategory: asm.bodyFatCategory || "average",
+                    bmr: asm.bmr || 1600,
+                    tdee: asm.tdee || 2200,
+                    caloricTarget: 1800,
+                    proteinTargetGrams: 120,
+                    activityLevel: asm.activityLevel || "moderately-active",
+                    dietPreference: asm.dietPreference || "vegetarian",
+                    waterLitres: 3.5,
+                    dailyStepGoal: 10000,
+                  },
+                },
+                doc.id
+              )
+            );
+          }
+        }
+      }
+    } catch (asmErr) {
+      console.warn("Firestore assessments collection fetch notice:", asmErr);
+    }
 
   // 2. Fetch live plans from Firestore "plans" collection
   try {

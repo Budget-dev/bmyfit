@@ -17,16 +17,25 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       enforceRateLimit(requestKey(request, "plan-read", user.uid), 60);
     }
 
+    const isCoach = user?.email?.toLowerCase() === "bmyfitnesscoach@gmail.com";
+
     // 1. Check if an admin-customized plan exists for this id
     const adminUser = await fetchAdminUserById(id);
     if (adminUser?.plan) {
-      return Response.json({ dashboardPlan: adminUser.plan });
+      const isPaid =
+        isCoach ||
+        adminUser.membershipCategory === "purchased" ||
+        adminUser.membershipCategory === "membership" ||
+        adminUser.order?.status === "paid";
+      if (isPaid) {
+        return Response.json({ dashboardPlan: adminUser.plan, isSubscribed: true });
+      }
     }
 
     // 2. Check Firestore direct dashboard plan
     let dashboardPlan = await getDashboardPlanById(id);
-    if (dashboardPlan) {
-      return Response.json({ dashboardPlan });
+    if (dashboardPlan && (isCoach || dashboardPlan.status === "approved" || dashboardPlan.status === "active")) {
+      return Response.json({ dashboardPlan, isSubscribed: true });
     }
 
     // 3. If user is authenticated, check their paid plan
@@ -44,19 +53,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             weeksCount: 8,
           });
           await storeDashboardPlan(user.uid, id, dashboardPlan);
-          return Response.json({ plan, dashboardPlan });
+          return Response.json({ plan, dashboardPlan, isSubscribed: true });
         }
       } catch {
-        // Continue to fallback
+        // Continue to access check
       }
     }
 
-    // 4. Fallback: generate default plan for demo id
-    const fallbackPlan = generateDashboardPlan(id, {
-      status: "approved",
-      weeksCount: 8,
-    });
-    return Response.json({ dashboardPlan: fallbackPlan });
+    // 4. Strict gate: Unsubscribed or unpaid users must not receive the week plan
+    return Response.json(
+      {
+        dashboardPlan: null,
+        isSubscribed: false,
+        error: "Week plan access is reserved exclusively for ₹99 subscribed members.",
+        code: "PAYMENT_REQUIRED",
+      },
+      { status: 402 }
+    );
   } catch (error) {
     return toErrorResponse(error);
   }

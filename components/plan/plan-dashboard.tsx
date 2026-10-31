@@ -348,7 +348,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
           <div className="flex items-center gap-3.5">
             <div className="relative w-12 h-12 rounded-full overflow-hidden bg-white/10 border-2 border-[#25D366] shrink-0 shadow-md">
               <Image
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
+                src="/images/coach-naveen.jpg"
                 alt="Coach Naveen"
                 fill
                 className="object-cover"
@@ -754,7 +754,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
                     >
                       <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-gray-100 mb-2">
                         <Image
-                          src={meal.image}
+                          src={meal.image || "/images/plan-hero-model-exact.png"}
                           alt={meal.name}
                           fill
                           className="object-cover group-hover:scale-105 transition duration-300"
@@ -835,7 +835,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                           <Image
-                            src={day.image}
+                            src={day.image || "/images/plan-hero-model-exact.png"}
                             alt={day.title}
                             fill
                             className="object-cover group-hover:scale-105 transition duration-300"
@@ -931,7 +931,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
                       <div className="flex items-center gap-3 mb-2.5">
                         <div className="relative w-12 h-12 rounded-xl bg-white p-1 shrink-0 overflow-hidden border border-emerald-100">
                           <Image
-                            src={supp.image}
+                            src={supp.image || "/images/creatine-monohydrate.jpg"}
                             alt={supp.name}
                             fill
                             className="object-contain p-0.5"
@@ -1130,7 +1130,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
             </button>
 
             <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-gray-100">
-              <Image src={selectedMeal.image} alt={selectedMeal.name} fill className="object-cover" sizes="500px" />
+              <Image src={selectedMeal.image || "/images/plan-hero-model-exact.png"} alt={selectedMeal.name} fill className="object-cover" sizes="500px" />
               <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-xs text-white text-xs font-bold px-3 py-1 rounded-full">
                 {selectedMeal.slot}
               </div>
@@ -1211,7 +1211,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
             </button>
 
             <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-gray-100">
-              <Image src={selectedWorkout.image} alt={selectedWorkout.title} fill className="object-cover" sizes="500px" />
+              <Image src={selectedWorkout.image || "/images/plan-hero-model-exact.png"} alt={selectedWorkout.title} fill className="object-cover" sizes="500px" />
               <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-xs text-white text-xs font-bold px-3 py-1 rounded-full">
                 {selectedWorkout.day} · {selectedWorkout.durationMinutes} mins
               </div>

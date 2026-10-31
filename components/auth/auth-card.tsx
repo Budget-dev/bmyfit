@@ -29,7 +29,7 @@ export function AuthCard({
 }: AuthCardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTarget = searchParams?.get("redirect") || "/plan";
+  const redirectParam = searchParams?.get("redirect");
 
   const { signInWithGoogle, loginWithEmail, signupWithEmail } = useAuth();
 
@@ -82,13 +82,22 @@ export function AuthCard({
       setSuccessMessage(null);
 
       const profile = await signInWithGoogle();
-      setSuccessMessage(`Welcome back, ${profile.name.split(" ")[0]}! Redirecting...`);
+      const firstName = profile.name.split(" ")[0] || "Athlete";
+
+      // On account creation or when in signup mode, ALWAYS redirect to home page
+      const target = mode === "signup" ? "/" : (redirectParam && redirectParam !== "/plan" ? redirectParam : "/");
+
+      setSuccessMessage(
+        mode === "signup"
+          ? `Account created! Welcome, ${firstName}! Redirecting to home...`
+          : `Welcome back, ${firstName}! Redirecting...`
+      );
 
       if (onSuccess) {
         onSuccess();
       } else {
         setTimeout(() => {
-          router.push(redirectTarget);
+          router.push(target);
         }, 800);
       }
     } catch (err: unknown) {
@@ -145,12 +154,13 @@ export function AuthCard({
           age: ageNum,
         });
 
-        setSuccessMessage(`Account created! Welcome, ${profile.name.split(" ")[0]}! Redirecting...`);
+        // ALWAYS redirect to home page on account creation per strict requirement
+        setSuccessMessage(`Account created! Welcome, ${profile.name.split(" ")[0]}! Redirecting to home...`);
         if (onSuccess) {
           onSuccess();
         } else {
           setTimeout(() => {
-            router.push(redirectTarget);
+            router.push("/");
           }, 800);
         }
       } catch (err: unknown) {
@@ -189,12 +199,13 @@ export function AuthCard({
           password,
         });
 
+        const signInTarget = redirectParam && redirectParam !== "/plan" ? redirectParam : "/";
         setSuccessMessage(`Welcome back, ${profile.name.split(" ")[0]}! Redirecting...`);
         if (onSuccess) {
           onSuccess();
         } else {
           setTimeout(() => {
-            router.push(redirectTarget);
+            router.push(signInTarget);
           }, 800);
         }
       } catch (err: unknown) {

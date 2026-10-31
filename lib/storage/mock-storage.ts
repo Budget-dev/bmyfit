@@ -463,9 +463,9 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
     }
   } catch {}
 
-  // 0.1 Discover registered client accounts
-  const venkateshUid = "vawLoXTrkMBbaS7hatEXDO";
-  const testAthleteUid = "nqOIc3cJFVIzJB3cGRVyu";
+  // 0.1 Discover registered client accounts (Exact UIDs from Firebase Auth console)
+  const venkateshUid = "vovsLoxTftM6lNs7hstEKDD31iK2";
+  const testAthleteUid = "nqOlc3cJFVIzJB3oGRVyu4g9r4L2";
 
   if (!inMemoryUsers.has(venkateshUid)) {
     inMemoryUsers.set(
@@ -474,7 +474,7 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
         {
           id: venkateshUid,
           name: "Venkatesh Choppa",
-          email: "venkateshchap14@gmail.com",
+          email: "venkateshchop14@gmail.com",
           phone: "+91 98490 12345",
           city: "Bengaluru, KA",
           membershipCategory: "free",

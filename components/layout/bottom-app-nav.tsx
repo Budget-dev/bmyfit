@@ -46,7 +46,7 @@ export function BottomAppNav({ currentTab, className = "" }: BottomAppNavProps) 
 
         {/* Plans */}
         <Link
-          href="/plan/demo"
+          href="/plan"
           className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 ${
             active === "plans"
               ? "text-gray-950 dark:text-white font-bold"

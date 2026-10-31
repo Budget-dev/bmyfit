@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import type { AssessmentInput, FitnessGoal } from "@/types/fitness";
 import type { PlanDashboardData } from "@/types/plan-dashboard";
 import { PlanDashboard } from "@/components/plan/plan-dashboard";
+import { PlanLockScreen } from "./plan-lock-screen";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 import {
   getStoredPlan,
@@ -14,55 +15,35 @@ import {
 } from "@/lib/storage/mock-storage";
 
 export function PlanClient({ id }: { id: string }) {
-  const { getIdToken, userProfile } = useAuth();
+  const { getIdToken, userProfile, loading: authLoading } = useAuth();
   const [dashboardPlan, setDashboardPlan] = useState<PlanDashboardData | null>(null);
   const [fetching, setFetching] = useState<boolean>(true);
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
+  const [biometrics, setBiometrics] = useState<{
+    bmi: number;
+    bodyFatPercent: number;
+    goal: FitnessGoal;
+  }>({
+    bmi: 24.2,
+    bodyFatPercent: 18.4,
+    goal: "fat-loss",
+  });
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadPlanData() {
-      // 0. If user is authenticated, check their UID first if looking at default / local plan
-      const targetPlanId = (id === "local" || id === "demo") && userProfile?.uid ? userProfile.uid : id;
+      // 1. Determine subscription entitlement
+      const isCoach = userProfile?.email?.toLowerCase() === "bmyfitnesscoach@gmail.com";
+      const hasPurchasedProfile =
+        userProfile?.isPaid === true ||
+        userProfile?.membershipCategory === "purchased" ||
+        userProfile?.membershipCategory === "membership";
 
-      // 1. First priority: Check Firebase Firestore direct plan
-      const storedDirectPlan =
-        getStoredPlan(targetPlanId) ||
-        (await fetchFirebasePlan(targetPlanId)) ||
-        (userProfile?.uid && targetPlanId !== userProfile.uid
-          ? getStoredPlan(userProfile.uid) || (await fetchFirebasePlan(userProfile.uid))
-          : null);
-
-      if (storedDirectPlan) {
-        if (isMounted) {
-          setDashboardPlan(storedDirectPlan);
-          setFetching(false);
-          return;
-        }
-      }
-
-      // Check stored admin users list (covers newly purchased users with customized months)
-      const storedAdminUsers = getStoredAdminUsers();
-      const matchedUser = storedAdminUsers.find(
-        (u) =>
-          u.id === targetPlanId ||
-          u.assessmentId === targetPlanId ||
-          (userProfile?.uid && (u.id === userProfile.uid || u.email === userProfile.email)) ||
-          (id === "local" && u.membershipCategory === "purchased")
-      );
-      if (matchedUser?.plan) {
-        if (isMounted) {
-          setDashboardPlan(matchedUser.plan);
-          setFetching(false);
-          return;
-        }
-      }
-
-      // 2. Try local assessment from sessionStorage
-      let localAssessment: AssessmentInput | null = null;
       let isPaidLocal = false;
       let calculatedBmi = 24.2;
       let calculatedBodyFat = 18.4;
+      let localAssessment: AssessmentInput | null = null;
 
       try {
         if (typeof window !== "undefined") {
@@ -79,32 +60,66 @@ export function PlanClient({ id }: { id: string }) {
           }
         }
       } catch (err) {
-        console.warn("Local storage parse error:", err);
+        console.warn("Session storage parse notice:", err);
       }
 
-      const medicalData = getStoredMedicalConsultation(id);
-
-      // If id is "local" or locally marked paid
-      if (id === "local" || isPaidLocal) {
-        const goal: FitnessGoal = localAssessment?.goal || "fat-loss";
-        const generated = generateDashboardPlan(id || "local", {
-          status: isPaidLocal ? "pending_review" : "active",
-          goal,
+      const effectiveGoal: FitnessGoal = localAssessment?.goal || "fat-loss";
+      if (isMounted) {
+        setBiometrics({
           bmi: calculatedBmi,
           bodyFatPercent: calculatedBodyFat,
-          weeksCount: 8,
-          monthsCount: 2,
-          customerName: "Fit Member",
-          medicalAssessment: medicalData || undefined,
+          goal: effectiveGoal,
         });
+      }
+
+      // Check stored admin users list (covers newly purchased users with customized months)
+      const storedAdminUsers = getStoredAdminUsers();
+      const matchedUser = storedAdminUsers.find(
+        (u) =>
+          u.id === id ||
+          u.assessmentId === id ||
+          (userProfile?.uid && (u.id === userProfile.uid || u.email === userProfile.email)) ||
+          (id === "local" && u.membershipCategory === "purchased")
+      );
+
+      const isPaidFromAdmin =
+        matchedUser?.membershipCategory === "purchased" ||
+        matchedUser?.membershipCategory === "membership" ||
+        matchedUser?.order?.status === "paid";
+
+      // 2. If user is NOT subscribed and NOT Coach Naveen, lock access immediately
+      const userEntitled = isCoach || hasPurchasedProfile || isPaidLocal || isPaidFromAdmin;
+
+      // 3. Try to fetch direct plan if entitled or looking up a specific id
+      const targetPlanId = (id === "local" || id === "demo") && userProfile?.uid ? userProfile.uid : id;
+
+      // First check local / Firestore stored plan
+      const storedDirectPlan =
+        getStoredPlan(targetPlanId) ||
+        (await fetchFirebasePlan(targetPlanId)) ||
+        (userProfile?.uid && targetPlanId !== userProfile.uid
+          ? getStoredPlan(userProfile.uid) || (await fetchFirebasePlan(userProfile.uid))
+          : null);
+
+      if (storedDirectPlan && (userEntitled || storedDirectPlan.status === "approved" || storedDirectPlan.status === "active")) {
         if (isMounted) {
-          setDashboardPlan(generated);
+          setDashboardPlan(storedDirectPlan);
+          setIsSubscribed(true);
           setFetching(false);
           return;
         }
       }
 
-      // 2. Try fetching from server API
+      if (matchedUser?.plan && userEntitled) {
+        if (isMounted) {
+          setDashboardPlan(matchedUser.plan);
+          setIsSubscribed(true);
+          setFetching(false);
+          return;
+        }
+      }
+
+      // Try fetching from server API with token
       try {
         const token = await getIdToken();
         const headers: Record<string, string> = {};
@@ -115,31 +130,45 @@ export function PlanClient({ id }: { id: string }) {
         const response = await fetch(`/api/plan/${id}`, { headers });
         if (response.ok) {
           const data = await response.json();
-          if (data.dashboardPlan) {
+          if (data.dashboardPlan && data.isSubscribed) {
             if (isMounted) {
               setDashboardPlan(data.dashboardPlan);
+              setIsSubscribed(true);
               setFetching(false);
               return;
             }
           }
         }
       } catch (err) {
-        console.warn("API plan fetch fallback:", err);
+        console.warn("API plan fetch notice:", err);
       }
 
-      // 3. Fallback: Generate mock plan matching user's exact screenshot
-      const fallbackGoal: FitnessGoal = localAssessment?.goal || "fat-loss";
-      const fallbackPlan = generateDashboardPlan(id || "demo", {
-        status: "active",
-        goal: fallbackGoal,
-        bmi: calculatedBmi,
-        bodyFatPercent: calculatedBodyFat,
-        weeksCount: 8,
-        customerName: "Fit Pioneer",
-      });
+      // If entitled (e.g. freshly completed ₹99 checkout locally or Coach Naveen)
+      if (userEntitled) {
+        const medicalData = getStoredMedicalConsultation(id);
+        const generated = generateDashboardPlan(id || "local", {
+          status: isPaidLocal ? "pending_review" : "active",
+          goal: effectiveGoal,
+          bmi: calculatedBmi,
+          bodyFatPercent: calculatedBodyFat,
+          weeksCount: 8,
+          monthsCount: 2,
+          customerName: userProfile?.name || matchedUser?.name || "Fit Member",
+          medicalAssessment: medicalData || undefined,
+        });
 
+        if (isMounted) {
+          setDashboardPlan(generated);
+          setIsSubscribed(true);
+          setFetching(false);
+          return;
+        }
+      }
+
+      // 4. Strict paywall: Unsubscribed / unpaid visitors must see the lock screen
       if (isMounted) {
-        setDashboardPlan(fallbackPlan);
+        setIsSubscribed(false);
+        setDashboardPlan(null);
         setFetching(false);
       }
     }
@@ -149,14 +178,26 @@ export function PlanClient({ id }: { id: string }) {
     return () => {
       isMounted = false;
     };
-  }, [id, getIdToken, userProfile?.uid, userProfile?.email]);
+  }, [id, getIdToken, userProfile?.uid, userProfile?.email, userProfile?.isPaid, userProfile?.membershipCategory]);
 
-  if (fetching || !dashboardPlan) {
+  if (fetching || authLoading) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex flex-col justify-center items-center p-6 space-y-4">
         <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-black text-gray-700">Loading your personalized plan...</p>
+        <p className="text-sm font-black text-gray-700">Verifying plan entitlement...</p>
       </div>
+    );
+  }
+
+  // If user is not subscribed to ₹99 plan, render PlanLockScreen
+  if (!isSubscribed || !dashboardPlan) {
+    return (
+      <PlanLockScreen
+        assessmentId={id}
+        bmi={biometrics.bmi}
+        bodyFatPercent={biometrics.bodyFatPercent}
+        goal={biometrics.goal}
+      />
     );
   }
 

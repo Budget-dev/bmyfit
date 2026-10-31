@@ -5,6 +5,8 @@ export interface UserProfile {
   phone: string;
   age: number;
   role?: "admin" | "user" | "coach";
+  membershipCategory?: "free" | "membership" | "purchased";
+  isPaid?: boolean;
   avatarUrl?: string;
   provider: "google" | "password" | "anonymous" | "demo";
   createdAt: string;

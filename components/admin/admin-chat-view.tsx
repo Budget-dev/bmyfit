@@ -157,10 +157,9 @@ export function AdminChatView({
             <div className="flex items-center gap-2.5">
               <div className="relative w-9 h-9 rounded-full overflow-hidden bg-emerald-600 border border-emerald-400">
                 <Image
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
+                  src="/images/coach-naveen.jpg"
                   alt="Coach Naveen"
                   fill
-                  unoptimized
                   className="object-cover"
                 />
               </div>

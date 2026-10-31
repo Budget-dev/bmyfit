@@ -92,7 +92,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#00c853] ring-2 ring-white" />
             </button>
             <Link
-              href="/plan/demo"
+              href="/plan"
               className="p-2 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition"
               aria-label="Menu"
             >
