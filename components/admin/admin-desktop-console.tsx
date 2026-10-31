@@ -1374,6 +1374,7 @@ export function AdminDesktopConsole() {
             <div className="p-4 lg:p-6 flex-1 flex flex-col">
               <AdminChatView
                 users={users}
+                initialUserId={selectedUser?.id}
                 onOpenStudio={(u) => {
                   setSelectedUser(u);
                   setActiveTab("studio");

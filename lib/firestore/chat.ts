@@ -11,16 +11,11 @@ import {
   orderBy,
   serverTimestamp,
 } from "@/lib/firebase/client";
+import { adminFetch } from "@/lib/admin-api-client";
 
 // Live in-memory cache for instant UI response and Firestore sync
 const inMemoryMessages = new Map<string, ChatMessage[]>();
 const inMemoryThreads = new Map<string, ChatThread>();
-
-function seedInitialChatData() {
-  // Real database mode: no fake chats seeded into memory
-}
-
-seedInitialChatData();
 
 // Custom Event bus for real-time local sync across components
 const CHAT_UPDATE_EVENT = "bmyfit_chat_updated";
@@ -38,45 +33,79 @@ export function subscribeToChatMessages(
   userId: string,
   callback: (messages: ChatMessage[]) => void
 ): () => void {
-  seedInitialChatData();
+  if (!userId) {
+    callback([]);
+    return () => {};
+  }
 
-  // If userId doesn't exist yet (e.g. newly registered user or "local"), create default greeting
+  // 1. If no messages exist in memory yet, initialize a polite introductory welcome
+  const existingThread = inMemoryThreads.get(userId);
+  const targetName = existingThread?.userName || "Athlete";
+  const userCategory = existingThread?.membershipCategory || "free";
+
   if (!inMemoryMessages.has(userId)) {
+    const greetingText =
+      userCategory === "purchased" || userCategory === "membership"
+        ? `Namaste ${targetName}! Coach Naveen here from BMYFIT. Your 8-week personalized plan and nutrition targets are ready. How is your energy and meal prep feeling today?`
+        : `Namaste ${targetName}! Coach Naveen here from BMYFIT. I've reviewed your body metrics and clinical assessment. Let me know if you have any questions about your results!`;
+
     const greeting: ChatMessage = {
       id: `msg_welcome_${userId}`,
       userId,
       senderId: "coach_naveen",
       senderRole: "coach",
       senderName: "Coach Naveen",
-      text: "Namaste! I am Coach Naveen, your dedicated Head Coach & Nutritionist at BMYFIT. I am reviewing your biometrics and tailoring your custom weekly roadmap. Feel free to ask me anything here anytime!",
+      text: greetingText,
       createdAt: new Date().toISOString(),
       read: true,
     };
     inMemoryMessages.set(userId, [greeting]);
 
-    const initialThread: ChatThread = {
-      userId,
-      userName: "Client",
-      userEmail: "client@bmyfit.com",
-      planGoal: "Custom Transformation",
-      membershipCategory: "purchased",
-      lastMessageText: greeting.text,
-      lastMessageAt: greeting.createdAt,
-      lastMessageSenderRole: "coach",
-      unreadCountCoach: 0,
-      unreadCountClient: 0,
-      updatedAt: greeting.createdAt,
-    };
-    inMemoryThreads.set(userId, initialThread);
+    if (!existingThread) {
+      const initialThread: ChatThread = {
+        userId,
+        userName: targetName,
+        userEmail: "",
+        planGoal: "Fitness Transformation",
+        membershipCategory: userCategory,
+        lastMessageText: greeting.text,
+        lastMessageAt: greeting.createdAt,
+        lastMessageSenderRole: "coach",
+        unreadCountCoach: 0,
+        unreadCountClient: 0,
+        updatedAt: greeting.createdAt,
+      };
+      inMemoryThreads.set(userId, initialThread);
+    }
   }
 
   // Initial callback with in-memory data
   callback(inMemoryMessages.get(userId) || []);
 
-  // Listen to local event updates
+  // 2. Background server fetch from API (handles server-side Firebase Admin authorization)
+  void (async () => {
+    try {
+      // Try admin endpoint first
+      let res = await adminFetch(`/api/admin/chats/${encodeURIComponent(userId)}/messages`).catch(() => null);
+      if (!res || !res.ok) {
+        res = await fetch(`/api/chats/${encodeURIComponent(userId)}/messages`).catch(() => null);
+      }
+      if (res && res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.messages) && data.messages.length > 0) {
+          inMemoryMessages.set(userId, data.messages);
+          callback(data.messages);
+        }
+      }
+    } catch (e) {
+      console.warn("Background chat fetch notice:", e);
+    }
+  })();
+
+  // 3. Listen to local event updates
   const handleLocalUpdate = (e: Event) => {
     const customEvent = e as CustomEvent<{ userId: string }>;
-    if (!customEvent.detail || customEvent.detail.userId === userId) {
+    if (!customEvent.detail || customEvent.detail.userId === userId || customEvent.detail.userId === "all") {
       callback(inMemoryMessages.get(userId) || []);
     }
   };
@@ -85,7 +114,7 @@ export function subscribeToChatMessages(
     window.addEventListener(CHAT_UPDATE_EVENT, handleLocalUpdate);
   }
 
-  // Listen to Firestore real-time collection: chats/{userId}/messages
+  // 4. Listen to Firestore real-time collection: chats/{userId}/messages
   let unsubscribeFirestore = () => {};
   try {
     const messagesRef = collection(db, "chats", userId, "messages");
@@ -109,13 +138,11 @@ export function subscribeToChatMessages(
             });
           });
 
-          // Merge remote with local messages
           inMemoryMessages.set(userId, remoteMsgs);
           callback(remoteMsgs);
         }
       },
       (error) => {
-        // Silently keep using local/mock store if permission or network error
         console.warn("Firestore messages snapshot warning (using local fallback):", error.message);
       }
     );
@@ -142,7 +169,6 @@ export async function sendChatMessage(params: {
   text: string;
 }): Promise<ChatMessage> {
   const { userId, senderRole, senderId, senderName, text } = params;
-  seedInitialChatData();
 
   const msgId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const now = new Date().toISOString();
@@ -158,7 +184,7 @@ export async function sendChatMessage(params: {
     read: false,
   };
 
-  // 1. Update inMemory messages
+  // 1. Update inMemory messages immediately for zero-lag UI response
   const existingMsgs = inMemoryMessages.get(userId) || [];
   inMemoryMessages.set(userId, [...existingMsgs, newMessage]);
 
@@ -167,7 +193,7 @@ export async function sendChatMessage(params: {
     userId,
     userName: senderRole === "client" ? senderName : "Client",
     userEmail: "",
-    membershipCategory: "purchased",
+    membershipCategory: "free",
     unreadCountCoach: 0,
     unreadCountClient: 0,
     updatedAt: now,
@@ -187,7 +213,26 @@ export async function sendChatMessage(params: {
   // Notify local components immediately
   notifyChatUpdated(userId);
 
-  // 3. Persist to Cloud Firestore in the background
+  // 3. Persist to server via API endpoint (uses Firebase Admin SDK for 100% reliable write permissions)
+  try {
+    if (senderRole === "coach") {
+      void adminFetch(`/api/admin/chats/${encodeURIComponent(userId)}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newMessage),
+      }).catch((e) => console.warn("Admin chat API push notice:", e));
+    } else {
+      void fetch(`/api/chats/${encodeURIComponent(userId)}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newMessage),
+      }).catch((e) => console.warn("Client chat API push notice:", e));
+    }
+  } catch (apiErr) {
+    console.warn("Chat API dispatch notice:", apiErr);
+  }
+
+  // 4. Also attempt direct client Firestore write for instant real-time listener updates
   try {
     const threadDocRef = doc(db, "chats", userId);
     const messageDocRef = doc(db, "chats", userId, "messages", msgId);
@@ -206,6 +251,7 @@ export async function sendChatMessage(params: {
       {
         userId,
         userName: updatedThread.userName,
+        userEmail: updatedThread.userEmail || "",
         lastMessageText: newMessage.text,
         lastMessageAt: now,
         lastMessageSenderRole: senderRole,
@@ -216,7 +262,7 @@ export async function sendChatMessage(params: {
       { merge: true }
     ).catch(() => {});
   } catch (err) {
-    console.warn("Firestore chat push fallback notice:", err);
+    console.warn("Firestore direct chat write notice:", err);
   }
 
   return newMessage;
@@ -268,14 +314,31 @@ export async function markChatThreadRead(
  * Subscribe to all chat threads (used in Coach Admin Console)
  */
 export function subscribeToChatThreads(callback: (threads: ChatThread[]) => void): () => void {
-  seedInitialChatData();
-
   const getSortedThreads = () => {
-    return Array.from(inMemoryThreads.values()).sort((a, b) => {
-      const timeA = new Date(a.lastMessageAt || a.updatedAt).getTime();
-      const timeB = new Date(b.lastMessageAt || b.updatedAt).getTime();
-      return timeB - timeA;
-    });
+    return Array.from(inMemoryThreads.values())
+      .filter((t) => {
+        // Exclude Coach Naveen from client thread list
+        if (t.userEmail?.toLowerCase() === "bmyfitnesscoach@gmail.com") return false;
+        if (t.userName?.toLowerCase() === "coach naveen") return false;
+        // Exclude mock/test seed placeholders completely
+        if (
+          t.userId.startsWith("user_membership_") ||
+          t.userId.startsWith("user_purchased_") ||
+          t.userId.startsWith("user_purchase_") ||
+          t.userId.startsWith("mock_") ||
+          t.userId === "coach_naveen" ||
+          !t.userName ||
+          t.userName === "Client"
+        ) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const timeA = new Date(a.lastMessageAt || a.updatedAt).getTime();
+        const timeB = new Date(b.lastMessageAt || b.updatedAt).getTime();
+        return timeB - timeA;
+      });
   };
 
   callback(getSortedThreads());
@@ -297,18 +360,36 @@ export function subscribeToChatThreads(callback: (threads: ChatThread[]) => void
         if (!snapshot.empty) {
           snapshot.forEach((docSnap) => {
             const data = docSnap.data();
+            // Skip dummy mock records completely
+            if (
+              docSnap.id.startsWith("user_membership_") ||
+              docSnap.id.startsWith("user_purchased_") ||
+              docSnap.id.startsWith("user_purchase_") ||
+              docSnap.id.startsWith("mock_") ||
+              docSnap.id === "coach_naveen" ||
+              !data.userName ||
+              data.userName === "Client"
+            ) {
+              return;
+            }
+
             const existing = inMemoryThreads.get(docSnap.id);
             if (existing) {
               inMemoryThreads.set(docSnap.id, {
                 ...existing,
                 ...data,
                 userId: docSnap.id,
+                // Preserve genuine membership category
+                membershipCategory: existing.membershipCategory || data.membershipCategory || "free",
               });
-            } else {
+            } else if (data.userName && data.userName !== "Client") {
               inMemoryThreads.set(docSnap.id, {
                 userId: docSnap.id,
-                userName: data.userName || "Client",
+                userName: data.userName,
                 userEmail: data.userEmail || "",
+                userPhone: data.userPhone,
+                planGoal: data.planGoal || "Custom Fitness Plan",
+                membershipCategory: data.membershipCategory || "free",
                 lastMessageText: data.lastMessageText || "",
                 lastMessageAt: data.lastMessageAt || new Date().toISOString(),
                 unreadCountCoach: data.unreadCountCoach || 0,
@@ -335,7 +416,7 @@ export function subscribeToChatThreads(callback: (threads: ChatThread[]) => void
 }
 
 /**
- * Synchronize all ₹99 purchased users into chat threads so Coach can message all of them immediately
+ * Synchronize registered users into chat threads so Coach can message all of them immediately
  */
 export function syncPurchasedUsersToChatThreads(
   users: Array<{
@@ -348,11 +429,18 @@ export function syncPurchasedUsersToChatThreads(
     membershipCategory?: "purchased" | "membership" | "free";
   }>
 ) {
-  seedInitialChatData();
   let added = false;
 
   users.forEach((u) => {
-    if (!inMemoryThreads.has(u.id)) {
+    // Never include Coach Naveen as a client thread
+    if (u.email?.toLowerCase() === "bmyfitnesscoach@gmail.com" || u.id === "coach_naveen" || u.name?.toLowerCase() === "coach naveen") {
+      return;
+    }
+
+    const existing = inMemoryThreads.get(u.id);
+    const category = u.membershipCategory || "free";
+
+    if (!existing) {
       const newThread: ChatThread = {
         userId: u.id,
         userName: u.name,
@@ -360,8 +448,8 @@ export function syncPurchasedUsersToChatThreads(
         userPhone: u.phone,
         avatarUrl: u.avatar,
         planGoal: u.goalDisplay || "Custom Fitness Plan",
-        membershipCategory: u.membershipCategory || "purchased",
-        lastMessageText: "Plan created. Click here to chat with client.",
+        membershipCategory: category,
+        lastMessageText: "Click here to message client directly.",
         lastMessageAt: new Date().toISOString(),
         lastMessageSenderRole: "coach",
         unreadCountCoach: 0,
@@ -370,6 +458,28 @@ export function syncPurchasedUsersToChatThreads(
       };
       inMemoryThreads.set(u.id, newThread);
       added = true;
+    } else {
+      // Update details to ensure correct membership and name
+      let modified = false;
+      if (existing.userName !== u.name) {
+        existing.userName = u.name;
+        modified = true;
+      }
+      if (existing.membershipCategory !== category) {
+        existing.membershipCategory = category;
+        modified = true;
+      }
+      if (u.phone && existing.userPhone !== u.phone) {
+        existing.userPhone = u.phone;
+        modified = true;
+      }
+      if (u.goalDisplay && existing.planGoal !== u.goalDisplay) {
+        existing.planGoal = u.goalDisplay;
+        modified = true;
+      }
+      if (modified) {
+        added = true;
+      }
     }
   });
 
@@ -377,4 +487,3 @@ export function syncPurchasedUsersToChatThreads(
     notifyChatUpdated("all");
   }
 }
-

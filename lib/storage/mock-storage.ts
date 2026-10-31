@@ -213,7 +213,15 @@ if (isClient()) {
  */
 export function getStoredAdminUsers(): AdminUserRecord[] {
   return Array.from(inMemoryUsers.values())
-    .filter((u) => !u.id.startsWith("user_membership_") && !u.id.startsWith("user_purchase_") && !u.id.startsWith("mock_"))
+    .filter(
+      (u) =>
+        !u.id.startsWith("user_membership_") &&
+        !u.id.startsWith("user_purchase_") &&
+        !u.id.startsWith("user_purchased_") &&
+        !u.id.startsWith("mock_") &&
+        u.id !== "coach_naveen" &&
+        u.email?.toLowerCase() !== "bmyfitnesscoach@gmail.com"
+    )
     .map((u) => sanitizeAdminUserRecord(u, u.id));
 }
 
@@ -551,7 +559,7 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
               id: docSnap.id,
               name: planData.customerName,
               email: `${docSnap.id}@client.bmyfit.in`,
-              membershipCategory: "purchased",
+              membershipCategory: "free",
               plan: planData,
             },
             docSnap.id
@@ -626,10 +634,19 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
       const chatsSnap = await getDocs(collection(db, "chats"));
       chatsSnap.forEach((docSnap) => {
         const id = docSnap.id;
-        if (id.startsWith("user_membership_") || id.startsWith("user_purchase_") || id.startsWith("mock_")) {
+        if (
+          id.startsWith("user_membership_") ||
+          id.startsWith("user_purchase_") ||
+          id.startsWith("user_purchased_") ||
+          id.startsWith("mock_") ||
+          id === "coach_naveen"
+        ) {
           return;
         }
         const chat = docSnap.data();
+        if (!chat.userName || chat.userName === "Client") {
+          return;
+        }
         const existing = inMemoryUsers.get(id);
         if (existing) {
           if (chat.userName) existing.name = chat.userName;
@@ -642,10 +659,10 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
           const newRec = sanitizeAdminUserRecord(
             {
               id,
-              name: chat.userName || `Client (${id.slice(0, 8)})`,
+              name: chat.userName,
               email: chat.userEmail || `${id}@client.bmyfit.in`,
               phone: chat.userPhone || "+91 98000 00000",
-              membershipCategory: chat.membershipCategory || "purchased",
+              membershipCategory: chat.membershipCategory || "free",
               goal: chat.planGoal || "fat-loss",
               avatar: chat.avatarUrl,
             },

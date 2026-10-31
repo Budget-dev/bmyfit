@@ -655,7 +655,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
           </div>
 
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-            {plan.weeks.map((w) => {
+            {weeks.map((w) => {
               const isSelected = w.weekNumber === selectedWeekNum;
               const wp = calculateWeekProgress(w.weekNumber, w, taskLogs);
               return (

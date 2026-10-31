@@ -23,39 +23,54 @@ import {
 
 interface AdminChatViewProps {
   users: AdminUserRecord[];
+  initialUserId?: string;
   onOpenStudio?: (user: AdminUserRecord) => void;
   onOpenBiometrics?: (user: AdminUserRecord) => void;
 }
 
 export function AdminChatView({
   users,
+  initialUserId,
   onOpenStudio,
   onOpenBiometrics,
 }: AdminChatViewProps) {
   const [threads, setThreads] = useState<ChatThread[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [selectedUserId, setSelectedUserId] = useState<string>(initialUserId || "");
+
+  useEffect(() => {
+    if (initialUserId) {
+      setSelectedUserId(initialUserId);
+    }
+  }, [initialUserId]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [filterType, setFilterType] = useState<"all" | "purchased" | "unread">("all");
+  const [filterType, setFilterType] = useState<"all" | "purchased" | "free" | "unread">("all");
   const [sending, setSending] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Sync all purchased users to chat threads
+  // 1. Sync real users to chat threads (excluding Coach Naveen)
   useEffect(() => {
     if (users.length > 0) {
-      syncPurchasedUsersToChatThreads(
-        users.map((u) => ({
+      const clientUsers = users
+        .filter(
+          (u) =>
+            u.email?.toLowerCase() !== "bmyfitnesscoach@gmail.com" &&
+            u.id !== "coach_naveen" &&
+            u.name?.toLowerCase() !== "coach naveen"
+        )
+        .map((u) => ({
           id: u.id,
           name: u.name,
           email: u.email,
           phone: u.phone,
           avatar: u.avatar,
           goalDisplay: u.goalDisplay,
-          membershipCategory: u.membershipCategory,
-        }))
-      );
+          membershipCategory: u.membershipCategory || "free",
+        }));
+
+      syncPurchasedUsersToChatThreads(clientUsers);
     }
   }, [users]);
 
@@ -82,7 +97,7 @@ export function AdminChatView({
       setMessages(newMsgs);
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 50);
+      }, 60);
     });
 
     return () => {
@@ -90,18 +105,25 @@ export function AdminChatView({
     };
   }, [selectedUserId]);
 
-  const selectedThread = threads.find((t) => t.userId === selectedUserId) || threads[0];
-  const selectedUserRecord = users.find((u) => u.id === selectedUserId);
+  const selectedThread =
+    threads.find((t) => t.userId === selectedUserId) ||
+    (threads.length > 0 ? threads[0] : null);
+
+  const selectedUserRecord = users.find(
+    (u) =>
+      u.id === (selectedThread ? selectedThread.userId : selectedUserId) ||
+      u.assessmentId === selectedUserId
+  );
 
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || inputText).trim();
-    if (!text || !selectedUserId || sending) return;
+    if (!text || !selectedThread?.userId || sending) return;
 
     try {
       setSending(true);
       setInputText("");
       await sendChatMessage({
-        userId: selectedUserId,
+        userId: selectedThread.userId,
         senderRole: "coach",
         senderId: "coach_naveen",
         senderName: "Coach Naveen",
@@ -109,7 +131,7 @@ export function AdminChatView({
       });
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 50);
+      }, 60);
     } finally {
       setSending(false);
     }
@@ -121,15 +143,36 @@ export function AdminChatView({
 
   // Filter threads
   const filteredThreads = threads.filter((t) => {
+    // Strictly exclude dummy/mock threads and coach self-thread
+    if (
+      !t.userName ||
+      t.userName === "Client" ||
+      t.userName.toLowerCase() === "coach naveen" ||
+      t.userEmail?.toLowerCase() === "bmyfitnesscoach@gmail.com" ||
+      t.userId.startsWith("user_membership_") ||
+      t.userId.startsWith("user_purchased_") ||
+      t.userId.startsWith("user_purchase_") ||
+      t.userId.startsWith("mock_") ||
+      t.userId === "coach_naveen"
+    ) {
+      return false;
+    }
+
+    const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
-      t.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (t.userPhone && t.userPhone.includes(searchQuery));
+      !q ||
+      t.userName.toLowerCase().includes(q) ||
+      t.userEmail.toLowerCase().includes(q) ||
+      (t.userPhone && t.userPhone.includes(q)) ||
+      (t.userId && t.userId.toLowerCase().includes(q));
 
     if (!matchesSearch) return false;
 
     if (filterType === "purchased") {
-      return t.membershipCategory === "purchased" || true;
+      return t.membershipCategory === "purchased" || t.membershipCategory === "membership";
+    }
+    if (filterType === "free") {
+      return t.membershipCategory === "free" || !t.membershipCategory;
     }
     if (filterType === "unread") {
       return t.unreadCountCoach > 0;
@@ -140,17 +183,28 @@ export function AdminChatView({
   const formatTime = (isoString?: string) => {
     if (!isoString) return "";
     try {
-      const d = new Date(isoString);
-      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const date = new Date(isoString);
+      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     } catch {
       return "";
     }
   };
 
+  const activeUserId = selectedThread ? selectedThread.userId : selectedUserId;
+  const clientName = selectedThread?.userName || selectedUserRecord?.name || "Client";
+  const firstName = clientName.split(" ")[0] || "Client";
+  const clientEmail = selectedThread?.userEmail || selectedUserRecord?.email || "client@bmyfit.in";
+  const clientPhone = selectedThread?.userPhone || selectedUserRecord?.phone || "+91 Mobile";
+  const planGoal = selectedThread?.planGoal || selectedUserRecord?.goalDisplay || "Fitness Plan";
+  const category = selectedThread?.membershipCategory || selectedUserRecord?.membershipCategory || "free";
+  const avatarUrl = selectedThread?.avatarUrl || selectedUserRecord?.avatar;
+  const initialLetter = (clientName.charAt(0) || "C").toUpperCase();
+  const idSnippet = (selectedThread?.userId || "").slice(0, 10);
+
   return (
-    <div className="flex-1 flex h-[calc(100vh-130px)] bg-white rounded-3xl border border-gray-200/80 shadow-xs overflow-hidden">
+    <div className="flex-1 flex h-[calc(100vh-140px)] min-h-[620px] bg-white rounded-3xl border border-gray-200/80 shadow-xs overflow-hidden">
       {/* ================= LEFT SIDEBAR: CLIENT THREADS LIST (WhatsApp Web Style) ================= */}
-      <div className="w-80 lg:w-96 border-r border-gray-200/80 flex flex-col bg-gray-50/60">
+      <div className="w-80 lg:w-96 border-r border-gray-200/80 flex flex-col bg-gray-50/60 shrink-0">
         {/* Sidebar Header */}
         <div className="p-4 bg-white border-b border-gray-200/80 space-y-3">
           <div className="flex items-center justify-between">
@@ -190,34 +244,48 @@ export function AdminChatView({
           </div>
 
           {/* Filter Pills */}
-          <div className="flex items-center gap-1.5 text-[11px] font-bold">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold overflow-x-auto pb-0.5">
             <button
               type="button"
               onClick={() => setFilterType("all")}
-              className={`px-3 py-1 rounded-lg transition ${filterType === "all"
+              className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap cursor-pointer ${
+                filterType === "all"
                   ? "bg-[#075E54] text-white shadow-xs"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
+              }`}
             >
-              All Clients ({threads.length})
+              All ({threads.length})
             </button>
             <button
               type="button"
               onClick={() => setFilterType("purchased")}
-              className={`px-3 py-1 rounded-lg transition ${filterType === "purchased"
+              className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap cursor-pointer ${
+                filterType === "purchased"
                   ? "bg-[#075E54] text-white shadow-xs"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
+              }`}
             >
-              ₹99 Paid
+              ₹99 Paid ({threads.filter((t) => t.membershipCategory === "purchased" || t.membershipCategory === "membership").length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterType("free")}
+              className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap cursor-pointer ${
+                filterType === "free"
+                  ? "bg-purple-700 text-white shadow-xs"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Leads ({threads.filter((t) => t.membershipCategory === "free" || !t.membershipCategory).length})
             </button>
             <button
               type="button"
               onClick={() => setFilterType("unread")}
-              className={`px-3 py-1 rounded-lg transition ${filterType === "unread"
+              className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap cursor-pointer ${
+                filterType === "unread"
                   ? "bg-rose-600 text-white shadow-xs"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
+              }`}
             >
               Unread
             </button>
@@ -227,28 +295,31 @@ export function AdminChatView({
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
           {filteredThreads.map((thread) => {
-            const isSelected = thread.userId === selectedUserId;
+            const isSelected = thread.userId === activeUserId;
             const hasUnread = thread.unreadCountCoach > 0;
+            const isPaid = thread.membershipCategory === "purchased";
+            const isMembership = thread.membershipCategory === "membership";
 
             return (
               <button
                 key={thread.userId}
                 type="button"
                 onClick={() => setSelectedUserId(thread.userId)}
-                className={`w-full text-left p-3.5 flex items-start gap-3 transition hover:bg-white ${isSelected ? "bg-emerald-50/70 border-l-4 border-l-[#075E54]" : "bg-transparent"
-                  }`}
+                className={`w-full text-left p-3.5 flex items-start gap-3 transition hover:bg-white cursor-pointer ${
+                  isSelected ? "bg-emerald-50/80 border-l-4 border-l-[#075E54]" : "bg-transparent"
+                }`}
               >
                 {/* User Avatar */}
                 <div className="relative w-11 h-11 rounded-full overflow-hidden bg-gray-200 shrink-0 border border-gray-300/80">
                   {thread.avatarUrl ? (
-                    <Image src={thread.avatarUrl} alt={thread.userName} fill unoptimized className="object-cover" />
+                    <img src={thread.avatarUrl} alt={thread.userName} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-emerald-700 text-white font-bold text-xs">
-                      {thread.userName.charAt(0)}
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-tr from-emerald-800 to-emerald-600 text-white font-bold text-xs">
+                      {thread.userName.charAt(0).toUpperCase()}
                     </div>
                   )}
                   {hasUnread && (
-                    <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-rose-500 rounded-full border-2 border-white" />
+                    <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-rose-500 rounded-full border-2 border-white animate-pulse" />
                   )}
                 </div>
 
@@ -261,10 +332,21 @@ export function AdminChatView({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
-                      ₹99 PLAN ACTIVE
-                    </span>
+                  {/* Membership Category Badge (Accurate per User) */}
+                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                    {isPaid ? (
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        ₹99 PLAN ACTIVE
+                      </span>
+                    ) : isMembership ? (
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 border border-purple-300">
+                        MEMBERSHIP
+                      </span>
+                    ) : (
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 border border-gray-200">
+                        FREE LEAD
+                      </span>
+                    )}
                     {thread.planGoal && (
                       <span className="text-[10px] text-gray-400 truncate max-w-[120px]">
                         {thread.planGoal}
@@ -303,37 +385,64 @@ export function AdminChatView({
       {selectedThread ? (
         <div className="flex-1 flex flex-col bg-[#efeae2] relative overflow-hidden">
           {/* Top Bar: Selected Client Header */}
-          <div className="bg-[#075E54] text-white p-3.5 flex items-center justify-between shadow-xs z-10">
+          <div className="bg-[#075E54] text-white p-3.5 flex items-center justify-between shadow-xs z-10 shrink-0">
             <div className="flex items-center gap-3">
-              <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-200 border border-emerald-400">
-                {selectedThread.avatarUrl ? (
-                  <Image src={selectedThread.avatarUrl} alt={selectedThread.userName} fill unoptimized className="object-cover" />
+              <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-200 border border-emerald-400 shrink-0">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={clientName} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-emerald-800 text-white font-bold text-xs">
-                    {selectedThread.userName.charAt(0)}
+                    {initialLetter}
                   </div>
                 )}
               </div>
               <div className="text-left">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold tracking-tight text-white">{selectedThread.userName}</h3>
-                  <span className="text-[9px] bg-emerald-400 text-gray-950 font-black px-2 py-0.2 rounded-full">
-                    ₹99 SUBSCRIBER
-                  </span>
+                  <h3 className="text-sm font-bold tracking-tight text-white">{clientName}</h3>
+                  {category === "purchased" ? (
+                    <span className="text-[9px] bg-emerald-400 text-gray-950 font-black px-2 py-0.5 rounded-full">
+                      ₹99 SUBSCRIBER
+                    </span>
+                  ) : category === "membership" ? (
+                    <span className="text-[9px] bg-purple-300 text-purple-950 font-black px-2 py-0.5 rounded-full">
+                      MEMBERSHIP
+                    </span>
+                  ) : (
+                    <span className="text-[9px] bg-gray-200 text-gray-800 font-black px-2 py-0.5 rounded-full">
+                      FREE INTAKE LEAD
+                    </span>
+                  )}
                 </div>
                 <p className="text-[11px] text-emerald-100 font-medium">
-                  {selectedThread.userEmail || "client@bmyfit.com"} · {selectedThread.userPhone || "+91 Mobile"}
+                  {clientEmail} · {clientPhone}
                 </p>
               </div>
             </div>
 
-            {/* Quick Actions to jump to Studio or Biometrics */}
+            {/* Quick Actions to jump to WhatsApp Web, Studio, or Biometrics */}
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const rawPhone = clientPhone.replace(/\D/g, "") || "919800000000";
+                  const phone = rawPhone.startsWith("91") ? rawPhone : `91${rawPhone}`;
+                  const msg = encodeURIComponent(
+                    `Hello ${firstName}! Coach Naveen here from BMYFIT. I'm reviewing your ${planGoal}. How are your workouts and meals going?`
+                  );
+                  window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
+                }}
+                className="bg-[#25D366] hover:bg-[#20bd5a] text-gray-950 text-xs font-black px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                title="Open WhatsApp Web Conversation"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span>Open in WhatsApp</span>
+              </button>
+
               {selectedUserRecord && onOpenBiometrics && (
                 <button
                   type="button"
                   onClick={() => onOpenBiometrics(selectedUserRecord)}
-                  className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5"
+                  className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
                 >
                   <Scale className="w-3.5 h-3.5" />
                   <span>Biometrics</span>
@@ -343,7 +452,7 @@ export function AdminChatView({
                 <button
                   type="button"
                   onClick={() => onOpenStudio(selectedUserRecord)}
-                  className="bg-emerald-400 hover:bg-emerald-300 text-gray-950 text-xs font-black px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-xs"
+                  className="bg-emerald-400 hover:bg-emerald-300 text-gray-950 text-xs font-black px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
                   <span>Edit 8-W Plan</span>
@@ -365,14 +474,14 @@ export function AdminChatView({
             <div className="flex justify-center">
               <span className="bg-white/95 text-gray-700 text-[11px] font-bold px-3.5 py-1 rounded-full shadow-xs flex items-center gap-1.5 border border-gray-200/60">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Active 1-on-1 Consultation Thread with Coach Naveen</span>
+                <span>1-on-1 Consultation Thread for {clientName} (ID: {idSnippet})</span>
               </span>
             </div>
 
             {/* Date Pill */}
             <div className="flex justify-center">
               <span className="bg-white/90 text-gray-500 text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-xs uppercase tracking-wider">
-                Today
+                Conversation History
               </span>
             </div>
 
@@ -382,14 +491,15 @@ export function AdminChatView({
               return (
                 <div key={msg.id} className={`flex ${isCoach ? "justify-end" : "justify-start"}`}>
                   <div
-                    className={`max-w-[78%] rounded-2xl p-3.5 shadow-xs relative text-left leading-relaxed ${isCoach
+                    className={`max-w-[78%] rounded-2xl p-3.5 shadow-xs relative text-left leading-relaxed ${
+                      isCoach
                         ? "bg-[#d9fdd3] text-gray-900 rounded-tr-xs border border-emerald-200/50"
                         : "bg-white text-gray-900 rounded-tl-xs border border-gray-200/70"
-                      }`}
+                    }`}
                   >
                     {!isCoach && (
                       <p className="text-[10px] font-black text-emerald-800 mb-0.5">
-                        {msg.senderName || selectedThread.userName}
+                        {msg.senderName || clientName}
                       </p>
                     )}
                     {isCoach && (
@@ -412,7 +522,7 @@ export function AdminChatView({
           </div>
 
           {/* Quick Reply Presets Row for Coach Naveen */}
-          <div className="bg-[#f0f2f5] px-4 py-2 border-t border-gray-200/90 overflow-x-auto flex items-center gap-2 scrollbar-none">
+          <div className="bg-[#f0f2f5] px-4 py-2 border-t border-gray-200/90 overflow-x-auto flex items-center gap-2 scrollbar-none shrink-0">
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider shrink-0">
               Quick Coach Replies:
             </span>
@@ -427,7 +537,7 @@ export function AdminChatView({
                 key={preset}
                 type="button"
                 onClick={() => handleQuickPreset(preset)}
-                className="shrink-0 bg-white hover:bg-emerald-50 text-gray-700 hover:text-emerald-900 border border-gray-200 rounded-full px-3 py-1 text-[11px] font-medium transition shadow-xs active:scale-95"
+                className="shrink-0 bg-white hover:bg-emerald-50 text-gray-700 hover:text-emerald-900 border border-gray-200 rounded-full px-3 py-1 text-[11px] font-medium transition shadow-xs active:scale-95 cursor-pointer"
               >
                 {preset}
               </button>
@@ -440,7 +550,7 @@ export function AdminChatView({
               e.preventDefault();
               void handleSendMessage();
             }}
-            className="bg-[#f0f2f5] p-3 flex items-center gap-3 border-t border-gray-200/90"
+            className="bg-[#f0f2f5] p-3 flex items-center gap-3 border-t border-gray-200/90 shrink-0"
           >
             <div className="flex-1 relative">
               <input
@@ -448,7 +558,7 @@ export function AdminChatView({
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder={`Type a coaching message to ${selectedThread.userName.split(" ")[0]}...`}
+                placeholder={`Type a coaching message to ${firstName}...`}
                 className="w-full bg-white text-gray-900 text-xs rounded-full py-2.5 pl-4 pr-10 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#25D366] focus:border-transparent transition"
               />
             </div>
@@ -456,10 +566,11 @@ export function AdminChatView({
             <button
               type="submit"
               disabled={!inputText.trim() || sending}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition shadow-md shrink-0 ${inputText.trim()
-                  ? "bg-[#25D366] hover:bg-[#1faa53] text-white active:scale-95"
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition shadow-md shrink-0 ${
+                inputText.trim()
+                  ? "bg-[#25D366] hover:bg-[#1faa53] text-white active:scale-95 cursor-pointer"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
+              }`}
               aria-label="Send Message"
             >
               <Send className="w-4 h-4 translate-x-0.5" />
@@ -469,8 +580,8 @@ export function AdminChatView({
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 text-gray-400 p-8 space-y-2">
           <MessageCircle className="w-12 h-12 text-gray-300" />
-          <p className="text-sm font-bold text-gray-600">Select a purchased client to start chatting</p>
-          <p className="text-xs text-gray-400">All ₹99 clients appear in the left list.</p>
+          <p className="text-sm font-bold text-gray-600">Select a client thread to start chatting</p>
+          <p className="text-xs text-gray-400">All registered clients and free leads appear in the left list.</p>
         </div>
       )}
     </div>

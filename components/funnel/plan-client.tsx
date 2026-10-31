@@ -101,7 +101,7 @@ export function PlanClient({ id }: { id: string }) {
           ? getStoredPlan(userProfile.uid) || (await fetchFirebasePlan(userProfile.uid))
           : null);
 
-      if (storedDirectPlan && (userEntitled || storedDirectPlan.status === "approved" || storedDirectPlan.status === "active")) {
+      if (userEntitled && storedDirectPlan) {
         if (isMounted) {
           setDashboardPlan(storedDirectPlan);
           setIsSubscribed(true);
@@ -110,7 +110,7 @@ export function PlanClient({ id }: { id: string }) {
         }
       }
 
-      if (matchedUser?.plan && userEntitled) {
+      if (userEntitled && matchedUser?.plan) {
         if (isMounted) {
           setDashboardPlan(matchedUser.plan);
           setIsSubscribed(true);
