@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import {
   X,
@@ -17,10 +17,15 @@ import {
   Trash2,
   ShieldCheck,
   Check,
+  Send,
+  CheckCheck,
+  Sparkles,
 } from "@/components/ui/icons";
 import { ShoppingBag } from "@/components/ui/supplement-icons";
 import type { AdminUserRecord } from "@/types/admin";
 import type { PlanVideo, PlanSupplementRecommendation } from "@/types/plan-dashboard";
+import type { ChatMessage } from "@/types/chat";
+import { subscribeToChatMessages, sendChatMessage, markChatThreadRead } from "@/lib/firestore/chat";
 import { SUPPLEMENT_PRODUCTS, type SupplementProduct } from "@/features/supplements/supplements-data";
 import { parseVideoUrl } from "@/lib/video-helper";
 
@@ -37,7 +42,7 @@ interface ClientDetailSidebarProps {
   onOpenStudio: (user: AdminUserRecord) => void;
   onOpenChat: (user: AdminUserRecord) => void;
   onSendAlert: (user: AdminUserRecord) => void;
-  initialTab?: "dispatch" | "biometrics" | "plan" | "alert";
+  initialTab?: "dispatch" | "biometrics" | "plan" | "alert" | "chat";
 }
 
 export function ClientDetailSidebar({
@@ -50,7 +55,54 @@ export function ClientDetailSidebar({
   onSendAlert,
   initialTab = "dispatch",
 }: ClientDetailSidebarProps) {
-  const [activeTab, setActiveTab] = useState<"dispatch" | "biometrics" | "plan" | "alert">(initialTab);
+  const [activeTab, setActiveTab] = useState<"dispatch" | "biometrics" | "plan" | "alert" | "chat">(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  // Live Chat state
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInputText, setChatInputText] = useState<string>("");
+  const [chatSending, setChatSending] = useState<boolean>(false);
+  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!user?.id || !isOpen || activeTab !== "chat") return;
+    void markChatThreadRead(user.id, "coach");
+    const unsubscribe = subscribeToChatMessages(user.id, (msgs) => {
+      setChatMessages(msgs);
+      setTimeout(() => {
+        chatMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 50);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [user?.id, isOpen, activeTab]);
+
+  const handleSendSidebarMessage = async (textToSend?: string) => {
+    const text = (textToSend || chatInputText).trim();
+    if (!text || !user?.id || chatSending) return;
+    try {
+      setChatSending(true);
+      setChatInputText("");
+      await sendChatMessage({
+        userId: user.id,
+        senderRole: "coach",
+        senderId: "coach_naveen",
+        senderName: "Coach Naveen",
+        text,
+      });
+      setTimeout(() => {
+        chatMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 50);
+    } finally {
+      setChatSending(false);
+    }
+  };
 
   // Video state
   const [videoUrl, setVideoUrl] = useState<string>("");
@@ -244,7 +296,21 @@ export function ClientDetailSidebar({
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveTab("chat")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs transition cursor-pointer ${
+                  activeTab === "chat"
+                    ? "bg-[#075E54] text-white"
+                    : "bg-[#25D366] hover:bg-[#20bd5a] text-black"
+                }`}
+                title="Open 1-on-1 Chat with Client"
+              >
+                <MessageCircle className="w-3.5 h-3.5 fill-current" />
+                <span>Chat</span>
+              </button>
+
               <button
                 type="button"
                 onClick={onClose}
@@ -300,13 +366,25 @@ export function ClientDetailSidebar({
 
               <button
                 type="button"
+                onClick={() => setActiveTab("chat")}
+                className={`py-3 border-b-2 transition flex items-center gap-1.5 ${activeTab === "chat"
+                  ? "border-[#25D366] text-[#075E54] font-bold"
+                  : "border-transparent text-slate-500 hover:text-slate-900"
+                  }`}
+              >
+                <MessageCircle className="w-4 h-4 text-[#25D366]" />
+                <span>1-on-1 Chat</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setActiveTab("alert")}
                 className={`py-3 border-b-2 transition flex items-center gap-1.5 ${activeTab === "alert"
                   ? "border-emerald-600 text-emerald-700 font-bold"
                   : "border-transparent text-slate-500 hover:text-slate-900"
                   }`}
               >
-                <MessageCircle className="w-4 h-4 text-[#25D366]" />
+                <MessageCircle className="w-4 h-4 text-emerald-600" />
                 <span>WhatsApp Alert</span>
               </button>
             </nav>
@@ -918,7 +996,168 @@ export function ClientDetailSidebar({
               </div>
             )}
 
-            {/* ---------------- TAB 4: WHATSAPP ALERT ---------------- */}
+            {/* ---------------- TAB 4: 1-ON-1 WHATSAPP CHAT ---------------- */}
+            {activeTab === "chat" && (
+              <div className="flex flex-col h-[520px] rounded-2xl border border-emerald-200 overflow-hidden bg-[#efeae2] shadow-sm">
+                {/* Chat Header Bar */}
+                <div className="bg-[#075E54] text-white p-3 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative w-8 h-8 rounded-full overflow-hidden bg-emerald-800 text-white font-bold text-xs flex items-center justify-center border border-emerald-400">
+                      {user.avatar ? (
+                        <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                      ) : (
+                        user.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-white">{user.name}</span>
+                        {user.membershipCategory === "purchased" ? (
+                          <span className="text-[9px] bg-emerald-400 text-gray-950 font-black px-1.5 py-0.2 rounded-full">
+                            ₹99 PAID
+                          </span>
+                        ) : user.membershipCategory === "membership" ? (
+                          <span className="text-[9px] bg-purple-300 text-purple-950 font-black px-1.5 py-0.2 rounded-full">
+                            MEMBERSHIP
+                          </span>
+                        ) : (
+                          <span className="text-[9px] bg-gray-200 text-gray-800 font-black px-1.5 py-0.2 rounded-full">
+                            FREE LEAD
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-emerald-100 font-mono">
+                        {user.phone || "+91 Mobile"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <a
+                      href={`https://wa.me/${user.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                        `Hi ${user.name}! Coach Naveen here from BMYFIT. How is your transformation going?`
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2.5 py-1 rounded-lg bg-[#25D366] hover:bg-[#20ba5a] text-black text-[11px] font-black flex items-center gap-1 shadow-xs transition"
+                      title="Open WhatsApp Web"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 fill-black" />
+                      <span>WhatsApp</span>
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => onOpenChat(user)}
+                      className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold transition"
+                      title="Open in Full Screen Console"
+                    >
+                      <span>Full View ↗</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Messages Body */}
+                <div
+                  className="flex-1 overflow-y-auto p-3.5 space-y-2.5"
+                  style={{
+                    backgroundImage: `radial-gradient(#cbd5e1 0.75px, transparent 0.75px), radial-gradient(#cbd5e1 0.75px, #efeae2 0.75px)`,
+                    backgroundSize: "20px 20px",
+                    backgroundPosition: "0 0, 10px 10px",
+                  }}
+                >
+                  <div className="flex justify-center">
+                    <span className="bg-white/95 text-gray-600 text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-2xs border border-gray-200/60 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-emerald-600" />
+                      <span>Direct 1-on-1 Consultation Thread</span>
+                    </span>
+                  </div>
+
+                  {chatMessages.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400 text-xs">
+                      No message history yet. Type below to send your first message!
+                    </div>
+                  ) : (
+                    chatMessages.map((msg) => {
+                      const isCoach = msg.senderRole === "coach";
+                      return (
+                        <div key={msg.id} className={`flex ${isCoach ? "justify-end" : "justify-start"}`}>
+                          <div
+                            className={`max-w-[85%] rounded-2xl p-2.5 text-xs shadow-xs relative text-left leading-relaxed ${
+                              isCoach
+                                ? "bg-[#d9fdd3] text-gray-900 rounded-tr-xs border border-emerald-200/50"
+                                : "bg-white text-gray-900 rounded-tl-xs border border-gray-200/70"
+                            }`}
+                          >
+                            <p className={`text-[10px] font-black mb-0.5 ${isCoach ? "text-[#075E54]" : "text-emerald-800"}`}>
+                              {isCoach ? "Coach Naveen" : (msg.senderName || user.name)}
+                            </p>
+                            <p className="whitespace-pre-wrap font-medium">{msg.text}</p>
+                            <div className="flex items-center justify-end gap-1 mt-1 text-[9px] text-gray-500 font-mono">
+                              <span>
+                                {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
+                              </span>
+                              {isCoach && (
+                                <CheckCheck className={`w-3 h-3 ${msg.read ? "text-[#53bdeb]" : "text-gray-400"}`} />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                  <div ref={chatMessagesEndRef} />
+                </div>
+
+                {/* Quick Reply Chips */}
+                <div className="bg-[#f0f2f5] px-3 py-1.5 border-t border-gray-200 overflow-x-auto flex items-center gap-1.5 scrollbar-none shrink-0">
+                  {[
+                    "Plan reviewed! Protein targets updated.",
+                    "Great work! Keep hydration above 3.5L.",
+                    "Please share morning weigh-in.",
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => void handleSendSidebarMessage(preset)}
+                      className="shrink-0 bg-white hover:bg-emerald-50 text-gray-700 hover:text-emerald-900 border border-gray-200 rounded-full px-2.5 py-0.5 text-[10px] font-medium transition cursor-pointer"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Input Form */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void handleSendSidebarMessage();
+                  }}
+                  className="bg-[#f0f2f5] p-2.5 flex items-center gap-2 border-t border-gray-200 shrink-0"
+                >
+                  <input
+                    type="text"
+                    value={chatInputText}
+                    onChange={(e) => setChatInputText(e.target.value)}
+                    placeholder={`Message ${user.name.split(" ")[0]}...`}
+                    className="flex-1 bg-white text-gray-900 text-xs rounded-full py-2 pl-3.5 pr-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#25D366] transition"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!chatInputText.trim() || chatSending}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition shadow-xs shrink-0 ${
+                      chatInputText.trim()
+                        ? "bg-[#25D366] hover:bg-[#1faa53] text-white cursor-pointer"
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    }`}
+                  >
+                    <Send className="w-3.5 h-3.5 translate-x-0.2" />
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* ---------------- TAB 5: WHATSAPP ALERT ---------------- */}
             {activeTab === "alert" && (
               <div className="space-y-5">
                 <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-3">
@@ -946,9 +1185,10 @@ export function ClientDetailSidebar({
 
                     <button
                       type="button"
-                      onClick={() => onOpenChat(user)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-slate-300 text-slate-800 font-bold text-xs hover:bg-slate-50 transition"
+                      onClick={() => setActiveTab("chat")}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-slate-300 text-slate-800 font-bold text-xs hover:bg-slate-50 transition cursor-pointer"
                     >
+                      <MessageCircle className="w-3.5 h-3.5 text-[#25D366]" />
                       <span>In-App Coach Messenger</span>
                     </button>
                   </div>

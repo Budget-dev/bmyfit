@@ -105,15 +105,35 @@ export function AdminChatView({
     };
   }, [selectedUserId]);
 
-  const selectedThread =
-    threads.find((t) => t.userId === selectedUserId) ||
-    (threads.length > 0 ? threads[0] : null);
-
+  const matchedThread = threads.find((t) => t.userId === selectedUserId);
   const selectedUserRecord = users.find(
     (u) =>
-      u.id === (selectedThread ? selectedThread.userId : selectedUserId) ||
-      u.assessmentId === selectedUserId
+      u.id === selectedUserId ||
+      u.assessmentId === selectedUserId ||
+      (matchedThread && (u.id === matchedThread.userId || u.assessmentId === matchedThread.userId))
   );
+
+  const selectedThread: ChatThread | null =
+    matchedThread ||
+    (selectedUserRecord
+      ? {
+          userId: selectedUserRecord.id,
+          userName: selectedUserRecord.name,
+          userEmail: selectedUserRecord.email,
+          userPhone: selectedUserRecord.phone,
+          avatarUrl: selectedUserRecord.avatar,
+          planGoal: selectedUserRecord.goalDisplay || "Custom Fitness Plan",
+          membershipCategory: selectedUserRecord.membershipCategory || "free",
+          lastMessageText: "New conversation",
+          lastMessageAt: new Date().toISOString(),
+          lastMessageSenderRole: "coach",
+          unreadCountCoach: 0,
+          unreadCountClient: 0,
+          updatedAt: new Date().toISOString(),
+        }
+      : threads.length > 0
+      ? threads[0]
+      : null);
 
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || inputText).trim();

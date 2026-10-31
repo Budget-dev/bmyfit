@@ -50,7 +50,9 @@ export function AdminDesktopConsole() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedUser, setSelectedUser] = useState<AdminUserRecord | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
-  const [sidebarInitialTab, setSidebarInitialTab] = useState<"dispatch" | "biometrics" | "plan" | "alert">("dispatch");
+  const [sidebarInitialTab, setSidebarInitialTab] = useState<
+    "dispatch" | "biometrics" | "plan" | "alert" | "chat"
+  >("dispatch");
 
   // Modals state
   const [inspectUser, setInspectUser] = useState<AdminUserRecord | null>(null);
