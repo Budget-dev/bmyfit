@@ -14,6 +14,7 @@ import type { MedicalDocument, MedicalAssessment, AdminUserRecord } from "@/type
 import {
   saveStoredMedicalConsultation,
   upsertStoredAdminUser,
+  saveStoredPlan,
 } from "@/lib/storage/mock-storage";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 import {
@@ -186,6 +187,9 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       }),
     };
     upsertStoredAdminUser(initialRecord);
+    if (initialRecord.plan) {
+      saveStoredPlan(initialRecord.plan);
+    }
     setFunnelStep("medical_questionnaire");
   };
 
@@ -320,6 +324,9 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         }),
       };
       upsertStoredAdminUser(updatedRecord);
+      if (updatedRecord.plan) {
+        saveStoredPlan(updatedRecord.plan);
+      }
 
       // 3. Post to backend API
       await fetch("/api/assessment/medical-consultation", {
@@ -1646,7 +1653,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
               <div className="flex items-center justify-between pb-1.5 border-b border-gray-200">
                 <span className="text-gray-500 font-bold">Status:</span>
                 <span className="font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md text-[10px]">
-                  Pending Coach Plan Review
+                  Waitlist · Nutritionist &amp; Trainer Preparing Plan
                 </span>
               </div>
               <div className="flex items-center justify-between py-1 border-b border-gray-100">

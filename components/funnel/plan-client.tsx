@@ -12,6 +12,7 @@ import {
   fetchFirebasePlan,
   getStoredAdminUsers,
   getStoredMedicalConsultation,
+  saveStoredPlan,
 } from "@/lib/storage/mock-storage";
 
 export function PlanClient({ id }: { id: string }) {
@@ -106,7 +107,11 @@ export function PlanClient({ id }: { id: string }) {
 
       if (userEntitled && storedDirectPlan) {
         if (isMounted) {
-          setDashboardPlan(storedDirectPlan);
+          const effectivePlan: PlanDashboardData =
+            !isCoach && storedDirectPlan.status !== "approved"
+              ? { ...storedDirectPlan, status: "pending_review" }
+              : storedDirectPlan;
+          setDashboardPlan(effectivePlan);
           setIsSubscribed(true);
           setFetching(false);
           return;
@@ -115,7 +120,11 @@ export function PlanClient({ id }: { id: string }) {
 
       if (userEntitled && matchedUser?.plan) {
         if (isMounted) {
-          setDashboardPlan(matchedUser.plan);
+          const effectivePlan: PlanDashboardData =
+            !isCoach && matchedUser.plan.status !== "approved"
+              ? { ...matchedUser.plan, status: "pending_review" }
+              : matchedUser.plan;
+          setDashboardPlan(effectivePlan);
           setIsSubscribed(true);
           setFetching(false);
           return;
@@ -135,7 +144,11 @@ export function PlanClient({ id }: { id: string }) {
           const data = await response.json();
           if (data.dashboardPlan && data.isSubscribed) {
             if (isMounted) {
-              setDashboardPlan(data.dashboardPlan);
+              const effectivePlan: PlanDashboardData =
+                !isCoach && data.dashboardPlan.status !== "approved"
+                  ? { ...data.dashboardPlan, status: "pending_review" }
+                  : data.dashboardPlan;
+              setDashboardPlan(effectivePlan);
               setIsSubscribed(true);
               setFetching(false);
               return;
@@ -150,7 +163,7 @@ export function PlanClient({ id }: { id: string }) {
       if (userEntitled) {
         const medicalData = getStoredMedicalConsultation(id);
         const generated = generateDashboardPlan(id || "local", {
-          status: isPaidLocal ? "pending_review" : "active",
+          status: isCoach ? "active" : "pending_review",
           goal: effectiveGoal,
           bmi: calculatedBmi,
           bodyFatPercent: calculatedBodyFat,
@@ -159,6 +172,9 @@ export function PlanClient({ id }: { id: string }) {
           customerName: userProfile?.name || matchedUser?.name || "Fit Member",
           medicalAssessment: medicalData || undefined,
         });
+
+        // Persist so admin can see and edit this plan immediately in Coach Admin!
+        saveStoredPlan(generated);
 
         if (isMounted) {
           setDashboardPlan(generated);

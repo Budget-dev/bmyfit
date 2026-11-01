@@ -16,7 +16,6 @@ import {
   faCalculator,
   faArrowsRotate,
   faArrowRight,
-  faArrowLeft,
   faLock,
   faPhone,
   faEnvelope,
@@ -35,24 +34,10 @@ import {
   faChartLine,
   faBullseye,
   faChevronRight,
-  faChevronLeft,
   faChevronDown,
-  faQuoteLeft,
-  faQuoteRight,
-  faArrowUpRightFromSquare,
   faClock,
-  faUser,
-  faUsers,
 } from "@fortawesome/free-solid-svg-icons";
-import {
-  faWhatsapp,
-  faGoogle,
-  faInstagram,
-  faTwitter,
-  faXTwitter,
-  faFacebookF,
-  faYoutube,
-} from "@fortawesome/free-brands-svg-icons";
+import { faWhatsapp, faGoogle } from "@fortawesome/free-brands-svg-icons";
 
 export {
   FontAwesomeIcon,
@@ -70,7 +55,6 @@ export {
   faCalculator,
   faArrowsRotate,
   faArrowRight,
-  faArrowLeft,
   faLock,
   faPhone,
   faEnvelope,
@@ -89,19 +73,9 @@ export {
   faChartLine,
   faBullseye,
   faChevronRight,
-  faChevronLeft,
   faChevronDown,
-  faQuoteLeft,
-  faQuoteRight,
-  faArrowUpRightFromSquare,
   faClock,
-  faUser,
-  faUsers,
   faWhatsapp,
   faGoogle,
-  faInstagram,
-  faTwitter,
-  faXTwitter,
-  faFacebookF,
-  faYoutube,
 };
+
