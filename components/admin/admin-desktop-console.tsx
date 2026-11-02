@@ -94,46 +94,78 @@ export function AdminDesktopConsole() {
       const localUsers = getStoredAdminUsers();
       const userMap = new Map<string, AdminUserRecord>();
 
+      // Lookup helper to find an existing record by ID or by email
+      const findInMap = (targetId: string, email?: string): AdminUserRecord | undefined => {
+        if (userMap.has(targetId)) return userMap.get(targetId);
+        if (email) {
+          const lower = email.toLowerCase().trim();
+          for (const u of userMap.values()) {
+            if (u.email && u.email.toLowerCase().trim() === lower) return u;
+          }
+        }
+        return undefined;
+      };
+
       serverUsers.forEach((u) => userMap.set(u.id, sanitizeAdminUserRecord(u, u.id)));
       liveFirestoreUsers.forEach((lfu) => {
-        const existing = userMap.get(lfu.id);
-        if (existing) {
-          userMap.set(
-            lfu.id,
-            sanitizeAdminUserRecord(
-              {
-                ...existing,
-                ...lfu,
-                plan: lfu.plan || existing.plan,
-                medicalAssessment: lfu.medicalAssessment || existing.medicalAssessment,
-                needsPlanReview: lfu.needsPlanReview ?? existing.needsPlanReview,
-              },
-              lfu.id
-            )
-          );
-        } else {
-          userMap.set(lfu.id, sanitizeAdminUserRecord(lfu, lfu.id));
-        }
+        const existing = findInMap(lfu.id, lfu.email);
+        const targetKey = existing ? existing.id : lfu.id;
+        const isPaid =
+          Boolean(lfu.isPaid) ||
+          Boolean(existing?.isPaid) ||
+          lfu.membershipCategory === "purchased" ||
+          existing?.membershipCategory === "purchased" ||
+          lfu.order?.status === "paid" ||
+          existing?.order?.status === "paid";
+
+        const merged: AdminUserRecord = sanitizeAdminUserRecord(
+          {
+            ...(existing || {}),
+            ...lfu,
+            id: targetKey,
+            isPaid,
+            membershipCategory: isPaid ? "purchased" : (lfu.membershipCategory || existing?.membershipCategory || "free"),
+            membershipTitle: isPaid ? "Purchased Client Plan" : (lfu.membershipTitle || existing?.membershipTitle || "Free Registered Member"),
+            plan: lfu.plan || existing?.plan,
+            order: lfu.order || existing?.order,
+            medicalAssessment: lfu.medicalAssessment || existing?.medicalAssessment,
+            needsPlanReview: (lfu.plan?.status === "approved" || existing?.plan?.status === "approved")
+              ? false
+              : (isPaid || Boolean(lfu.needsPlanReview) || Boolean(existing?.needsPlanReview)),
+          },
+          targetKey
+        );
+        userMap.set(targetKey, merged);
       });
       localUsers.forEach((lu) => {
-        const existing = userMap.get(lu.id);
-        if (existing) {
-          userMap.set(
-            lu.id,
-            sanitizeAdminUserRecord(
-              {
-                ...existing,
-                ...lu,
-                plan: lu.plan || existing.plan,
-                medicalAssessment: lu.medicalAssessment || existing.medicalAssessment,
-                needsPlanReview: lu.needsPlanReview ?? existing.needsPlanReview,
-              },
-              lu.id
-            )
-          );
-        } else {
-          userMap.set(lu.id, sanitizeAdminUserRecord(lu, lu.id));
-        }
+        const existing = findInMap(lu.id, lu.email);
+        const targetKey = existing ? existing.id : lu.id;
+        const isPaid =
+          Boolean(lu.isPaid) ||
+          Boolean(existing?.isPaid) ||
+          lu.membershipCategory === "purchased" ||
+          existing?.membershipCategory === "purchased" ||
+          lu.order?.status === "paid" ||
+          existing?.order?.status === "paid";
+
+        const merged: AdminUserRecord = sanitizeAdminUserRecord(
+          {
+            ...(existing || {}),
+            ...lu,
+            id: targetKey,
+            isPaid,
+            membershipCategory: isPaid ? "purchased" : (lu.membershipCategory || existing?.membershipCategory || "free"),
+            membershipTitle: isPaid ? "Purchased Client Plan" : (lu.membershipTitle || existing?.membershipTitle || "Free Registered Member"),
+            plan: lu.plan || existing?.plan,
+            order: lu.order || existing?.order,
+            medicalAssessment: lu.medicalAssessment || existing?.medicalAssessment,
+            needsPlanReview: (lu.plan?.status === "approved" || existing?.plan?.status === "approved")
+              ? false
+              : (isPaid || Boolean(lu.needsPlanReview) || Boolean(existing?.needsPlanReview)),
+          },
+          targetKey
+        );
+        userMap.set(targetKey, merged);
       });
 
       const mergedUsers = Array.from(userMap.values()).filter((u) => {
@@ -389,9 +421,35 @@ export function AdminDesktopConsole() {
       }
 
       if (updatedUser) {
-        setUsers((prev) =>
-          prev.map((u) => (u.id === updatedUser!.id ? updatedUser! : u))
-        );
+        setUsers((prev) => {
+          const next = prev.map((u) => (u.id === updatedUser!.id ? updatedUser! : u));
+          const purchasedPlansCount = next.filter(
+            (u) =>
+              u.membershipCategory === "purchased" ||
+              Boolean(u.order && u.order.status === "paid") ||
+              Boolean((u as { isPaid?: boolean }).isPaid)
+          ).length;
+          const freeMembersCount = next.filter(
+            (u) =>
+              u.membershipCategory === "free" &&
+              !Boolean(u.order && u.order.status === "paid") &&
+              !Boolean((u as { isPaid?: boolean }).isPaid)
+          ).length;
+          const pendingReviewCount = next.filter(
+            (u) => u.plan?.status === "pending_review" || u.needsPlanReview
+          ).length;
+          setStats((prevStats) =>
+            prevStats
+              ? {
+                  ...prevStats,
+                  purchasedPlansCount,
+                  freeMembersCount,
+                  pendingReviewCount,
+                }
+              : prevStats
+          );
+          return next;
+        });
         if (selectedUser?.id === updatedUser.id) {
           setSelectedUser(updatedUser);
         }

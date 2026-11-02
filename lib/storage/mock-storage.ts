@@ -72,12 +72,12 @@ export function sanitizeAdminUserRecord(raw: Partial<AdminUserRecord>, id: strin
       raw.membershipCategory === "membership"
         ? "membership"
         : (raw.membershipCategory === "purchased" ||
-            Boolean((raw as { isPaid?: boolean }).isPaid) ||
-            raw.order?.status === "paid" ||
-            Boolean(raw.order && (raw.order.amountPaise || 0) > 0) ||
-            raw.plan?.status === "pending_review")
-        ? "purchased"
-        : (raw.membershipCategory || "free"),
+          Boolean((raw as { isPaid?: boolean }).isPaid) ||
+          raw.order?.status === "paid" ||
+          Boolean(raw.order && (raw.order.amountPaise || 0) > 0) ||
+          raw.plan?.status === "pending_review")
+          ? "purchased"
+          : (raw.membershipCategory || "free"),
     membershipTitle:
       raw.membershipTitle ||
       (raw.membershipCategory === "purchased" ? "Purchased Client Plan" : "Free Registered Member"),
@@ -246,6 +246,16 @@ export function getStoredAdminUsers(): AdminUserRecord[] {
           return false;
         }
 
+        // Strictly exclude anonymous funnel leads who only checked analysis without registering or paying
+        const isAnonymousLead =
+          (email.includes("@lead.bmyfit.in") || u.name?.startsWith("Free Score Lead")) &&
+          u.membershipCategory === "free" &&
+          !u.order &&
+          !u.isPaid;
+        if (isAnonymousLead) {
+          return false;
+        }
+
         const isPaidUser =
           u.membershipCategory === "purchased" ||
           u.membershipCategory === "membership" ||
@@ -319,17 +329,46 @@ export function promoteStoredUserToPaid(userId: string): AdminUserRecord | null 
       void setDoc(
         doc(db, "orders", orderId),
         {
-          ...paidOrder,
           id: orderId,
+          orderId,
           uid: user.id,
           userId: user.id,
           customerName: user.name,
           customerEmail: user.email,
           customerPhone: user.phone,
+          amount: 99,
+          amountPaise: 9900,
+          amountFormatted: "₹99",
+          currency: "INR",
+          status: "paid",
+          paymentMethod: "razorpay",
+          razorpayOrderId: orderId,
+          razorpayPaymentId: paidOrder.razorpayPaymentId,
+          packageTitle: paidOrder.packageTitle,
           createdAt: now,
+          paidAt: now,
+          updatedAt: now,
         },
         { merge: true }
-      ).catch(() => {});
+      ).catch(() => { });
+      void setDoc(
+        doc(db, "users", user.id),
+        {
+          id: user.id,
+          uid: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          membershipCategory: "purchased",
+          membershipTitle: "Purchased Client Plan",
+          isPaid: true,
+          needsPlanReview: user.needsPlanReview,
+          order: paidOrder,
+          plan: user.plan,
+          updatedAt: now,
+        },
+        { merge: true }
+      ).catch(() => { });
       if (user.plan?.id) {
         void setDoc(
           doc(db, "plans", user.plan.id),
@@ -339,9 +378,9 @@ export function promoteStoredUserToPaid(userId: string): AdminUserRecord | null 
             updatedAt: now,
           },
           { merge: true }
-        ).catch(() => {});
+        ).catch(() => { });
       }
-    } catch {}
+    } catch { }
   }
 
   return user;
@@ -554,9 +593,10 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
   inMemoryUsers.delete("nqOlc3cJFVIzJB3oGRVyu4g9r4L2");
 
   // 0.1 Discover registered client accounts (Exact UIDs from Firebase Auth console)
+  const venkateshUid = "v0vsUoxTrkMGbNs7hstEXODyD2f2";
   const knownAuthClients = [
     {
-      id: "vovsLoxTftM6lNs7hstEKDD31iK2",
+      id: "v0vsUoxTrkMGbNs7hstEXODyD2f2",
       name: "Venkatesh Choppa",
       email: "venkateshchop14@gmail.com",
       phone: "+91 98490 12345",
@@ -566,7 +606,7 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
       joinedAt: "2026-10-28T12:00:00.000Z",
     },
     {
-      id: "RLuiNcGHWgTmdYmBkkr2fSL4k8h2",
+      id: "RLUiNcGHWgTmdYmBkkr2fSL7v6A2",
       name: "Athlete",
       email: "www.arjunshiva@gmail.com",
       phone: "+91 98000 00000",
@@ -607,314 +647,373 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
     },
   ];
 
-  for (const client of knownAuthClients) {
-    if (!inMemoryUsers.has(client.id)) {
-      inMemoryUsers.set(
-        client.id,
-        sanitizeAdminUserRecord(
-          {
-            id: client.id,
-            name: client.name,
-            email: client.email,
-            phone: client.phone,
-            city: client.city,
-            membershipCategory: "free",
-            membershipTitle: "Registered Member",
-            goal: client.goal,
-            goalDisplay: client.goalDisplay,
-            joinedAt: client.joinedAt,
-            lastActive: "Active Today",
-          },
-          client.id
-        )
-      );
-    }
+  if (!inMemoryUsers.has(venkateshUid)) {
+    inMemoryUsers.set(
+      venkateshUid,
+      sanitizeAdminUserRecord(
+        {
+          id: venkateshUid,
+          name: "Venkatesh Choppa",
+          email: "venkateshchop14@gmail.com",
+          phone: "+91 98490 12345",
+          city: "Bengaluru, KA",
+          membershipCategory: "free",
+          membershipTitle: "Registered Member",
+          goal: "fat-loss",
+          goalDisplay: "Fat Loss & Muscle",
+          joinedAt: "2026-10-28T12:00:00.000Z",
+          lastActive: "Active Today",
+        },
+        venkateshUid
+      )
+    );
   }
+  for (const client of knownAuthClients) {
+      if (!inMemoryUsers.has(client.id)) {
+        inMemoryUsers.set(
+          client.id,
+          sanitizeAdminUserRecord(
+            {
+              id: client.id,
+              name: client.name,
+              email: client.email,
+              phone: client.phone,
+              city: client.city,
+              membershipCategory: "free",
+              membershipTitle: "Registered Member",
+              goal: client.goal,
+              goalDisplay: client.goalDisplay,
+              joinedAt: client.joinedAt,
+              lastActive: "Active Today",
+            },
+            client.id
+          )
+        );
+      }
+    }
 
-  try {
-    // 1. Fetch users collection (strictly real accounts or paid customers)
     try {
-      const userSnap = await getDocs(collection(db, "users"));
-      userSnap.forEach((docSnap) => {
-        const data = docSnap.data() as Partial<AdminUserRecord> & { isPaid?: boolean; paymentStatus?: string };
-        const email = (data.email || "").toLowerCase();
-        if (
-          email === "bmyfitnesscoach@gmail.com" ||
-          docSnap.id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
-          email.includes("@test.com") ||
-          email.startsWith("test_") ||
-          data.name?.toLowerCase().includes("test athlete")
-        ) {
-          return;
-        }
-
-        const isPurchased =
-          data.membershipCategory === "purchased" ||
-          data.membershipCategory === "membership" ||
-          data.isPaid === true ||
-          data.paymentStatus === "paid" ||
-          data.order?.status === "paid" ||
-          Boolean(data.order && (data.order.amountPaise || 0) > 0) ||
-          data.plan?.status === "pending_review" ||
-          data.needsPlanReview === true;
-
-        if (!isPurchased) {
+      // 1. Fetch users collection
+      // 1. Fetch users collection (strictly real accounts or paid customers)
+      try {
+        const userSnap = await getDocs(collection(db, "users"));
+        userSnap.forEach((docSnap) => {
+          const data = docSnap.data() as Partial<AdminUserRecord> & { isPaid?: boolean; paymentStatus?: string };
+          const email = (data.email || "").toLowerCase();
           if (
-            email.includes("@lead.bmyfit.in") ||
-            email.includes("@client.bmyfit.in") ||
-            (email.includes("@example.com") && docSnap.id.startsWith("plan_")) ||
-            data.name?.startsWith("Free Score Lead") ||
-            docSnap.id.startsWith("plan_") ||
-            docSnap.id.startsWith("asm_") ||
-            docSnap.id.startsWith("guest_") ||
-            docSnap.id.startsWith("anon_")
+            email === "bmyfitnesscoach@gmail.com" ||
+            docSnap.id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
+            email.includes("@test.com") ||
+            email.startsWith("test_") ||
+            data.name?.toLowerCase().includes("test athlete")
           ) {
             return;
           }
-        }
 
-        const existing = inMemoryUsers.get(docSnap.id);
-        const effectiveCategory = data.membershipCategory === "membership"
-          ? "membership"
-          : isPurchased
-          ? "purchased"
-          : (data.membershipCategory || existing?.membershipCategory || "free");
+          const isPurchased =
+            data.membershipCategory === "purchased" ||
+            data.membershipCategory === "membership" ||
+            data.isPaid === true ||
+            data.paymentStatus === "paid" ||
+            data.order?.status === "paid" ||
+            Boolean(data.order && (data.order.amountPaise || 0) > 0) ||
+            data.plan?.status === "pending_review" ||
+            data.needsPlanReview === true;
 
-        const record = sanitizeAdminUserRecord(
-          {
-            ...existing,
-            ...data,
-            id: docSnap.id,
-            membershipCategory: effectiveCategory,
-            needsPlanReview: data.plan?.status === "approved" ? false : (isPurchased || Boolean(data.needsPlanReview)),
-            plan: data.plan || existing?.plan,
-          },
-          docSnap.id
-        );
-        inMemoryUsers.set(docSnap.id, record);
-      });
-    } catch (e) {
-      console.warn("Direct Firestore users collection sync notice:", e);
-    }
-
-    // 2. Fetch plans collection (Plans ONLY attach to registered/paid users; never create synthetic users)
-    try {
-      const plansSnap = await getDocs(collection(db, "plans"));
-      plansSnap.forEach((docSnap) => {
-        const planData = docSnap.data() as PlanDashboardData;
-        inMemoryPlans.set(docSnap.id, { ...planData, id: docSnap.id });
-        const existing = inMemoryUsers.get(docSnap.id);
-        const isPending = planData.status === "pending_review";
-        if (existing) {
-          existing.plan = { ...existing.plan, ...planData };
-          if (planData.status === "approved" || planData.status === "active") {
-            existing.needsPlanReview = false;
+          if (!isPurchased) {
+            if (
+              email.includes("@lead.bmyfit.in") ||
+              email.includes("@client.bmyfit.in") ||
+              (email.includes("@example.com") && docSnap.id.startsWith("plan_")) ||
+              data.name?.startsWith("Free Score Lead") ||
+              docSnap.id.startsWith("plan_") ||
+              docSnap.id.startsWith("asm_") ||
+              docSnap.id.startsWith("guest_") ||
+              docSnap.id.startsWith("anon_")
+            ) {
+              return;
+            }
           }
-          if (isPending) {
-            existing.membershipCategory = "purchased";
-            existing.needsPlanReview = true;
-          }
-          inMemoryUsers.set(docSnap.id, existing);
-        }
-      });
-    } catch (e) {
-      console.warn("Direct Firestore plans collection sync notice:", e);
-    }
 
-    // 3. Fetch assessments collection (attach biometrics only to registered users)
-    try {
-      const asmSnap = await getDocs(collection(db, "assessments"));
-      asmSnap.forEach((docSnap) => {
-        const asm = docSnap.data();
-        const id = (asm.uid && asm.uid !== "anonymous-user" && !String(asm.uid).startsWith("guest_")) ? asm.uid : null;
-        if (!id) return; // Do NOT create synthetic users for anonymous visitors checking free scores
-        const existing = inMemoryUsers.get(id) || inMemoryUsers.get(docSnap.id);
-        if (existing) {
-          if (asm.weightKg && existing.biometrics) {
-            existing.biometrics.weightKg = asm.weightKg;
-            existing.biometrics.heightCm = asm.heightCm || existing.biometrics.heightCm;
-            existing.biometrics.bmi = asm.bmi || existing.biometrics.bmi;
-            existing.biometrics.bodyFatPercent = asm.bodyFatPercent || existing.biometrics.bodyFatPercent;
-          }
-        }
-      });
-    } catch (e) {
-      console.warn("Direct Firestore assessments collection sync notice:", e);
-    }
+          const existing =
+            inMemoryUsers.get(docSnap.id) ||
+            (email
+              ? Array.from(inMemoryUsers.values()).find(
+                  (u) => u.email && u.email.toLowerCase() === email
+                )
+              : undefined);
+          const primaryId = existing?.id || docSnap.id;
+          const effectiveCategory = data.membershipCategory === "membership"
+            ? "membership"
+            : isPurchased
+              ? "purchased"
+              : (data.membershipCategory || existing?.membershipCategory || "free");
 
-    // 4. Fetch chats collection to discover active client threads (ignoring mock seed IDs)
-    try {
-      const chatsSnap = await getDocs(collection(db, "chats"));
-      chatsSnap.forEach((docSnap) => {
-        const id = docSnap.id;
-        if (
-          id.startsWith("user_membership_") ||
-          id.startsWith("user_purchase_") ||
-          id.startsWith("user_purchased_") ||
-          id.startsWith("mock_") ||
-          id === "coach_naveen"
-        ) {
-          return;
-        }
-        const chat = docSnap.data();
-        if (!chat.userName || chat.userName === "Client") {
-          return;
-        }
-        const existing = inMemoryUsers.get(id);
-        if (existing) {
-          if (chat.userName) existing.name = chat.userName;
-          if (chat.userEmail) existing.email = chat.userEmail;
-          if (chat.userPhone) existing.phone = chat.userPhone;
-          if (chat.planGoal) existing.goal = chat.planGoal;
-          if (chat.membershipCategory) existing.membershipCategory = chat.membershipCategory;
-          inMemoryUsers.set(id, existing);
-        }
-      });
-    } catch (e) {
-      console.warn("Direct Firestore chats collection sync notice:", e);
-    }
-
-    // 4. Fetch orders collection
-    try {
-      const ordersSnap = await getDocs(collection(db, "orders"));
-      ordersSnap.forEach((docSnap) => {
-        const order = docSnap.data();
-        const targetId = order.uid || order.userId;
-        const isOrderPaid =
-          order.status === "paid" ||
-          order.status === "submitted" ||
-          order.status === "verified";
-        if (!isOrderPaid) return;
-
-        // Try finding existing user by ID, assessmentId, email, or phone
-        const user =
-          (targetId ? inMemoryUsers.get(targetId) : null) ||
-          (order.assessmentId ? inMemoryUsers.get(order.assessmentId) : null) ||
-          Array.from(inMemoryUsers.values()).find(
-            (u) =>
-              (order.customerEmail &&
-                u.email &&
-                u.email.toLowerCase() === String(order.customerEmail).toLowerCase()) ||
-              (order.customerPhone && u.phone && u.phone === order.customerPhone) ||
-              (order.assessmentId &&
-                (u.assessmentId === order.assessmentId ||
-                  u.id === order.assessmentId ||
-                  u.plan?.id === order.assessmentId))
-          );
-
-        const orderRecord = {
-          orderId: order.razorpayOrderId || order.orderId || docSnap.id,
-          razorpayPaymentId:
-            order.razorpayPaymentId ||
-            order.upiTransactionId ||
-            order.utr ||
-            "pay_verified",
-          amountPaise:
-            order.amountPaise ||
-            (order.amount ? Math.round(order.amount * 100) : 9900),
-          amountFormatted:
-            order.amountFormatted ||
-            `₹${Math.round(
-              (order.amountPaise ||
-                (order.amount ? order.amount * 100 : 9900)) /
-                100
-            )}`,
-          currency: order.currency || "INR",
-          status: "paid" as const,
-          packageTitle: order.packageTitle || "Custom 8-Week Transformation Plan",
-          durationWeeks: order.durationWeeks || 8,
-          purchasedAt:
-            order.paidAt ||
-            order.submittedAt ||
-            order.createdAt ||
-            new Date().toISOString(),
-        };
-
-        if (user) {
-          user.membershipCategory = "purchased";
-          user.membershipTitle = "Purchased Client Plan";
-          user.needsPlanReview = user.plan?.status === "approved" ? false : true;
-          user.order = orderRecord;
-          user.isPaid = true;
-          if (user.plan && user.plan.status !== "approved") {
-            user.plan.status = "pending_review";
-          }
-        } else {
-          // Discover purchased client directly from paid order document so they are NEVER missing!
-          const primaryId = targetId || order.assessmentId || docSnap.id;
-          const newRec = sanitizeAdminUserRecord(
+          const record = sanitizeAdminUserRecord(
             {
+              ...existing,
+              ...data,
               id: primaryId,
-              assessmentId: order.assessmentId,
-              name: order.customerName || "Purchased Client",
-              email: order.customerEmail || `${primaryId}@client.bmyfit.in`,
-              phone: order.customerPhone || "+91 98000 00000",
-              membershipCategory: "purchased",
-              membershipTitle: "Purchased Client Plan",
-              needsPlanReview: true,
-              isPaid: true,
-              order: orderRecord,
-              plan: generateDashboardPlan(order.assessmentId || primaryId, {
-                customerName: order.customerName || "Purchased Client",
-                status: "pending_review",
-                weeksCount: 8,
-                coachNotes:
-                  "NEW PURCHASE (₹99 Paid): Discovered from verified order record.",
-              }),
+              isPaid: isPurchased || Boolean(existing?.isPaid),
+              membershipCategory: effectiveCategory,
+              needsPlanReview: data.plan?.status === "approved" ? false : (isPurchased || Boolean(data.needsPlanReview)),
+              plan: data.plan || existing?.plan,
             },
             primaryId
           );
-          inMemoryUsers.set(primaryId, newRec);
-        }
-      });
-    } catch (e) {
-      console.warn("Direct Firestore orders collection sync notice:", e);
-    }
+          inMemoryUsers.set(primaryId, record);
+        });
+      } catch (e) {
+        console.warn("Direct Firestore users collection sync notice:", e);
+      }
 
-    // 5. Fetch subscriptions collection
-    try {
-      const subsSnap = await getDocs(collection(db, "subscriptions"));
-      subsSnap.forEach((docSnap) => {
-        const sub = docSnap.data() as UserSubscription;
-        const targetId = sub.userId || docSnap.id.replace("sub_", "");
-        const user = inMemoryUsers.get(targetId);
-        if (user) {
-          user.subscription = { ...sub, id: docSnap.id };
-          user.membershipCategory = "purchased";
-          if (sub.packageTitle) user.membershipTitle = sub.packageTitle;
-        }
-      });
-    } catch (e) {
-      console.warn("Direct Firestore subscriptions collection sync notice:", e);
-    }
-
-    // 6. Fetch medical_consultations collection
-    try {
-      const medSnap = await getDocs(collection(db, "medical_consultations"));
-      medSnap.forEach((docSnap) => {
-        const med = docSnap.data() as MedicalAssessment & { userId?: string };
-        const targetId = med.userId || docSnap.id;
-        const user = inMemoryUsers.get(targetId);
-        if (user) {
-          user.medicalAssessment = {
-            hasDisease: Boolean(med.hasDisease),
-            diseases: Array.isArray(med.diseases) ? med.diseases : [],
-            customDiseaseDescription: med.customDiseaseDescription,
-            medications: med.medications,
-            documents: Array.isArray(med.documents) ? med.documents : [],
-            submittedAt: med.submittedAt || new Date().toISOString(),
-          };
-          if (med.diseases && med.diseases.length > 0 && user.biometrics) {
-            user.biometrics.medicalConditions = med.diseases.join(", ");
+      // 2. Fetch plans collection
+      // 2. Fetch plans collection (Plans ONLY attach to registered/paid users; never create synthetic users)
+      try {
+        const plansSnap = await getDocs(collection(db, "plans"));
+        plansSnap.forEach((docSnap) => {
+          const planData = docSnap.data() as PlanDashboardData;
+          inMemoryPlans.set(docSnap.id, { ...planData, id: docSnap.id });
+          const existing = inMemoryUsers.get(docSnap.id);
+          const isPending = planData.status === "pending_review";
+          if (existing) {
+            existing.plan = { ...existing.plan, ...planData };
+            if (planData.status === "approved" || planData.status === "active") {
+              existing.needsPlanReview = false;
+            }
+            if (isPending) {
+              existing.membershipCategory = "purchased";
+              existing.needsPlanReview = true;
+            }
+            inMemoryUsers.set(docSnap.id, existing);
+          } else if (planData.customerName) {
+            const newRec = sanitizeAdminUserRecord(
+              {
+                id: docSnap.id,
+                name: planData.customerName,
+                email: `${docSnap.id}@client.bmyfit.in`,
+                membershipCategory: isPending ? "purchased" : "free",
+                needsPlanReview: isPending,
+                plan: planData,
+              },
+              docSnap.id
+            );
+            inMemoryUsers.set(docSnap.id, newRec);
           }
-        }
-      });
-    } catch (e) {
-      console.warn("Direct Firestore medical_consultations sync notice:", e);
-    }
-  } catch (err) {
-    console.warn("syncFirestoreUsersDirectly error:", err);
-  }
+        });
+      } catch (e) {
+        console.warn("Direct Firestore plans collection sync notice:", e);
+      }
 
-  return getStoredAdminUsers();
-}
+      // 3. Fetch assessments collection (attach biometrics only to registered users)
+      try {
+        const asmSnap = await getDocs(collection(db, "assessments"));
+        asmSnap.forEach((docSnap) => {
+          const asm = docSnap.data();
+          const id = (asm.uid && asm.uid !== "anonymous-user" && !String(asm.uid).startsWith("guest_")) ? asm.uid : null;
+          if (!id) return; // Do NOT create synthetic users for anonymous visitors checking free scores
+          const existing = inMemoryUsers.get(id) || inMemoryUsers.get(docSnap.id);
+          if (existing) {
+            if (asm.weightKg && existing.biometrics) {
+              existing.biometrics.weightKg = asm.weightKg;
+              existing.biometrics.heightCm = asm.heightCm || existing.biometrics.heightCm;
+              existing.biometrics.bmi = asm.bmi || existing.biometrics.bmi;
+              existing.biometrics.bodyFatPercent = asm.bodyFatPercent || existing.biometrics.bodyFatPercent;
+            }
+          }
+        });
+      } catch (e) {
+        console.warn("Direct Firestore assessments collection sync notice:", e);
+      }
+
+      // 4. Fetch chats collection to discover active client threads (ignoring mock seed IDs)
+      try {
+        const chatsSnap = await getDocs(collection(db, "chats"));
+        chatsSnap.forEach((docSnap) => {
+          const id = docSnap.id;
+          if (
+            id.startsWith("user_membership_") ||
+            id.startsWith("user_purchase_") ||
+            id.startsWith("user_purchased_") ||
+            id.startsWith("mock_") ||
+            id === "coach_naveen"
+          ) {
+            return;
+          }
+          const chat = docSnap.data();
+          if (!chat.userName || chat.userName === "Client") {
+            return;
+          }
+          const existing = inMemoryUsers.get(id);
+          if (existing) {
+            if (chat.userName) existing.name = chat.userName;
+            if (chat.userEmail) existing.email = chat.userEmail;
+            if (chat.userPhone) existing.phone = chat.userPhone;
+            if (chat.planGoal) existing.goal = chat.planGoal;
+            if (chat.membershipCategory) existing.membershipCategory = chat.membershipCategory;
+            inMemoryUsers.set(id, existing);
+          } else if (chat.userName || chat.userEmail) {
+            const newRec = sanitizeAdminUserRecord(
+              {
+                id,
+                name: chat.userName,
+                email: chat.userEmail || `${id}@client.bmyfit.in`,
+                phone: chat.userPhone || "+91 98000 00000",
+                membershipCategory: chat.membershipCategory || "free",
+                goal: chat.planGoal || "fat-loss",
+                avatar: chat.avatarUrl,
+              },
+              id
+            );
+            inMemoryUsers.set(id, newRec);
+          }
+        });
+      } catch (e) {
+        console.warn("Direct Firestore chats collection sync notice:", e);
+      }
+
+      // 4. Fetch orders collection
+      try {
+        const ordersSnap = await getDocs(collection(db, "orders"));
+        ordersSnap.forEach((docSnap) => {
+          const order = docSnap.data();
+          const targetId = order.uid || order.userId;
+          const isOrderPaid =
+            order.status === "paid" ||
+            order.status === "submitted" ||
+            order.status === "verified";
+          if (!isOrderPaid) return;
+
+          // Try finding existing user by ID, assessmentId, email, or phone
+          const user =
+            (targetId ? inMemoryUsers.get(targetId) : null) ||
+            (order.assessmentId ? inMemoryUsers.get(order.assessmentId) : null) ||
+            Array.from(inMemoryUsers.values()).find(
+              (u) =>
+                (order.customerEmail &&
+                  u.email &&
+                  u.email.toLowerCase() === String(order.customerEmail).toLowerCase()) ||
+                (order.customerPhone && u.phone && u.phone === order.customerPhone) ||
+                (order.assessmentId &&
+                  (u.assessmentId === order.assessmentId ||
+                    u.id === order.assessmentId ||
+                    u.plan?.id === order.assessmentId))
+            );
+
+          const orderRecord = {
+            orderId: order.razorpayOrderId || order.orderId || docSnap.id,
+            razorpayPaymentId:
+              order.razorpayPaymentId ||
+              order.upiTransactionId ||
+              order.utr ||
+              "pay_verified",
+            amountPaise:
+              order.amountPaise ||
+              (order.amount ? Math.round(order.amount * 100) : 9900),
+            amountFormatted:
+              order.amountFormatted ||
+              `₹${Math.round(
+                (order.amountPaise ||
+                  (order.amount ? order.amount * 100 : 9900)) /
+                100
+              )}`,
+            currency: order.currency || "INR",
+            status: "paid" as const,
+            packageTitle: order.packageTitle || "Custom 8-Week Transformation Plan",
+            durationWeeks: order.durationWeeks || 8,
+            purchasedAt:
+              order.paidAt ||
+              order.submittedAt ||
+              order.createdAt ||
+              new Date().toISOString(),
+          };
+
+          if (user) {
+            user.membershipCategory = "purchased";
+            user.membershipTitle = "Purchased Client Plan";
+            user.needsPlanReview = user.plan?.status === "approved" ? false : true;
+            user.order = orderRecord;
+            user.isPaid = true;
+            if (user.plan && user.plan.status !== "approved") {
+              user.plan.status = "pending_review";
+            }
+            inMemoryUsers.set(user.id, user);
+          } else {
+            // Discover purchased client directly from paid order document so they are NEVER missing!
+            const primaryId = targetId || order.assessmentId || docSnap.id;
+            const newRec = sanitizeAdminUserRecord(
+              {
+                id: primaryId,
+                assessmentId: order.assessmentId,
+                name: order.customerName || "Purchased Client",
+                email: order.customerEmail || `${primaryId}@client.bmyfit.in`,
+                phone: order.customerPhone || "+91 98000 00000",
+                membershipCategory: "purchased",
+                membershipTitle: "Purchased Client Plan",
+                needsPlanReview: true,
+                isPaid: true,
+                order: orderRecord,
+                plan: generateDashboardPlan(order.assessmentId || primaryId, {
+                  customerName: order.customerName || "Purchased Client",
+                  status: "pending_review",
+                  weeksCount: 8,
+                  coachNotes:
+                    "NEW PURCHASE (₹99 Paid): Discovered from verified order record.",
+                }),
+              },
+              primaryId
+            );
+            inMemoryUsers.set(primaryId, newRec);
+          }
+        });
+      } catch (e) {
+        console.warn("Direct Firestore orders collection sync notice:", e);
+      }
+
+      // 5. Fetch subscriptions collection
+      try {
+        const subsSnap = await getDocs(collection(db, "subscriptions"));
+        subsSnap.forEach((docSnap) => {
+          const sub = docSnap.data() as UserSubscription;
+          const targetId = sub.userId || docSnap.id.replace("sub_", "");
+          const user = inMemoryUsers.get(targetId);
+          if (user) {
+            user.subscription = { ...sub, id: docSnap.id };
+            user.membershipCategory = "purchased";
+            if (sub.packageTitle) user.membershipTitle = sub.packageTitle;
+          }
+        });
+      } catch (e) {
+        console.warn("Direct Firestore subscriptions collection sync notice:", e);
+      }
+
+      // 6. Fetch medical_consultations collection
+      try {
+        const medSnap = await getDocs(collection(db, "medical_consultations"));
+        medSnap.forEach((docSnap) => {
+          const med = docSnap.data() as MedicalAssessment & { userId?: string };
+          const targetId = med.userId || docSnap.id;
+          const user = inMemoryUsers.get(targetId);
+          if (user) {
+            user.medicalAssessment = {
+              hasDisease: Boolean(med.hasDisease),
+              diseases: Array.isArray(med.diseases) ? med.diseases : [],
+              customDiseaseDescription: med.customDiseaseDescription,
+              medications: med.medications,
+              documents: Array.isArray(med.documents) ? med.documents : [],
+              submittedAt: med.submittedAt || new Date().toISOString(),
+            };
+            if (med.diseases && med.diseases.length > 0 && user.biometrics) {
+              user.biometrics.medicalConditions = med.diseases.join(", ");
+            }
+          }
+        });
+      } catch (e) {
+        console.warn("Direct Firestore medical_consultations sync notice:", e);
+      }
+    } catch (err) {
+      console.warn("syncFirestoreUsersDirectly error:", err);
+    }
+
+    return getStoredAdminUsers();
+  }

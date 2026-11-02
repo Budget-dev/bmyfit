@@ -52,7 +52,9 @@ export function PlanClient({ id }: { id: string }) {
             sessionStorage.getItem("bmyfit_local_paid") === "true" ||
             localStorage.getItem("bmyfit_local_paid") === "true" ||
             localStorage.getItem(`bmyfit_paid_${id}`) === "true" ||
-            Boolean(userProfile?.uid && localStorage.getItem(`bmyfit_paid_${userProfile.uid}`) === "true");
+            sessionStorage.getItem(`bmyfit_paid_${id}`) === "true" ||
+            Boolean(userProfile?.uid && localStorage.getItem(`bmyfit_paid_${userProfile.uid}`) === "true") ||
+            Boolean(userProfile?.uid && sessionStorage.getItem(`bmyfit_paid_${userProfile.uid}`) === "true");
           const rawLocal = sessionStorage.getItem("bmyfit_local_assessment");
           if (rawLocal) {
             localAssessment = JSON.parse(rawLocal);
@@ -82,16 +84,16 @@ export function PlanClient({ id }: { id: string }) {
       const matchedUser = storedAdminUsers.find(
         (u) =>
           (userProfile?.uid && (u.id === userProfile.uid || (u.email && u.email.toLowerCase() === userProfile.email?.toLowerCase()))) ||
+          (userProfile?.email && u.email && u.email.toLowerCase() === userProfile.email.toLowerCase()) ||
           (id !== "local" && id !== "demo" && (u.id === id || u.assessmentId === id))
       );
 
       // Only mark paid from admin if this specific user profile is genuinely purchased
       const isPaidFromAdmin = Boolean(
-        userProfile?.uid &&
-          matchedUser &&
-          (matchedUser.id === userProfile.uid || (matchedUser.email && matchedUser.email.toLowerCase() === userProfile.email?.toLowerCase())) &&
+        matchedUser &&
           (matchedUser.membershipCategory === "purchased" ||
             matchedUser.membershipCategory === "membership" ||
+            matchedUser.isPaid === true ||
             matchedUser.order?.status === "paid")
       );
 

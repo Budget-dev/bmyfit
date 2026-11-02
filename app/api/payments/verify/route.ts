@@ -23,7 +23,10 @@ const requestSchema = z.object({
   razorpay_payment_id: z.string().min(1).max(200),
   razorpay_signature: z.string().regex(/^[a-f0-9]{64}$/i, "Invalid signature format"),
   customerName: z.string().max(100).optional(),
-  customerEmail: z.string().email().optional(),
+  customerEmail: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.includes("@") ? v.trim() : undefined)),
   customerPhone: z.string().max(30).optional(),
 });
 

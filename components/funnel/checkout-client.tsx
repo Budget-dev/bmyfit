@@ -11,7 +11,7 @@ import { db, doc, setDoc } from "@/lib/firebase/client";
 import { useRazorpay } from "@/hooks/use-razorpay";
 import { APP_CONFIG } from "@/lib/config";
 import type { VerifyPaymentRequest } from "@/types/payment";
-import type { MedicalDocument, MedicalAssessment, AdminUserRecord } from "@/types/admin";
+import type { MedicalDocument, MedicalAssessment, AdminUserRecord, UserPurchaseOrder } from "@/types/admin";
 import {
   saveStoredMedicalConsultation,
   upsertStoredAdminUser,
@@ -23,6 +23,8 @@ import {
   faShieldHalved,
   faBolt,
   faLock,
+  faCheck,
+  faArrowRight,
 } from "@/components/ui/font-awesome-icons";
 import { recordFootprint } from "@/lib/telemetry/footprints";
 
@@ -108,9 +110,19 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
 
   const [funnelStep, setFunnelStep] = useState<"payment" | "medical_questionnaire" | "medical_submitted">("payment");
   const [, setSelectedMethod] = useState<"upi" | "card" | "netbanking">("upi");
-  const [paymentStatus, setPaymentStatus] = useState<"idle" | "creating" | "verifying" | "failed">("idle");
+  const [paymentStatus, setPaymentStatus] = useState<"idle" | "creating" | "verifying" | "failed" | "success">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+
+  // Payment Successful Popup & Waitlisting State
+  const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState<boolean>(false);
+  const [confirmedPaymentDetails, setConfirmedPaymentDetails] = useState<{
+    paymentId: string;
+    orderId: string;
+    amount: number;
+    customerName: string;
+    customerEmail: string;
+  } | null>(null);
 
   // Post-payment Medical Health Profile & Documents State
   const [hasDisease, setHasDisease] = useState<boolean | null>(null);
@@ -198,23 +210,41 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
     const realBiometrics = getSessionBiometrics();
     const now = new Date().toISOString();
 
-    const orderData = {
+    const initialOrderRecord: UserPurchaseOrder = {
       orderId: effectiveOrderId,
       razorpayOrderId: effectiveOrderId,
       razorpayPaymentId: effectivePaymentId,
       amountPaise: 9900,
       amountFormatted: "₹99",
-      currency: "INR" as const,
-      status: "paid" as const,
-      packageTitle: "Custom 8-Week Transformation Plan (₹99 Assessment)",
+      currency: "INR",
+      status: "paid",
+      paymentMethod: "razorpay",
+      packageTitle: "Custom 8-Week Transformation Plan",
       durationWeeks: 8,
       purchasedAt: now,
-      customerName: customerDetails.name || userProfile?.name || "Purchased Member",
-      customerEmail: customerDetails.email || userProfile?.email || "",
-      customerPhone: customerDetails.phone || userProfile?.phone || "",
+    };
+
+    const sanitizedFirestoreOrder = {
+      id: effectiveOrderId,
+      orderId: effectiveOrderId,
       uid: primaryUserId,
       userId: primaryUserId,
       assessmentId,
+      customerName: customerDetails.name || userProfile?.name || "Purchased Member",
+      customerPhone: customerDetails.phone || userProfile?.phone || "",
+      customerEmail: customerDetails.email || userProfile?.email || "",
+      amount: 99,
+      amountPaise: 9900,
+      amountFormatted: "₹99",
+      currency: "INR",
+      status: "paid",
+      paymentMethod: "razorpay",
+      razorpayOrderId: effectiveOrderId,
+      razorpayPaymentId: effectivePaymentId,
+      packageTitle: "Custom 8-Week Transformation Plan",
+      createdAt: now,
+      paidAt: now,
+      updatedAt: now,
     };
 
     const dashboardPlan = generateDashboardPlan(assessmentId, {
@@ -242,23 +272,30 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       needsPlanReview: true,
       isPaid: true,
       biometrics: realBiometrics,
-      order: orderData,
+      order: initialOrderRecord,
       plan: dashboardPlan,
     };
 
     upsertStoredAdminUser(initialRecord);
     saveStoredPlan(dashboardPlan);
 
-    // Update in-memory auth profile
+    // Update in-memory & stored auth profile
     try {
-      const current = getStoredProfile();
-      if (current) {
-        saveStoredProfile({
-          ...current,
-          membershipCategory: "purchased",
-          isPaid: true,
-        });
-      }
+      const current = getStoredProfile() || {
+        uid: primaryUserId,
+        name: customerDetails.name || userProfile?.name || "Purchased Member",
+        email: customerDetails.email || userProfile?.email || "",
+        phone: customerDetails.phone || userProfile?.phone || "",
+        age: 26,
+        provider: "password" as const,
+        createdAt: now,
+        role: "user" as const,
+      };
+      saveStoredProfile({
+        ...current,
+        membershipCategory: "purchased",
+        isPaid: true,
+      });
     } catch { }
 
     // Direct Firestore synchronization
@@ -274,19 +311,12 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
           membershipTitle: "Purchased Client Plan",
           needsPlanReview: true,
           isPaid: true,
-          order: orderData,
+          order: sanitizedFirestoreOrder,
           plan: dashboardPlan,
           updatedAt: now,
         };
         void setDoc(doc(db, "users", primaryUserId), userPayload, { merge: true }).catch(() => {});
-        if (assessmentId && assessmentId !== primaryUserId) {
-          void setDoc(doc(db, "users", assessmentId), userPayload, { merge: true }).catch(() => {});
-        }
-        void setDoc(doc(db, "orders", effectiveOrderId), {
-          ...orderData,
-          id: effectiveOrderId,
-          createdAt: now,
-        }, { merge: true }).catch(() => {});
+        void setDoc(doc(db, "orders", effectiveOrderId), sanitizedFirestoreOrder, { merge: true }).catch(() => {});
         void setDoc(doc(db, "plans", assessmentId), dashboardPlan, { merge: true }).catch(() => {});
         if (primaryUserId !== assessmentId) {
           void setDoc(doc(db, "plans", primaryUserId), dashboardPlan, { merge: true }).catch(() => {});
@@ -305,7 +335,16 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       customerPhone: customerDetails.phone,
       amount: 99,
     });
-    setFunnelStep("medical_questionnaire");
+
+    setPaymentStatus("success");
+    setConfirmedPaymentDetails({
+      paymentId: effectivePaymentId,
+      orderId: effectiveOrderId,
+      amount: 99,
+      customerName: customerDetails.name || userProfile?.name || "Purchased Member",
+      customerEmail: customerDetails.email || userProfile?.email || "",
+    });
+    setShowPaymentSuccessModal(true);
   };
 
   const handleToggleDisease = (diseaseLabel: string) => {
@@ -684,8 +723,20 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
               // Fallback to /api/verify-payment
               const fallbackVerifyRes = await fetch("/api/verify-payment", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(response),
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-assessment-id": assessmentId,
+                  "x-customer-name": cleanName || "",
+                  "x-customer-email": cleanEmail || "",
+                  "x-customer-phone": cleanPhone || "",
+                },
+                body: JSON.stringify({
+                  ...response,
+                  customerName: cleanName,
+                  customerEmail: cleanEmail,
+                  customerPhone: cleanPhone,
+                  assessmentId,
+                }),
               });
               if (fallbackVerifyRes.ok) {
                 verifyOk = true;
@@ -1687,6 +1738,94 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
                 className="w-full py-1 text-center text-gray-400 hover:text-gray-600 text-[9px]"
               >
                 Cancel and return to checkout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Successful Popup Modal with Waitlist Routing */}
+      {showPaymentSuccessModal && confirmedPaymentDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border-2 border-emerald-400/50 text-center space-y-5 animate-in zoom-in-95 duration-200 relative overflow-hidden">
+            {/* Ambient celebratory top glow */}
+            <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-48 h-24 bg-emerald-400/20 blur-2xl rounded-full pointer-events-none" />
+
+            {/* Pulsing Success Badge */}
+            <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
+              <span className="absolute inset-0 rounded-full bg-emerald-100 animate-ping opacity-60" />
+              <div className="relative w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-500 to-green-400 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                <FontAwesomeIcon icon={faCheck} className="text-3xl font-black" />
+              </div>
+            </div>
+
+            {/* Header Text */}
+            <div className="space-y-1.5">
+              <span className="inline-block text-[11px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                ✓ PAYMENT VERIFIED · ₹99 RECEIVED
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-gray-950 tracking-tight">
+                Payment Successful!
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed max-w-xs mx-auto">
+                Your <strong>Custom 8-Week Transformation Plan</strong> is activated and submitted to Head Coach Naveen&apos;s queue.
+              </p>
+            </div>
+
+            {/* Receipt & Waitlist Details Card */}
+            <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200 text-left space-y-2 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-gray-200">
+                <span className="text-gray-500 font-semibold">Amount Paid:</span>
+                <span className="font-black text-sm text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                  ₹99.00 (All-Inclusive)
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-gray-100">
+                <span className="text-gray-500">Waitlist Status:</span>
+                <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 text-[10.5px]">
+                  ⏳ In Queue · Coach Preparing Plan
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-gray-100">
+                <span className="text-gray-500">Assigned Head Coach:</span>
+                <span className="font-bold text-gray-900">Coach Naveen (Blaze Gym)</span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-gray-100 text-[11px]">
+                <span className="text-gray-500">Order ID:</span>
+                <span className="font-mono text-gray-700 truncate max-w-[170px]">
+                  {confirmedPaymentDetails.orderId}
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-1 text-[11px]">
+                <span className="text-gray-500">Payment ID:</span>
+                <span className="font-mono text-gray-700 truncate max-w-[170px]">
+                  {confirmedPaymentDetails.paymentId}
+                </span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = `/plan/${assessmentId}`;
+                }}
+                className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 active:scale-[0.99] text-white font-black text-sm shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Go to Waitlist / Plan Dashboard</span>
+                <FontAwesomeIcon icon={faArrowRight} className="text-xs" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPaymentSuccessModal(false);
+                  setFunnelStep("medical_questionnaire");
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <span>🩺 Add Medical &amp; Health History (Optional)</span>
               </button>
             </div>
           </div>

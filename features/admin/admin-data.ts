@@ -56,10 +56,10 @@ export function sanitizeAdminUser(raw: Partial<AdminUserRecord>, id: string): Ad
     raw.plan && Array.isArray(raw.plan.weeks) && raw.plan.weeks.length > 0
       ? raw.plan
       : generateDashboardPlan(id, {
-          customerName: name,
-          status: raw.membershipCategory === "purchased" ? "pending_review" : "active",
-          weeksCount: 8,
-        });
+        customerName: name,
+        status: raw.membershipCategory === "purchased" ? "pending_review" : "active",
+        weeksCount: 8,
+      });
 
   return {
     id,
@@ -76,12 +76,12 @@ export function sanitizeAdminUser(raw: Partial<AdminUserRecord>, id: string): Ad
       raw.membershipCategory === "membership"
         ? "membership"
         : (raw.membershipCategory === "purchased" ||
-            Boolean((raw as { isPaid?: boolean }).isPaid) ||
-            raw.order?.status === "paid" ||
-            Boolean(raw.order && (raw.order.amountPaise || 0) > 0) ||
-            raw.plan?.status === "pending_review")
-        ? "purchased"
-        : (raw.membershipCategory || "free"),
+          Boolean((raw as { isPaid?: boolean }).isPaid) ||
+          raw.order?.status === "paid" ||
+          Boolean(raw.order && (raw.order.amountPaise || 0) > 0) ||
+          raw.plan?.status === "pending_review")
+          ? "purchased"
+          : (raw.membershipCategory || "free"),
     membershipTitle:
       raw.membershipTitle ||
       (raw.membershipCategory === "purchased" ? "Purchased Client Plan" : "Free Registered Member"),
@@ -141,7 +141,7 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
       joinedAt: "2026-10-28T12:00:00.000Z",
     },
     {
-      id: "RLuiNcGHWgTmdYmBkkr2fSL4k8h2",
+      id: "RLUiNcGHWgTmdYmBkkr2fSL7v6A2",
       name: "Athlete",
       email: "www.arjunshiva@gmail.com",
       phone: "+91 98000 00000",
@@ -289,16 +289,40 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
             }
           }
 
-          const existing = memoryStore.get(doc.id);
+          const existing =
+            memoryStore.get(doc.id) ||
+            (userData.email
+              ? Array.from(memoryStore.values()).find(
+                  (u) => u.email && u.email.toLowerCase() === String(userData.email).toLowerCase()
+                )
+              : undefined);
           if (existing) {
             if (userData.name) existing.name = userData.name;
             if (userData.email) existing.email = userData.email;
             if (userData.phone) existing.phone = userData.phone;
             if (userData.avatarUrl) existing.avatar = userData.avatarUrl;
-            if (userData.membershipCategory) existing.membershipCategory = userData.membershipCategory;
+            const isUserPaid =
+              Boolean(userData.isPaid) ||
+              userData.membershipCategory === "purchased" ||
+              userData.membershipCategory === "membership" ||
+              userData.order?.status === "paid" ||
+              Boolean(userData.order && (userData.order.amountPaise || 0) > 0);
+            if (isUserPaid) {
+              existing.isPaid = true;
+              existing.membershipCategory = userData.membershipCategory === "membership" ? "membership" : "purchased";
+              existing.membershipTitle = userData.membershipTitle || "Purchased Client Plan";
+              if (userData.plan?.status !== "approved") {
+                existing.needsPlanReview = true;
+              }
+            } else if (userData.membershipCategory) {
+              existing.membershipCategory = userData.membershipCategory;
+            }
+            if (userData.order) existing.order = userData.order;
             if (userData.plan) existing.plan = { ...existing.plan, ...userData.plan };
             if (userData.biometrics) existing.biometrics = { ...existing.biometrics, ...userData.biometrics };
             if (userData.medicalAssessment) existing.medicalAssessment = { ...existing.medicalAssessment, ...userData.medicalAssessment };
+            if (userData.needsPlanReview !== undefined) existing.needsPlanReview = userData.needsPlanReview;
+            memoryStore.set(existing.id, existing);
           } else {
             memoryStore.set(doc.id, {
               id: doc.id,
@@ -407,165 +431,166 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
       console.warn("Firestore assessments collection fetch notice:", asmErr);
     }
 
-  // 2. Fetch live plans from Firestore "plans" collection (Plans ONLY attach to registered/paid users; never create synthetic users)
-  try {
-    const plansSnap = await adminDb.collection("plans").get();
-    if (!plansSnap.empty) {
-      for (const doc of plansSnap.docs) {
-        const planData = doc.data() as PlanDashboardData;
-        const existing = memoryStore.get(doc.id);
-        if (existing) {
-          existing.plan = { ...existing.plan, ...planData };
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("Firestore plans collection fetch notice:", err);
-  }
-
-  // 3. Fetch live subscriptions from Firestore "subscriptions" collection
-  try {
-    const subsSnap = await adminDb.collection("subscriptions").get();
-    if (!subsSnap.empty) {
-      for (const doc of subsSnap.docs) {
-        const subData = doc.data() as UserSubscription;
-        const targetId = subData.userId || doc.id;
-        const user = memoryStore.get(targetId) || memoryStore.get(subData.planId);
-        if (user) {
-          user.subscription = { ...subData, id: doc.id };
-          user.membershipCategory = "purchased";
-          if (subData.packageTitle) user.membershipTitle = subData.packageTitle;
-          if (user.plan && subData.status === "pending_review") {
-            user.needsPlanReview = true;
+    // 2. Fetch live plans from Firestore "plans" collection (Plans ONLY attach to registered/paid users; never create synthetic users)
+    try {
+      const plansSnap = await adminDb.collection("plans").get();
+      if (!plansSnap.empty) {
+        for (const doc of plansSnap.docs) {
+          const planData = doc.data() as PlanDashboardData;
+          const existing = memoryStore.get(doc.id);
+          if (existing) {
+            existing.plan = { ...existing.plan, ...planData };
           }
         }
       }
+    } catch (err) {
+      console.warn("Firestore plans collection fetch notice:", err);
     }
-  } catch (err) {
-    console.warn("Firestore subscriptions collection fetch notice:", err);
-  }
 
-  // 4. Fetch live task completion & daily adherence logs from Firestore
-  try {
-    const logsSnap = await adminDb.collection("user_logs").get();
-    if (!logsSnap.empty) {
-      for (const doc of logsSnap.docs) {
-        const rawData = doc.data() as Record<string, unknown>;
-        const targetId = doc.id.includes("_") ? doc.id.split("_")[0] : doc.id;
-        const user = memoryStore.get(targetId) || memoryStore.get(doc.id);
-        if (user) {
-          const { dailyLogs, ...taskLogsOnly } = rawData;
-          user.taskLogs = { ...(user.taskLogs || {}), ...(taskLogsOnly as TaskLogState) };
-          if (dailyLogs && typeof dailyLogs === "object") {
-            user.dailyLogs = { ...(user.dailyLogs || {}), ...(dailyLogs as Record<string, DailyCheckInLog>) };
+    // 3. Fetch live subscriptions from Firestore "subscriptions" collection
+    try {
+      const subsSnap = await adminDb.collection("subscriptions").get();
+      if (!subsSnap.empty) {
+        for (const doc of subsSnap.docs) {
+          const subData = doc.data() as UserSubscription;
+          const targetId = subData.userId || doc.id;
+          const user = memoryStore.get(targetId) || memoryStore.get(subData.planId);
+          if (user) {
+            user.subscription = { ...subData, id: doc.id };
+            user.membershipCategory = "purchased";
+            if (subData.packageTitle) user.membershipTitle = subData.packageTitle;
+            if (user.plan && subData.status === "pending_review") {
+              user.needsPlanReview = true;
+            }
           }
         }
       }
+    } catch (err) {
+      console.warn("Firestore subscriptions collection fetch notice:", err);
     }
-  } catch (err) {
-    console.warn("Firestore user_logs collection fetch notice:", err);
-  }
 
-  // 4b. Also fetch from daily_checkins collection if present
-  try {
-    const checkinsSnap = await adminDb.collection("daily_checkins").get();
-    if (!checkinsSnap.empty) {
-      for (const doc of checkinsSnap.docs) {
-        const checkinData = doc.data() as Record<string, DailyCheckInLog>;
-        const targetId = doc.id;
-        const user = memoryStore.get(targetId);
-        if (user) {
-          user.dailyLogs = { ...(user.dailyLogs || {}), ...checkinData };
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("Firestore daily_checkins fetch notice:", err);
-  }
-
-  // 4c. Fetch live orders from Firestore "orders" collection to ensure paying customers automatically push to paid
-  try {
-    const ordersSnap = await adminDb.collection("orders").get();
-    if (!ordersSnap.empty) {
-      for (const oDoc of ordersSnap.docs) {
-        const oData = oDoc.data();
-        const isOrderPaid =
-          oData.status === "paid" ||
-          oData.status === "verified" ||
-          oData.status === "submitted" ||
-          Boolean(oData.razorpayPaymentId);
-        if (!isOrderPaid) continue;
-
-        const targetUid = (oData.uid || oData.userId || oData.assessmentId) as string;
-        let user =
-          (targetUid ? memoryStore.get(targetUid) : null) ||
-          (oData.assessmentId ? memoryStore.get(oData.assessmentId as string) : null) ||
-          Array.from(memoryStore.values()).find(
-            (u) =>
-              (oData.customerEmail &&
-                u.email &&
-                u.email.toLowerCase() === String(oData.customerEmail).toLowerCase()) ||
-              (oData.customerPhone && u.phone && u.phone === oData.customerPhone)
-          );
-
-        const orderRecord: UserPurchaseOrder = {
-          orderId: (oData.razorpayOrderId || oData.orderId || oDoc.id) as string,
-          razorpayPaymentId: (oData.razorpayPaymentId || "pay_verified") as string,
-          amountPaise:
-            Number(oData.amountPaise) ||
-            (oData.amount ? Math.round(Number(oData.amount) * 100) : 9900),
-          amountFormatted:
-            (oData.amountFormatted as string) ||
-            `₹${Math.round((Number(oData.amountPaise) || 9900) / 100)}`,
-          currency: "INR",
-          status: "paid",
-          packageTitle:
-            (oData.packageTitle || "Custom 8-Week Transformation Plan") as string,
-          durationWeeks: Number(oData.durationWeeks) || 8,
-          purchasedAt: (oData.paidAt || oData.createdAt || new Date().toISOString()) as string,
-        };
-
-        if (user) {
-          user.membershipCategory = "purchased";
-          user.membershipTitle = "Purchased Client Plan";
-          user.isPaid = true;
-          user.order = orderRecord;
-          if (user.plan && user.plan.status !== "approved") {
-            user.plan.status = "pending_review";
-            user.needsPlanReview = true;
+    // 4. Fetch live task completion & daily adherence logs from Firestore
+    try {
+      const logsSnap = await adminDb.collection("user_logs").get();
+      if (!logsSnap.empty) {
+        for (const doc of logsSnap.docs) {
+          const rawData = doc.data() as Record<string, unknown>;
+          const targetId = doc.id.includes("_") ? doc.id.split("_")[0] : doc.id;
+          const user = memoryStore.get(targetId) || memoryStore.get(doc.id);
+          if (user) {
+            const { dailyLogs, ...taskLogsOnly } = rawData;
+            user.taskLogs = { ...(user.taskLogs || {}), ...(taskLogsOnly as TaskLogState) };
+            if (dailyLogs && typeof dailyLogs === "object") {
+              user.dailyLogs = { ...(user.dailyLogs || {}), ...(dailyLogs as Record<string, DailyCheckInLog>) };
+            }
           }
-        } else {
-          // A customer who completed payment must always be visible in Admin Console
-          const primaryId = targetUid || oDoc.id;
-          const newPaidUser = sanitizeAdminUser(
-            {
-              id: primaryId,
-              assessmentId: (oData.assessmentId as string) || undefined,
-              name: (oData.customerName as string) || "Purchased Member",
-              email: (oData.customerEmail as string) || `${primaryId}@client.bmyfit.in`,
-              phone: (oData.customerPhone as string) || "",
-              city: "Online Intake",
-              membershipCategory: "purchased",
-              membershipTitle: "Purchased Client Plan",
-              isPaid: true,
-              needsPlanReview: true,
-              order: orderRecord,
-              plan: generateDashboardPlan(primaryId, {
-                customerName: (oData.customerName as string) || "Purchased Member",
-                status: "pending_review",
-                weeksCount: 8,
-                coachNotes: "NEW PURCHASE (₹99 Paid): Payment verified via Razorpay.",
-              }),
-            },
-            primaryId
-          );
-          memoryStore.set(primaryId, newPaidUser);
         }
       }
+    } catch (err) {
+      console.warn("Firestore user_logs collection fetch notice:", err);
     }
-  } catch (ordErr) {
-    console.warn("Firestore orders collection fetch notice:", ordErr);
-  }
+
+    // 4b. Also fetch from daily_checkins collection if present
+    try {
+      const checkinsSnap = await adminDb.collection("daily_checkins").get();
+      if (!checkinsSnap.empty) {
+        for (const doc of checkinsSnap.docs) {
+          const checkinData = doc.data() as Record<string, DailyCheckInLog>;
+          const targetId = doc.id;
+          const user = memoryStore.get(targetId);
+          if (user) {
+            user.dailyLogs = { ...(user.dailyLogs || {}), ...checkinData };
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Firestore daily_checkins fetch notice:", err);
+    }
+
+    // 4c. Fetch live orders from Firestore "orders" collection to ensure paying customers automatically push to paid
+    try {
+      const ordersSnap = await adminDb.collection("orders").get();
+      if (!ordersSnap.empty) {
+        for (const oDoc of ordersSnap.docs) {
+          const oData = oDoc.data();
+          const isOrderPaid =
+            oData.status === "paid" ||
+            oData.status === "verified" ||
+            oData.status === "submitted" ||
+            Boolean(oData.razorpayPaymentId);
+          if (!isOrderPaid) continue;
+
+          const targetUid = (oData.uid || oData.userId || oData.assessmentId) as string;
+          let user =
+            (targetUid ? memoryStore.get(targetUid) : null) ||
+            (oData.assessmentId ? memoryStore.get(oData.assessmentId as string) : null) ||
+            Array.from(memoryStore.values()).find(
+              (u) =>
+                (oData.customerEmail &&
+                  u.email &&
+                  u.email.toLowerCase() === String(oData.customerEmail).toLowerCase()) ||
+                (oData.customerPhone && u.phone && u.phone === oData.customerPhone)
+            );
+
+          const orderRecord: UserPurchaseOrder = {
+            orderId: (oData.razorpayOrderId || oData.orderId || oDoc.id) as string,
+            razorpayPaymentId: (oData.razorpayPaymentId || "pay_verified") as string,
+            amountPaise:
+              Number(oData.amountPaise) ||
+              (oData.amount ? Math.round(Number(oData.amount) * 100) : 9900),
+            amountFormatted:
+              (oData.amountFormatted as string) ||
+              `₹${Math.round((Number(oData.amountPaise) || 9900) / 100)}`,
+            currency: "INR",
+            status: "paid",
+            packageTitle:
+              (oData.packageTitle || "Custom 8-Week Transformation Plan") as string,
+            durationWeeks: Number(oData.durationWeeks) || 8,
+            purchasedAt: (oData.paidAt || oData.createdAt || new Date().toISOString()) as string,
+          };
+
+          if (user) {
+            user.membershipCategory = "purchased";
+            user.membershipTitle = "Purchased Client Plan";
+            user.isPaid = true;
+            user.order = orderRecord;
+            if (user.plan && user.plan.status !== "approved") {
+              user.plan.status = "pending_review";
+              user.needsPlanReview = true;
+            }
+            memoryStore.set(user.id, user);
+          } else {
+            // A customer who completed payment must always be visible in Admin Console
+            const primaryId = targetUid || oDoc.id;
+            const newPaidUser = sanitizeAdminUser(
+              {
+                id: primaryId,
+                assessmentId: (oData.assessmentId as string) || undefined,
+                name: (oData.customerName as string) || "Purchased Member",
+                email: (oData.customerEmail as string) || `${primaryId}@client.bmyfit.in`,
+                phone: (oData.customerPhone as string) || "",
+                city: "Online Intake",
+                membershipCategory: "purchased",
+                membershipTitle: "Purchased Client Plan",
+                isPaid: true,
+                needsPlanReview: true,
+                order: orderRecord,
+                plan: generateDashboardPlan(primaryId, {
+                  customerName: (oData.customerName as string) || "Purchased Member",
+                  status: "pending_review",
+                  weeksCount: 8,
+                  coachNotes: "NEW PURCHASE (₹99 Paid): Payment verified via Razorpay.",
+                }),
+              },
+              primaryId
+            );
+            memoryStore.set(primaryId, newPaidUser);
+          }
+        }
+      }
+    } catch (ordErr) {
+      console.warn("Firestore orders collection fetch notice:", ordErr);
+    }
   }
 
   const rawUsers = Array.from(memoryStore.entries())
@@ -746,7 +771,7 @@ export async function findAdminUserByIdOrPlanId(
           memoryStore.set(user.id, user);
           return user;
         }
-      } catch {}
+      } catch { }
 
       // 3d. Query users collection where assessmentId == tid
       try {
@@ -764,7 +789,7 @@ export async function findAdminUserByIdOrPlanId(
           memoryStore.set(user.id, user);
           return user;
         }
-      } catch {}
+      } catch { }
 
       // 3e. Check Firestore "orders" collection
       try {
@@ -780,7 +805,7 @@ export async function findAdminUserByIdOrPlanId(
             if (foundFromOrder) return foundFromOrder;
           }
         }
-      } catch {}
+      } catch { }
     }
   }
 
@@ -1233,12 +1258,12 @@ export async function registerPurchasedClient(
     coachNotes: "NEW PURCHASE (₹99 Paid + Medical Assessment Submitted): Review health profile and medical docs to customize monthly training & nutrition.",
     medicalSummary: params.medicalAssessment
       ? {
-          hasDisease: params.medicalAssessment.hasDisease,
-          diseases: params.medicalAssessment.diseases,
-          customDiseaseDescription: params.medicalAssessment.customDiseaseDescription,
-          medications: params.medicalAssessment.medications,
-          documentsCount: params.medicalAssessment.documents.length,
-        }
+        hasDisease: params.medicalAssessment.hasDisease,
+        diseases: params.medicalAssessment.diseases,
+        customDiseaseDescription: params.medicalAssessment.customDiseaseDescription,
+        medications: params.medicalAssessment.medications,
+        documentsCount: params.medicalAssessment.documents.length,
+      }
       : undefined,
   });
 
