@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import Image from "next/image";
 import {
   Users,
   TrendingUp,
@@ -558,7 +557,7 @@ export function ClientHealthDashboard({
                           <button
                             type="button"
                             onClick={() => onOpenBiometrics(user)}
-                            title="View Biometrics Dossier"
+                            title="View Health Profile & Biometrics"
                             className="p-1.5 rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 transition cursor-pointer"
                           >
                             <Eye className="w-3.5 h-3.5" />

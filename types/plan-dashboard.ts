@@ -67,21 +67,48 @@ export interface PlanSupplementRecommendation {
   customCoachNote?: string;
 }
 
+export interface PlanReleaseHistoryItem {
+  version: number;
+  pushedAt: string;
+  coachName: string;
+  notes?: string;
+  weeksCount: number;
+  summary?: string;
+}
+
+export interface DailyCheckInLog {
+  id: string; // e.g. "2026-11-02"
+  date: string; // YYYY-MM-DD
+  timestamp: string; // ISO
+  workoutCompleted: boolean;
+  workoutDayTitle?: string;
+  workoutNotes?: string;
+  dietAdherence: "100% on track" | "Minor deviation" | "Off track";
+  caloriesActual?: number;
+  proteinGramsActual?: number;
+  waterLitres?: number;
+  stepsCompleted?: number;
+  supplementsTaken?: boolean;
+  energyLevel?: "High" | "Moderate" | "Low";
+  clientNote?: string;
+  coachFeedback?: string;
+}
+
 export interface PlanDashboardData {
   id: string;
   assessmentId: string;
   customerName: string;
-  weeksCount: number; // e.g. 8 (dynamic: can be 4, 8, 12, 16 etc.)
-  monthsCount?: number; // e.g. 1, 2, 3, 6, 12 months
+  weeksCount: number; // Dynamic: e.g. 1, 2, 4, 8 etc.
+  monthsCount?: number; // Dynamic
   status: PlanStatus;
   goal: FitnessGoal;
-  goalDisplay: string; // e.g. "Fat Loss"
+  goalDisplay: string;
   bmi: number;
   bodyFatPercent: number;
   calorieTarget: number;
   proteinTargetGrams: number;
   workoutDaysPerWeek: number;
-  progressTrackingFrequency: string; // e.g. "Weekly"
+  progressTrackingFrequency: string;
   coach: {
     name: string;
     role: string;
@@ -96,6 +123,8 @@ export interface PlanDashboardData {
   dailyStepGoal?: number;
   video?: PlanVideo;
   suggestedSupplements?: PlanSupplementRecommendation[];
+  planHistory?: PlanReleaseHistoryItem[];
+  dailyLogs?: Record<string, DailyCheckInLog>;
   medicalSummary?: {
     hasDisease: boolean;
     diseases: string[];

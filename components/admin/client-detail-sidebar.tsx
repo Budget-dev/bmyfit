@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import {
   X,
   Rocket,
@@ -37,12 +36,13 @@ interface ClientDetailSidebarProps {
     user: AdminUserRecord,
     coachNotes: string,
     video?: PlanVideo,
-    supplements?: PlanSupplementRecommendation[]
+    supplements?: PlanSupplementRecommendation[],
+    targets?: { calorieTarget?: number; proteinTargetGrams?: number; workoutDaysPerWeek?: number }
   ) => Promise<void>;
   onOpenStudio: (user: AdminUserRecord) => void;
   onOpenChat: (user: AdminUserRecord) => void;
   onSendAlert: (user: AdminUserRecord) => void;
-  initialTab?: "dispatch" | "biometrics" | "plan" | "alert" | "chat";
+  initialTab?: "dispatch" | "tracking" | "biometrics" | "plan" | "alert" | "chat";
 }
 
 export function ClientDetailSidebar({
@@ -55,7 +55,7 @@ export function ClientDetailSidebar({
   onSendAlert,
   initialTab = "dispatch",
 }: ClientDetailSidebarProps) {
-  const [activeTab, setActiveTab] = useState<"dispatch" | "biometrics" | "plan" | "alert" | "chat">(initialTab);
+  const [activeTab, setActiveTab] = useState<"dispatch" | "tracking" | "biometrics" | "plan" | "alert" | "chat">(initialTab);
 
   useEffect(() => {
     if (initialTab) {
@@ -119,6 +119,20 @@ export function ClientDetailSidebar({
   // Suggested supplements state
   const [selectedSupplements, setSelectedSupplements] = useState<PlanSupplementRecommendation[]>([]);
   const [supplementSearch, setSupplementSearch] = useState<string>("");
+  const [showAddCustomProduct, setShowAddCustomProduct] = useState<boolean>(false);
+  const [customProdName, setCustomProdName] = useState<string>("");
+  const [customProdPrice, setCustomProdPrice] = useState<string>("");
+  const [customProdUrl, setCustomProdUrl] = useState<string>("");
+  const [customProdImageUrl, setCustomProdImageUrl] = useState<string>("");
+  const [customProdNote, setCustomProdNote] = useState<string>("");
+
+  // Daily tracking coach feedback state
+  const [coachFeedbackText, setCoachFeedbackText] = useState<string>("");
+  const [sendingFeedback, setSendingFeedback] = useState<boolean>(false);
+  const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
+
+  // Version history accordion
+  const [showVersionHistory, setShowVersionHistory] = useState<boolean>(false);
 
   // Loading & success
   const [isPushing, setIsPushing] = useState<boolean>(false);
@@ -129,6 +143,7 @@ export function ClientDetailSidebar({
     if (user) {
       setActiveTab(initialTab);
       setSuccessMessage(null);
+      setFeedbackNotice(null);
       setCoachNotes(user.plan?.coachNotes || "Plan customized & verified by Head Coach Naveen. Ready for execution!");
       setCalorieTarget(user.plan?.calorieTarget || 1800);
       setProteinTargetGrams(user.plan?.proteinTargetGrams || 120);
@@ -149,24 +164,8 @@ export function ClientDetailSidebar({
       if (user.plan?.suggestedSupplements && user.plan.suggestedSupplements.length > 0) {
         setSelectedSupplements(user.plan.suggestedSupplements);
       } else {
-        // Pre-select 1 recommended protein supplement matching their goal by default
-        const defaultProtein = SUPPLEMENT_PRODUCTS.find((p) => p.category === "protein") || SUPPLEMENT_PRODUCTS[0];
-        if (defaultProtein) {
-          setSelectedSupplements([
-            {
-              productId: defaultProtein.id,
-              name: defaultProtein.name,
-              subtitle: defaultProtein.subtitle,
-              affiliateUrl: defaultProtein.amazonUrl,
-              price: defaultProtein.price,
-              originalPrice: defaultProtein.originalPrice,
-              image: defaultProtein.image,
-              customCoachNote: "Consume 1 scoop in 200ml water post workout to hit your daily protein goal.",
-            },
-          ]);
-        } else {
-          setSelectedSupplements([]);
-        }
+        // Admin will manually add or recommend products (no hardcoded mock supplements)
+        setSelectedSupplements([]);
       }
     }
   }, [user, initialTab]);
@@ -208,6 +207,37 @@ export function ClientDetailSidebar({
     }
   };
 
+  const handleAddCustomProduct = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!customProdName.trim()) return;
+    const newSupp: PlanSupplementRecommendation = {
+      productId: `custom_${Date.now()}`,
+      name: customProdName.trim(),
+      subtitle: "Coach Custom Recommendation",
+      affiliateUrl: customProdUrl.trim() || "#",
+      price: Number(customProdPrice) || 0,
+      image: customProdImageUrl.trim() || "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=200&auto=format&fit=crop&q=80",
+      customCoachNote: customProdNote.trim() || "Prescribed by Head Coach Naveen.",
+    };
+    setSelectedSupplements([...selectedSupplements, newSupp]);
+    setCustomProdName("");
+    setCustomProdPrice("");
+    setCustomProdUrl("");
+    setCustomProdImageUrl("");
+    setCustomProdNote("");
+    setShowAddCustomProduct(false);
+  };
+
+  const handleRemoveSupplement = (productId: string) => {
+    setSelectedSupplements(selectedSupplements.filter((s) => s.productId !== productId));
+  };
+
+  const handleUpdateSupplementImage = (productId: string, imageUrl: string) => {
+    setSelectedSupplements(
+      selectedSupplements.map((s) => (s.productId === productId ? { ...s, image: imageUrl } : s))
+    );
+  };
+
   const handleUpdateSupplementNote = (productId: string, note: string) => {
     setSelectedSupplements(
       selectedSupplements.map((s) => (s.productId === productId ? { ...s, customCoachNote: note } : s))
@@ -218,6 +248,37 @@ export function ClientDetailSidebar({
     setSelectedSupplements(
       selectedSupplements.map((s) => (s.productId === productId ? { ...s, affiliateUrl: url } : s))
     );
+  };
+
+  const handleSendCoachFeedback = async (targetDate: string) => {
+    if (!coachFeedbackText.trim() || !user) return;
+    setSendingFeedback(true);
+    setFeedbackNotice(null);
+    try {
+      const planId = user.plan?.id || user.id;
+      const res = await fetch(`/api/plan/${encodeURIComponent(planId)}/daily-log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: targetDate,
+          coachFeedback: coachFeedbackText.trim(),
+        }),
+      });
+      if (res.ok) {
+        if (!user.dailyLogs) user.dailyLogs = {};
+        if (user.dailyLogs[targetDate]) {
+          user.dailyLogs[targetDate].coachFeedback = coachFeedbackText.trim();
+        }
+        setFeedbackNotice("Coach feedback successfully delivered to client dashboard!");
+        setCoachFeedbackText("");
+        setTimeout(() => setFeedbackNotice(null), 4000);
+      }
+    } catch (err) {
+      console.error("Failed to send coach feedback:", err);
+      setFeedbackNotice("Failed to send feedback.");
+    } finally {
+      setSendingFeedback(false);
+    }
   };
 
   const handleSendPlanSubmit = async () => {
@@ -233,7 +294,11 @@ export function ClientDetailSidebar({
         }
         : undefined;
 
-      await onPushPlan(user, coachNotes, videoPayload, selectedSupplements);
+      await onPushPlan(user, coachNotes, videoPayload, selectedSupplements, {
+        calorieTarget,
+        proteinTargetGrams,
+        workoutDaysPerWeek,
+      });
       setSuccessMessage(`Plan successfully delivered and published to ${user.name}'s live dashboard!`);
       setTimeout(() => {
         setSuccessMessage(null);
@@ -262,7 +327,7 @@ export function ClientDetailSidebar({
       />
 
       {/* Slide-over Right Panel */}
-      <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
+      <div className="fixed inset-y-0 right-0 flex max-w-full pl-0 sm:pl-10">
         <div className="w-screen max-w-2xl bg-white shadow-2xl border-l border-slate-200 flex flex-col h-full animate-in slide-in-from-right duration-300">
 
           {/* ================= HEADER ================= */}
@@ -300,7 +365,17 @@ export function ClientDetailSidebar({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+              <button
+                type="button"
+                onClick={() => onOpenStudio(user)}
+                className="px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                title="Open Week Plan Studio to customize and give plan"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>{isPending ? "Give Plan" : "Plan Studio"}</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setActiveTab("chat")}
@@ -327,11 +402,11 @@ export function ClientDetailSidebar({
 
           {/* ================= TABS ================= */}
           <div className="px-6 pt-2 border-b border-slate-100 bg-white">
-            <nav className="flex space-x-6 text-xs font-semibold" aria-label="Tabs">
+            <nav className="flex space-x-6 text-xs font-semibold overflow-x-auto whitespace-nowrap scrollbar-none flex-nowrap" aria-label="Tabs">
               <button
                 type="button"
                 onClick={() => setActiveTab("dispatch")}
-                className={`py-3 border-b-2 transition flex items-center gap-1.5 ${activeTab === "dispatch"
+                className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 ${activeTab === "dispatch"
                   ? "border-emerald-600 text-emerald-700 font-bold"
                   : "border-transparent text-slate-500 hover:text-slate-900"
                   }`}
@@ -343,10 +418,28 @@ export function ClientDetailSidebar({
                 )}
               </button>
 
+              {/* TAB: DAILY ADHERENCE */}
+              <button
+                type="button"
+                onClick={() => setActiveTab("tracking")}
+                className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 ${activeTab === "tracking"
+                  ? "border-emerald-600 text-emerald-700 font-bold"
+                  : "border-transparent text-slate-500 hover:text-slate-900"
+                  }`}
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Daily Adherence</span>
+                {(user.dailyLogs?.[new Date().toISOString().split("T")[0]] || user.plan?.dailyLogs?.[new Date().toISOString().split("T")[0]]) ? (
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 ml-0.5 shadow-xs" title="Logged Today ✓" />
+                ) : (
+                  <span className="w-2 h-2 rounded-full bg-amber-500 ml-0.5 animate-pulse" title="Awaiting Today's Log" />
+                )}
+              </button>
+
               <button
                 type="button"
                 onClick={() => setActiveTab("biometrics")}
-                className={`py-3 border-b-2 transition flex items-center gap-1.5 ${activeTab === "biometrics"
+                className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 ${activeTab === "biometrics"
                   ? "border-emerald-600 text-emerald-700 font-bold"
                   : "border-transparent text-slate-500 hover:text-slate-900"
                   }`}
@@ -358,7 +451,7 @@ export function ClientDetailSidebar({
               <button
                 type="button"
                 onClick={() => setActiveTab("plan")}
-                className={`py-3 border-b-2 transition flex items-center gap-1.5 ${activeTab === "plan"
+                className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 ${activeTab === "plan"
                   ? "border-emerald-600 text-emerald-700 font-bold"
                   : "border-transparent text-slate-500 hover:text-slate-900"
                   }`}
@@ -370,7 +463,7 @@ export function ClientDetailSidebar({
               <button
                 type="button"
                 onClick={() => setActiveTab("chat")}
-                className={`py-3 border-b-2 transition flex items-center gap-1.5 ${activeTab === "chat"
+                className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 ${activeTab === "chat"
                   ? "border-[#25D366] text-[#075E54] font-bold"
                   : "border-transparent text-slate-500 hover:text-slate-900"
                   }`}
@@ -382,7 +475,7 @@ export function ClientDetailSidebar({
               <button
                 type="button"
                 onClick={() => setActiveTab("alert")}
-                className={`py-3 border-b-2 transition flex items-center gap-1.5 ${activeTab === "alert"
+                className={`py-3 border-b-2 transition flex items-center gap-1.5 shrink-0 ${activeTab === "alert"
                   ? "border-emerald-600 text-emerald-700 font-bold"
                   : "border-transparent text-slate-500 hover:text-slate-900"
                   }`}
@@ -418,7 +511,7 @@ export function ClientDetailSidebar({
             {activeTab === "dispatch" && (
               <div className="space-y-6">
 
-                {/* Section 0: Payment & UTR Verification Dossier (Direct PhonePe / Razorpay) */}
+                {/* Section 0: Payment & UTR Verification Record (Direct PhonePe / Razorpay) */}
                 {user.order && (
                   <div className="bg-emerald-50/70 rounded-2xl p-4 border border-emerald-200/80 space-y-2.5 text-xs text-left">
                     <div className="flex items-center justify-between">
@@ -614,29 +707,134 @@ export function ClientDetailSidebar({
                   </div>
                 </div>
 
-                {/* Section B: Suggested Supplements & Affiliate Links */}
+                {/* Section B: Suggested Supplements & Custom Products */}
                 <div className="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80 space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center font-bold">
                         <ShoppingBag className="w-4 h-4" />
                       </div>
                       <div>
                         <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                          Suggested Supplements &amp; Affiliate Products
+                          Suggested Supplements &amp; Products
                         </h3>
                         <p className="text-[11px] text-slate-500">
-                          Recommend tailored supplements with your affiliate links
+                          Recommend verified supplements with store links &amp; image URLs
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs font-bold text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
-                      {selectedSupplements.length} Selected
-                    </span>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                        {selectedSupplements.length} Selected
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddCustomProduct(!showAddCustomProduct)}
+                        className="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 transition shadow-2xs cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Product</span>
+                      </button>
+                    </div>
                   </div>
 
+                  {/* Add Custom Product Inline Form */}
+                  {showAddCustomProduct && (
+                    <div className="p-4 bg-white rounded-xl border-2 border-emerald-300 shadow-sm space-y-3 animate-in fade-in">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider">
+                          + Add Coach-Recommended Product
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddCustomProduct(false)}
+                          className="text-slate-400 hover:text-slate-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase">Product Name *</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Optimum Nutrition Gold Standard Whey"
+                            value={customProdName}
+                            onChange={(e) => setCustomProdName(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase">Price (₹) *</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 3199"
+                            value={customProdPrice}
+                            onChange={(e) => setCustomProdPrice(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase">Purchase / Store URL</label>
+                          <input
+                            type="url"
+                            placeholder="e.g. https://amazon.in/dp/..."
+                            value={customProdUrl}
+                            onChange={(e) => setCustomProdUrl(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono text-[11px]"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase">Image URL (Web Link)</label>
+                          <input
+                            type="url"
+                            placeholder="e.g. https://images.unsplash.com/... or img link"
+                            value={customProdImageUrl}
+                            onChange={(e) => setCustomProdImageUrl(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono text-[11px]"
+                          />
+                          <p className="text-[9.5px] text-slate-400">Uses direct URL to keep Firestore lean &amp; fast.</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase">Dosage &amp; Coach Instructions</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 1 scoop with 250ml water immediately post-workout"
+                          value={customProdNote}
+                          onChange={(e) => setCustomProdNote(e.target.value)}
+                          className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setShowAddCustomProduct(false)}
+                          className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleAddCustomProduct}
+                          disabled={!customProdName.trim()}
+                          className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-xs font-bold text-white shadow-xs cursor-pointer"
+                        >
+                          + Add to Recommendations
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Selected Supplements Active List */}
-                  {selectedSupplements.length > 0 && (
+                  {selectedSupplements.length > 0 ? (
                     <div className="space-y-3">
                       <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                         Attached Recommendations for {user.name}
@@ -645,40 +843,38 @@ export function ClientDetailSidebar({
                         {selectedSupplements.map((supp) => (
                           <div
                             key={supp.productId}
-                            className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-2xs space-y-2"
+                            className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-2xs space-y-2.5"
                           >
                             <div className="flex items-center justify-between gap-3">
                               <div className="flex items-center gap-2.5 min-w-0">
-                                <div className="relative w-9 h-9 rounded-lg bg-slate-50 p-1 shrink-0 border border-slate-100 overflow-hidden">
-                                  <Image
-                                    src={supp.image}
+                                <div className="relative w-10 h-10 rounded-lg bg-slate-50 p-1 shrink-0 border border-slate-100 overflow-hidden">
+                                  <img
+                                    src={supp.image || "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&auto=format&fit=crop&q=80"}
                                     alt={supp.name}
-                                    fill
-                                    unoptimized
-                                    className="object-contain"
-                                    sizes="36px"
+                                    className="w-full h-full object-contain"
+                                    onError={(e) => {
+                                      // Fallback on broken image link
+                                      (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&auto=format&fit=crop&q=80";
+                                    }}
                                   />
                                 </div>
                                 <div className="min-w-0">
                                   <span className="block text-xs font-bold text-slate-900 truncate">
                                     {supp.name}
                                   </span>
-                                  <span className="block text-[10px] text-slate-400">
-                                    ₹{supp.price.toLocaleString()}
+                                  <span className="block text-[10px] text-slate-500 font-semibold">
+                                    ₹{supp.price ? supp.price.toLocaleString() : "Free / Included"}
                                   </span>
                                 </div>
                               </div>
                               <button
                                 type="button"
-                                onClick={() =>
-                                  setSelectedSupplements(
-                                    selectedSupplements.filter((s) => s.productId !== supp.productId)
-                                  )
-                                }
-                                className="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 transition"
+                                onClick={() => handleRemoveSupplement(supp.productId)}
+                                className="inline-flex items-center gap-1 text-rose-600 hover:text-rose-800 px-2 py-1 rounded-lg hover:bg-rose-50 text-[11px] font-bold transition cursor-pointer"
                                 title="Remove supplement"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
+                                <span>Remove</span>
                               </button>
                             </div>
 
@@ -698,34 +894,60 @@ export function ClientDetailSidebar({
                               />
                             </div>
 
-                            {/* Affiliate URL */}
-                            <div className="space-y-1">
-                              <label className="block text-[10px] font-bold text-slate-500 uppercase">
-                                Affiliate Purchase URL
-                              </label>
-                              <div className="flex items-center gap-1.5">
+                            {/* Affiliate URL & Image URL */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div className="space-y-1">
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase">
+                                  Store / Purchase URL
+                                </label>
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="url"
+                                    value={supp.affiliateUrl}
+                                    onChange={(e) =>
+                                      handleUpdateSupplementUrl(supp.productId, e.target.value)
+                                    }
+                                    placeholder="https://..."
+                                    className="w-full px-2 py-1 text-[11px] rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono text-slate-600 truncate"
+                                  />
+                                  {supp.affiliateUrl && supp.affiliateUrl !== "#" && (
+                                    <a
+                                      href={supp.affiliateUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="p-1 text-slate-400 hover:text-slate-700 rounded transition shrink-0"
+                                      title="Test link"
+                                    >
+                                      <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase">
+                                  Product Image URL
+                                </label>
                                 <input
                                   type="url"
-                                  value={supp.affiliateUrl}
+                                  value={supp.image}
                                   onChange={(e) =>
-                                    handleUpdateSupplementUrl(supp.productId, e.target.value)
+                                    handleUpdateSupplementImage(supp.productId, e.target.value)
                                   }
-                                  className="w-full px-2.5 py-1 text-[11px] rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono text-slate-600 truncate"
+                                  placeholder="https://... direct image link"
+                                  className="w-full px-2 py-1 text-[11px] rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono text-slate-600 truncate"
                                 />
-                                <a
-                                  href={supp.affiliateUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition shrink-0"
-                                  title="Test link"
-                                >
-                                  <ExternalLink className="w-3.5 h-3.5" />
-                                </a>
                               </div>
                             </div>
                           </div>
                         ))}
                       </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-xl border border-dashed border-slate-200 bg-white text-center space-y-2">
+                      <p className="text-xs text-slate-500 font-medium">
+                        No products recommended yet. Click <strong>+ Add Product</strong> above to suggest specific brands, protein, creatine or multivitamins.
+                      </p>
                     </div>
                   )}
 
@@ -733,11 +955,11 @@ export function ClientDetailSidebar({
                   <div className="space-y-2 pt-2 border-t border-slate-200">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                        Quick Add From Catalog
+                        Or Pick From Verified Catalog
                       </span>
                       <input
                         type="text"
-                        placeholder="Filter supplements..."
+                        placeholder="Filter catalog..."
                         value={supplementSearch}
                         onChange={(e) => setSupplementSearch(e.target.value)}
                         className="px-2.5 py-1 text-[11px] rounded-lg border border-slate-200 bg-white"
@@ -758,13 +980,10 @@ export function ClientDetailSidebar({
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <div className="relative w-7 h-7 rounded-md bg-slate-50 p-0.5 shrink-0 overflow-hidden">
-                                <Image
+                                <img
                                   src={product.image}
                                   alt={product.name}
-                                  fill
-                                  unoptimized
-                                  className="object-contain"
-                                  sizes="28px"
+                                  className="w-full h-full object-contain"
                                 />
                               </div>
                               <div className="min-w-0">
@@ -807,7 +1026,7 @@ export function ClientDetailSidebar({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase">
                         Calories (kcal/day)
@@ -858,13 +1077,56 @@ export function ClientDetailSidebar({
                   </div>
                 </div>
 
+                {/* Plan Version & Reassurance Info */}
+                <div className="p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-200/80 text-xs space-y-2">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-emerald-950">
+                        Live Status: {user.needsPlanReview || user.plan?.status === "pending_review" ? "Pending Initial Review" : `Version ${user.plan?.planHistory?.length ? user.plan.planHistory.length : 1} Active`}
+                      </span>
+                      <span className="text-[10px] font-black bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full">
+                        {user.plan?.weeksCount || user.plan?.weeks?.length || 1} Week(s) Active
+                      </span>
+                    </div>
+
+                    {user.plan?.planHistory && user.plan.planHistory.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowVersionHistory(!showVersionHistory)}
+                        className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline cursor-pointer"
+                      >
+                        {showVersionHistory ? "Hide History" : `View ${user.plan.planHistory.length} Previous Pushes`}
+                      </button>
+                    )}
+                  </div>
+
+                  <p className="text-[11px] text-emerald-800">
+                    💡 <strong>Safe Updates:</strong> Re-sending or updating the plan preserves all existing weeks, athlete task completions, and daily compliance records.
+                  </p>
+
+                  {/* Expandable Release History Log */}
+                  {showVersionHistory && user.plan?.planHistory && (
+                    <div className="pt-2 border-t border-emerald-200 space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                      {user.plan.planHistory.map((h, idx) => (
+                        <div key={idx} className="p-2 rounded-lg bg-white border border-emerald-100 text-[10px] space-y-0.5">
+                          <div className="flex items-center justify-between font-bold text-slate-800">
+                            <span>Version {h.version} · {h.weeksCount} Week(s)</span>
+                            <span className="text-slate-400 font-normal">{new Date(h.pushedAt).toLocaleString()}</span>
+                          </div>
+                          <p className="text-slate-600 truncate">{h.notes || h.summary}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Main Action Push Button */}
                 <div className="pt-2">
                   <button
                     type="button"
                     onClick={handleSendPlanSubmit}
                     disabled={isPushing}
-                    className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                   >
                     <Rocket className="w-4 h-4" />
                     <span>
@@ -876,9 +1138,256 @@ export function ClientDetailSidebar({
                     </span>
                   </button>
                   <p className="text-[11px] text-center text-slate-400 mt-2 font-medium">
-                    This updates Firestore instantly and unlocks the client&apos;s full 8-week dashboard.
+                    This updates Firestore instantly and unlocks the client&apos;s live customized dashboard with full history intact.
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* ---------------- TAB: DAILY ADHERENCE & TRACKING ---------------- */}
+            {activeTab === "tracking" && (
+              <div className="space-y-6">
+                {(() => {
+                  const todayDateStr = new Date().toISOString().split("T")[0];
+                  const allDailyLogs = user.dailyLogs || user.plan?.dailyLogs || {};
+                  const todayCheckin = allDailyLogs[todayDateStr];
+                  const sortedLogs = Object.values(allDailyLogs).sort((a, b) => b.date.localeCompare(a.date));
+                  const totalLoggedDays = sortedLogs.length;
+                  const workoutsCompleted = sortedLogs.filter((l) => l.workoutCompleted).length;
+                  const dietAdherentDays = sortedLogs.filter((l) => l.dietAdherence === "100% on track").length;
+                  const complianceRate = totalLoggedDays > 0 ? Math.round((dietAdherentDays / totalLoggedDays) * 100) : 0;
+
+                  return (
+                    <>
+                      {/* Metric Stats Banner */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-center">
+                          <span className="block text-[10px] font-bold text-slate-400 uppercase">Days Tracked</span>
+                          <span className="text-xl font-black text-slate-900">{totalLoggedDays}</span>
+                          <span className="block text-[10px] text-slate-500">Total Check-ins</span>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-center">
+                          <span className="block text-[10px] font-bold text-emerald-700 uppercase">Workouts Done</span>
+                          <span className="text-xl font-black text-emerald-950">{workoutsCompleted}</span>
+                          <span className="block text-[10px] text-emerald-700">Completed Sessions</span>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-teal-50/70 border border-teal-200/80 text-center">
+                          <span className="block text-[10px] font-bold text-teal-700 uppercase">Diet Adherence</span>
+                          <span className="text-xl font-black text-teal-950">{complianceRate}%</span>
+                          <span className="block text-[10px] text-teal-700">{dietAdherentDays} Days 100% On Plan</span>
+                        </div>
+                      </div>
+
+                      {/* Today's Check-in Status Card */}
+                      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">📅</span>
+                            <div>
+                              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                                Today&apos;s Athlete Log ({todayDateStr})
+                              </h3>
+                              <p className="text-[11px] text-slate-500">
+                                Real-time daily progress report from {user.name}
+                              </p>
+                            </div>
+                          </div>
+
+                          {todayCheckin ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Logged Today ✓</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+                              <Clock className="w-3.5 h-3.5 text-amber-600" />
+                              <span>Awaiting Today&apos;s Log</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {todayCheckin ? (
+                          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 space-y-3 text-xs">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                              <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                                <span className="block text-[10px] font-bold text-slate-400 uppercase">Workout</span>
+                                <span className="font-bold text-slate-900">
+                                  {todayCheckin.workoutCompleted ? "Completed ✓" : "Rest / Skipped"}
+                                </span>
+                                <span className="block text-[10px] text-slate-500 truncate">
+                                  {todayCheckin.workoutDayTitle || "Today's Routine"}
+                                </span>
+                              </div>
+
+                              <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                                <span className="block text-[10px] font-bold text-slate-400 uppercase">Nutrition</span>
+                                <span className="font-bold text-slate-900 capitalize">
+                                  {todayCheckin.dietAdherence}
+                                </span>
+                                <span className="block text-[10px] text-slate-500">
+                                  {todayCheckin.caloriesActual ? `${todayCheckin.caloriesActual} kcal` : "Target Met"}
+                                </span>
+                              </div>
+
+                              <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                                <span className="block text-[10px] font-bold text-slate-400 uppercase">Hydration &amp; Steps</span>
+                                <span className="font-bold text-slate-900">
+                                  {todayCheckin.waterLitres ?? 3.0} L Water
+                                </span>
+                                <span className="block text-[10px] text-slate-500">
+                                  {(todayCheckin.stepsCompleted ?? 8000).toLocaleString()} steps
+                                </span>
+                              </div>
+
+                              <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                                <span className="block text-[10px] font-bold text-slate-400 uppercase">Supplements</span>
+                                <span className="font-bold text-slate-900">
+                                  {todayCheckin.supplementsTaken ? "Taken ✓" : "Missed"}
+                                </span>
+                                <span className="block text-[10px] text-slate-500">
+                                  Energy: {todayCheckin.energyLevel || "High"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {todayCheckin.workoutNotes && (
+                              <div className="p-2.5 rounded-lg bg-white border border-slate-200 text-xs">
+                                <strong className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">Workout Notes:</strong>
+                                <p className="text-slate-800">{todayCheckin.workoutNotes}</p>
+                              </div>
+                            )}
+
+                            {todayCheckin.clientNote && (
+                              <div className="p-2.5 rounded-lg bg-emerald-50/60 border border-emerald-200 text-xs">
+                                <strong className="text-[10px] font-bold text-emerald-800 uppercase block mb-0.5">Message from {user.name}:</strong>
+                                <p className="text-emerald-950 font-medium">{todayCheckin.clientNote}</p>
+                              </div>
+                            )}
+
+                            {todayCheckin.coachFeedback && (
+                              <div className="p-2.5 rounded-lg bg-teal-50 border border-teal-200 text-xs">
+                                <strong className="text-[10px] font-bold text-teal-800 uppercase block mb-0.5">Your Coach Feedback:</strong>
+                                <p className="text-teal-950 font-medium">{todayCheckin.coachFeedback}</p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 text-amber-900 text-xs space-y-2">
+                            <p className="font-semibold">
+                              {user.name} hasn&apos;t marked today&apos;s daily routine yet.
+                            </p>
+                            <p className="text-[11px] text-amber-800">
+                              Clients mark today&apos;s workout and diet using the &ldquo;Track Today&apos;s Plan&rdquo; button directly on their dashboard.
+                            </p>
+                            <div className="pt-1">
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab("chat")}
+                                className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                <span>Send In-App Reminder in Chat</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Coach Response / Feedback Form */}
+                        <div className="pt-2 border-t border-slate-200 space-y-2">
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase">
+                            Send Coach Feedback for Today ({todayDateStr})
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={coachFeedbackText}
+                              onChange={(e) => setCoachFeedbackText(e.target.value)}
+                              placeholder={`Great job on the form, ${user.name.split(" ")[0]}! Rest well tonight.`}
+                              className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSendCoachFeedback(todayDateStr)}
+                              disabled={sendingFeedback || !coachFeedbackText.trim()}
+                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                              <span>{sendingFeedback ? "Sending..." : "Send"}</span>
+                            </button>
+                          </div>
+                          {feedbackNotice && (
+                            <p className="text-[11px] font-bold text-emerald-600 animate-in fade-in">
+                              ✓ {feedbackNotice}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Past Daily Logs Timeline */}
+                      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                            Daily Compliance History ({sortedLogs.length} Days)
+                          </h4>
+                          <span className="text-[10px] text-slate-400">Chronological</span>
+                        </div>
+
+                        {sortedLogs.length > 0 ? (
+                          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                            {sortedLogs.map((log) => (
+                              <div
+                                key={log.id}
+                                className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs flex items-center justify-between gap-3"
+                              >
+                                <div className="space-y-0.5 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-slate-900">{log.date}</span>
+                                    <span
+                                      className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded ${
+                                        log.workoutCompleted
+                                          ? "bg-emerald-100 text-emerald-800"
+                                          : "bg-slate-200 text-slate-700"
+                                      }`}
+                                    >
+                                      {log.workoutCompleted ? "Workout Done" : "Rest Day"}
+                                    </span>
+                                    <span
+                                      className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded ${
+                                        log.dietAdherence === "100% on track"
+                                          ? "bg-teal-100 text-teal-800"
+                                          : "bg-amber-100 text-amber-800"
+                                      }`}
+                                    >
+                                      {log.dietAdherence}
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-500 truncate">
+                                    {log.clientNote || log.workoutDayTitle || "No extra note added."}
+                                  </p>
+                                </div>
+
+                                <div className="text-right shrink-0">
+                                  <span className="block text-[11px] font-bold text-slate-800">
+                                    {log.waterLitres ?? 3.0}L · {(log.stepsCompleted ?? 8000).toLocaleString()} steps
+                                  </span>
+                                  <span className="block text-[9.5px] text-slate-400">
+                                    Supplements: {log.supplementsTaken ? "Yes" : "No"}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-400 text-center py-4">
+                            No past check-ins recorded yet. As {user.name} uses the daily tracking button, daily progress will appear here.
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             )}
 
@@ -934,7 +1443,7 @@ export function ClientDetailSidebar({
                   </div>
                 </div>
 
-                {/* Clinical / Medical Assessment Dossier */}
+                {/* Clinical / Medical Assessment Profile */}
                 <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-600" />

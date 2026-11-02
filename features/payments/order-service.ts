@@ -91,7 +91,7 @@ export async function verifyUserPayment(
     bodyFatPercent: assessment.bodyFatPercent ?? undefined,
     weeksCount: 8,
     customerName: "Fit Member",
-    coachNotes: "NEW PURCHASE (Verified via Razorpay): 8-Week plan generated and placed in pending review for Coach push.",
+    coachNotes: "NEW PURCHASE (Verified via Razorpay): Custom plan generated and placed in pending review for Coach push.",
   });
   await storeDashboardPlan(uid, order.assessmentId, dashboardPlan);
 

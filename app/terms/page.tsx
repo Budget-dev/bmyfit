@@ -207,7 +207,7 @@ export default function TermsPage() {
                   category, BMR (Basal Metabolic Rate), TDEE, and daily caloric requirements.
                 </li>
                 <li>
-                  <strong>Personalized 8-Week Plan (₹99):</strong> Complete week-by-week progressive workout
+                  <strong>Personalized Transformation Plan (₹99):</strong> Complete week-by-week progressive workout
                   split (gym/home options with video demonstrations), personalized Indian meal matrices
                   (vegetarian, eggetarian, and non-vegetarian splits), macro nutrient targets, hydration guidelines,
                   and daily compliance task checklists.
@@ -228,7 +228,7 @@ export default function TermsPage() {
                 <span>Pricing, Taxes &amp; Razorpay Payment Terms</span>
               </h2>
               <p>
-                The purchase price for the 8-Week Personalized Transformation Plan is a fixed, one-time fee of{" "}
+                The purchase price for the Personalized Transformation Plan is a fixed, one-time fee of{" "}
                 <strong>₹99 (Ninety-Nine Indian Rupees)</strong>, inclusive of all applicable taxes.
               </p>
               <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 text-xs text-emerald-950 space-y-1.5">

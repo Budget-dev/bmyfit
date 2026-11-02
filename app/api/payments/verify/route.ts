@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       bodyFatPercent: assessment.bodyFatPercent ?? undefined,
       weeksCount: 8,
       customerName,
-      coachNotes: "NEW PURCHASE (Verified via Razorpay): 8-Week plan created in pending review status. Awaiting Coach review and dispatch.",
+      coachNotes: "NEW PURCHASE (Verified via Razorpay): Custom plan created in pending review status. Awaiting Coach review and dispatch.",
     });
     await storeDashboardPlan(order.uid, order.assessmentId, dashboardPlan);
 

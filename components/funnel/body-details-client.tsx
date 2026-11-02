@@ -13,6 +13,7 @@ import {
   loadDraftGoal,
 } from "@/features/assessment/session-store";
 import type { Gender, FitnessGoal } from "@/types/fitness";
+import { recordFootprint } from "@/lib/telemetry/footprints";
 
 interface BodyDetailsClientProps {
   initialStep?: 1 | 2;
@@ -249,6 +250,15 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
         dietPreference: "vegetarian",
       });
     }
+
+    recordFootprint("details_entered", {
+      gender,
+      age: numAge,
+      heightCm: numHeight,
+      weightKg: numWeight,
+      waistIn: finalWaistIn,
+      neckIn: finalNeckIn,
+    });
 
     router.push("/calculating");
   };

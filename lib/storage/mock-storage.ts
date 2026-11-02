@@ -52,10 +52,10 @@ export function sanitizeAdminUserRecord(raw: Partial<AdminUserRecord>, id: strin
     raw.plan && Array.isArray(raw.plan.weeks) && raw.plan.weeks.length > 0
       ? raw.plan
       : generateDashboardPlan(id, {
-          customerName: name,
-          status: raw.membershipCategory === "purchased" ? "pending_review" : "active",
-          weeksCount: 8,
-        });
+        customerName: name,
+        status: raw.membershipCategory === "purchased" ? "pending_review" : "active",
+        weeksCount: 8,
+      });
 
   return {
     id,
@@ -348,7 +348,7 @@ export function saveStoredPlan(plan: PlanDashboardData): void {
       });
       if (plan.assessmentId && plan.assessmentId !== plan.id) {
         const assessmentPlanRef = doc(db, "plans", plan.assessmentId);
-        void setDoc(assessmentPlanRef, plan, { merge: true }).catch(() => {});
+        void setDoc(assessmentPlanRef, plan, { merge: true }).catch(() => { });
       }
     } catch (err) {
       console.warn("Firebase save plan dispatch error:", err);
@@ -376,9 +376,16 @@ export function getStoredPlan(id: string): PlanDashboardData | null {
 /**
  * Fetch plan directly from Firebase Firestore
  */
-export async function fetchFirebasePlan(id: string): Promise<PlanDashboardData | null> {
-  const cached = getStoredPlan(id);
-  if (cached) return cached;
+export async function fetchFirebasePlan(
+  id: string,
+  forceFresh = false
+): Promise<PlanDashboardData | null> {
+  if (!forceFresh) {
+    const cached = getStoredPlan(id);
+    if (cached && (cached.status === "approved" || cached.status === "active")) {
+      return cached;
+    }
+  }
 
   if (!isClient()) return null;
   try {
@@ -469,7 +476,7 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
         }
       }
     }
-  } catch {}
+  } catch { }
 
   // 0.1 Discover registered client accounts (Exact UIDs from Firebase Auth console)
   const venkateshUid = "vovsLoxTftM6lNs7hstEKDD31iK2";
@@ -693,7 +700,7 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
               amountFormatted: `₹${Math.round((order.amountPaise || 9900) / 100)}`,
               currency: "INR",
               status: "paid",
-              packageTitle: "8-Week Custom Transformation Plan",
+              packageTitle: "Custom Transformation Plan",
               durationWeeks: 8,
               purchasedAt: order.paidAt || new Date().toISOString(),
             };

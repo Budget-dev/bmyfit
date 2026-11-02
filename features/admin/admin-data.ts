@@ -2,19 +2,16 @@ import type {
   AdminUserRecord,
   AdminStats,
   UserBiometrics,
-  UserPurchaseOrder,
   UserSubscription,
   MedicalAssessment,
-  MedicalDocument,
 } from "@/types/admin";
-import type { PlanDashboardData, PlanStatus, WeekPlanData, TaskLogState } from "@/types/plan-dashboard";
+import type { PlanDashboardData, TaskLogState, PlanReleaseHistoryItem, DailyCheckInLog } from "@/types/plan-dashboard";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 import { adminDb, adminAuth, hasAdminCredentials } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
 
 // In-memory cache for fast desktop administration & live synchronization with Firestore
 declare global {
-  // eslint-disable-next-line no-var
   var __bmyfit_admin_store__: Map<string, AdminUserRecord> | undefined;
 }
 
@@ -488,21 +485,42 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
     console.warn("Firestore subscriptions collection fetch notice:", err);
   }
 
-  // 4. Fetch live task completion logs from Firestore "user_logs" collection
+  // 4. Fetch live task completion & daily adherence logs from Firestore
   try {
     const logsSnap = await adminDb.collection("user_logs").get();
     if (!logsSnap.empty) {
       for (const doc of logsSnap.docs) {
-        const logData = doc.data() as TaskLogState;
+        const rawData = doc.data() as Record<string, unknown>;
         const targetId = doc.id.includes("_") ? doc.id.split("_")[0] : doc.id;
         const user = memoryStore.get(targetId) || memoryStore.get(doc.id);
         if (user) {
-          user.taskLogs = { ...(user.taskLogs || {}), ...logData };
+          const { dailyLogs, ...taskLogsOnly } = rawData;
+          user.taskLogs = { ...(user.taskLogs || {}), ...(taskLogsOnly as TaskLogState) };
+          if (dailyLogs && typeof dailyLogs === "object") {
+            user.dailyLogs = { ...(user.dailyLogs || {}), ...(dailyLogs as Record<string, DailyCheckInLog>) };
+          }
         }
       }
     }
   } catch (err) {
     console.warn("Firestore user_logs collection fetch notice:", err);
+  }
+
+  // 4b. Also fetch from daily_checkins collection if present
+  try {
+    const checkinsSnap = await adminDb.collection("daily_checkins").get();
+    if (!checkinsSnap.empty) {
+      for (const doc of checkinsSnap.docs) {
+        const checkinData = doc.data() as Record<string, DailyCheckInLog>;
+        const targetId = doc.id;
+        const user = memoryStore.get(targetId);
+        if (user) {
+          user.dailyLogs = { ...(user.dailyLogs || {}), ...checkinData };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Firestore daily_checkins fetch notice:", err);
   }
   }
 
@@ -525,98 +543,217 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
   return { users, stats };
 }
 
-export async function fetchAdminUserById(userId: string): Promise<AdminUserRecord | null> {
+export async function findAdminUserByIdOrPlanId(
+  id: string,
+  secondaryId?: string
+): Promise<AdminUserRecord | null> {
   ensureMemoryStore();
-  const rawUser = memoryStore.get(userId);
-  if (!rawUser) return null;
-  const user = sanitizeAdminUser(rawUser, userId);
+  if (!id && !secondaryId) return null;
 
-  // Check if live plan exists in Firestore
+  const targetIds = [id, secondaryId].filter(Boolean) as string[];
+
+  // 1. Direct memory lookup
+  for (const tid of targetIds) {
+    const raw = memoryStore.get(tid);
+    if (raw) return sanitizeAdminUser(raw, raw.id || tid);
+  }
+
+  // 2. Scan memoryStore values by matching user.id, plan.id, assessmentId, or order ids
+  for (const tid of targetIds) {
+    const found = Array.from(memoryStore.values()).find(
+      (u) =>
+        u.id === tid ||
+        u.plan?.id === tid ||
+        u.plan?.assessmentId === tid ||
+        u.order?.orderId === tid ||
+        u.order?.razorpayPaymentId === tid ||
+        u.order?.utr === tid ||
+        (u.email && tid.includes("@") && u.email.toLowerCase() === tid.toLowerCase())
+    );
+    if (found) return sanitizeAdminUser(found, found.id);
+  }
+
+  // 3. Fallback to live Firestore collections
   if (hasAdminCredentials) {
-    try {
-      const doc = await adminDb.collection("plans").doc(userId).get();
-      if (doc.exists) {
-        user.plan = { ...user.plan, ...(doc.data() as PlanDashboardData) };
+    for (const tid of targetIds) {
+      // 3a. Check Firestore "users" collection
+      try {
+        const uDoc = await adminDb.collection("users").doc(tid).get();
+        if (uDoc.exists) {
+          const uData = uDoc.data() || {};
+          const user = sanitizeAdminUser({ id: tid, ...uData }, tid);
+          memoryStore.set(user.id, user);
+          return user;
+        }
+      } catch (err) {
+        console.warn("Firestore findAdminUserByIdOrPlanId users doc notice:", err);
       }
-    } catch (err) {
-      console.warn("Firestore fetchAdminUserById error:", err);
+
+      // 3b. Check Firestore "plans" collection
+      try {
+        const pDoc = await adminDb.collection("plans").doc(tid).get();
+        if (pDoc.exists) {
+          const pData = pDoc.data() as PlanDashboardData & {
+            userId?: string;
+            customerId?: string;
+            uid?: string;
+          };
+          const refUserId = pData.userId || pData.customerId || pData.uid;
+
+          if (refUserId && typeof refUserId === "string") {
+            const uDoc = await adminDb.collection("users").doc(refUserId).get();
+            if (uDoc.exists) {
+              const uData = uDoc.data() || {};
+              const user = sanitizeAdminUser(
+                { id: refUserId, ...uData, plan: pData },
+                refUserId
+              );
+              memoryStore.set(user.id, user);
+              return user;
+            }
+          }
+
+          // Synthesize an admin user record for this plan
+          const fallbackUser = sanitizeAdminUser(
+            {
+              id: refUserId || tid,
+              name: pData.customerName || "BMYFIT Client",
+              plan: pData,
+              membershipCategory: "purchased",
+              goal: pData.goal,
+              goalDisplay: pData.goalDisplay,
+              needsPlanReview: pData.status === "pending_review",
+            },
+            refUserId || tid
+          );
+          memoryStore.set(fallbackUser.id, fallbackUser);
+          return fallbackUser;
+        }
+      } catch (err) {
+        console.warn("Firestore findAdminUserByIdOrPlanId plans doc notice:", err);
+      }
+
+      // 3c. Query users collection where plan.id == tid
+      try {
+        const snap = await adminDb
+          .collection("users")
+          .where("plan.id", "==", tid)
+          .limit(1)
+          .get();
+        if (!snap.empty) {
+          const docSnap = snap.docs[0];
+          const user = sanitizeAdminUser(
+            { id: docSnap.id, ...docSnap.data() },
+            docSnap.id
+          );
+          memoryStore.set(user.id, user);
+          return user;
+        }
+      } catch {}
+
+      // 3d. Query users collection where assessmentId == tid
+      try {
+        const snap = await adminDb
+          .collection("users")
+          .where("assessmentId", "==", tid)
+          .limit(1)
+          .get();
+        if (!snap.empty) {
+          const docSnap = snap.docs[0];
+          const user = sanitizeAdminUser(
+            { id: docSnap.id, ...docSnap.data() },
+            docSnap.id
+          );
+          memoryStore.set(user.id, user);
+          return user;
+        }
+      } catch {}
+
+      // 3e. Check Firestore "orders" collection
+      try {
+        const oDoc = await adminDb.collection("orders").doc(tid).get();
+        if (oDoc.exists) {
+          const oData = oDoc.data() || {};
+          const orderTargetId =
+            (oData.userId as string) ||
+            (oData.uid as string) ||
+            (oData.assessmentId as string);
+          if (orderTargetId && orderTargetId !== tid) {
+            const foundFromOrder = await findAdminUserByIdOrPlanId(orderTargetId);
+            if (foundFromOrder) return foundFromOrder;
+          }
+        }
+      } catch {}
     }
   }
 
-  return user;
+  return null;
+}
+
+export async function fetchAdminUserById(userIdOrPlanId: string): Promise<AdminUserRecord | null> {
+  return findAdminUserByIdOrPlanId(userIdOrPlanId);
 }
 
 export async function updateAdminUserPlan(
-  userId: string,
+  userIdOrPlanId: string,
   updatedPlan: PlanDashboardData
 ): Promise<AdminUserRecord> {
   ensureMemoryStore();
-  let user = memoryStore.get(userId);
-  if (!user && hasAdminCredentials) {
-    try {
-      const uDoc = await adminDb.collection("users").doc(userId).get();
-      if (uDoc.exists) {
-        const uData = uDoc.data();
-        user = {
-          id: userId,
-          name: uData?.name || updatedPlan.customerName || "BMYFIT Client",
-          email: uData?.email || "",
-          phone: uData?.phone || "",
-          city: uData?.city || "Online Funnel",
-          avatar:
-            uData?.avatarUrl ||
-            "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
-          joinedAt: uData?.createdAt || new Date().toISOString(),
-          lastActive: "Just now",
-          membershipCategory: "purchased",
-          membershipTitle: `${updatedPlan.weeksCount}-Week Plan`,
-          goal: updatedPlan.goal || "fat-loss",
-          goalDisplay: updatedPlan.goalDisplay || "Custom Goal",
-          needsPlanReview: false,
-          biometrics: uData?.biometrics || {
-            gender: "male",
-            age: uData?.age || 28,
-            heightCm: 175,
-            weightKg: 75,
-            bmi: updatedPlan.bmi || 24,
-            bmiCategory: "normal",
-            bodyFatPercent: updatedPlan.bodyFatPercent || 18,
-            bodyFatCategory: "average",
-            caloricTarget: updatedPlan.calorieTarget || 1800,
-            proteinTargetGrams: updatedPlan.proteinTargetGrams || 120,
-            activityLevel: "moderately-active",
-            dietPreference: "non-vegetarian",
-          },
-          plan: updatedPlan,
-        };
-      }
-    } catch {}
-  }
+  let user = await findAdminUserByIdOrPlanId(userIdOrPlanId, updatedPlan.id);
 
   if (!user) {
-    throw new Error(`User with ID ${userId} not found`);
+    const fallbackId = userIdOrPlanId || updatedPlan.id || `user_${Date.now()}`;
+    user = sanitizeAdminUser(
+      {
+        id: fallbackId,
+        name: updatedPlan.customerName || "BMYFIT Client",
+        plan: updatedPlan,
+        membershipCategory: "purchased",
+        needsPlanReview: updatedPlan.status === "pending_review",
+      },
+      fallbackId
+    );
   }
 
   user.plan = updatedPlan;
   if (updatedPlan.status === "approved" || updatedPlan.status === "active") {
     user.needsPlanReview = false;
   }
-  memoryStore.set(userId, user);
+  memoryStore.set(user.id, user);
 
-  // Sync to Firestore 'plans' and 'users' collections
+  // Sync to Firestore 'plans' and 'users' collections across both plan.id and user.id
   if (hasAdminCredentials) {
     try {
-      await adminDb.collection("plans").doc(userId).set(
-        {
-          ...updatedPlan,
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-      await adminDb.collection("users").doc(userId).set(
+      const planPayload = {
+        ...updatedPlan,
+        updatedAt: FieldValue.serverTimestamp(),
+        approvedAt:
+          updatedPlan.status === "approved" || updatedPlan.status === "active"
+            ? FieldValue.serverTimestamp()
+            : undefined,
+      };
+
+      await adminDb.collection("plans").doc(updatedPlan.id).set(planPayload, { merge: true });
+
+      if (user.id !== updatedPlan.id) {
+        await adminDb.collection("plans").doc(user.id).set(planPayload, { merge: true });
+      }
+
+      if (
+        updatedPlan.assessmentId &&
+        updatedPlan.assessmentId !== updatedPlan.id &&
+        updatedPlan.assessmentId !== user.id
+      ) {
+        await adminDb
+          .collection("plans")
+          .doc(updatedPlan.assessmentId)
+          .set(planPayload, { merge: true });
+      }
+
+      await adminDb.collection("users").doc(user.id).set(
         {
           plan: updatedPlan,
-          needsPlanReview: updatedPlan.status === "pending_review",
+          needsPlanReview: user.needsPlanReview,
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
@@ -630,53 +767,124 @@ export async function updateAdminUserPlan(
 }
 
 export async function pushPlanToUserDashboard(
-  userId: string,
+  userIdOrPlanId: string,
   coachName: string = "Coach Naveen (Blaze Gym Owner & Head Coach)",
-  notes?: string
+  notes?: string,
+  secondaryId?: string
 ): Promise<{ success: boolean; pushedPlan: PlanDashboardData; user: AdminUserRecord }> {
   ensureMemoryStore();
-  const rawUser = memoryStore.get(userId);
-  if (!rawUser) {
-    throw new Error(`User with ID ${userId} not found`);
+  let user = await findAdminUserByIdOrPlanId(userIdOrPlanId, secondaryId);
+
+  // If user wasn't found in memory or Firestore, synthesize so the push never fails
+  if (!user) {
+    const fallbackId = userIdOrPlanId || secondaryId || `user_${Date.now()}`;
+    const generatedPlan = generateDashboardPlan(fallbackId, {
+      customerName: "BMYFIT Client",
+      status: "pending_review",
+      weeksCount: 1,
+    });
+    user = sanitizeAdminUser(
+      {
+        id: fallbackId,
+        name: "BMYFIT Client",
+        membershipCategory: "purchased",
+        plan: generatedPlan,
+        needsPlanReview: true,
+      },
+      fallbackId
+    );
+    memoryStore.set(user.id, user);
   }
-  const user = sanitizeAdminUser(rawUser, userId);
 
   const nowIso = new Date().toISOString();
-  const updatedPlan: PlanDashboardData = {
-    ...user.plan,
+  const currentPlan =
+    user.plan ||
+    generateDashboardPlan(user.id, {
+      customerName: user.name,
+      weeksCount: 1,
+    });
+
+  const currentWeeksCount = currentPlan.weeksCount || currentPlan.weeks?.length || 1;
+  const previousHistory = currentPlan.planHistory || [];
+  const version = previousHistory.length + 1;
+  const historyItem: PlanReleaseHistoryItem = {
+    version,
+    pushedAt: nowIso,
+    coachName,
+    notes: notes || currentPlan.coachNotes || "Plan customized & verified by Head Coach Naveen.",
+    weeksCount: currentWeeksCount,
+    summary: `Version ${version} published with ${currentWeeksCount} active week(s).`,
+  };
+
+  const pushedPlan: PlanDashboardData = {
+    ...currentPlan,
+    id: currentPlan.id || user.id,
+    customerName: currentPlan.customerName || user.name,
     status: "approved",
     approvedAt: nowIso,
-    coachNotes: notes || user.plan.coachNotes || "Plan customized & verified by Head Coach. Ready for execution!",
+    coachNotes:
+      notes ||
+      currentPlan.coachNotes ||
+      "Plan customized & verified by Head Coach Naveen. Ready for execution!",
+    weeksCount: currentWeeksCount,
+    weeks: currentPlan.weeks || [],
+    planHistory: [...previousHistory, historyItem],
+    dailyLogs: currentPlan.dailyLogs || user.dailyLogs || {},
     coach: {
-      ...user.plan.coach,
+      ...currentPlan.coach,
       name: coachName,
+      role: currentPlan.coach?.role || "Blaze Gym Owner · Head Coach & Sports Nutritionist",
+      whatsAppNumber: currentPlan.coach?.whatsAppNumber || "+919876543210",
+      avatar: currentPlan.coach?.avatar || "/images/coach-naveen.jpg",
     },
   };
 
-  user.plan = updatedPlan;
+  user.plan = pushedPlan;
   user.needsPlanReview = false;
-  memoryStore.set(userId, user);
+  memoryStore.set(user.id, user);
 
-  // Write to Firestore plans and users collection so user dashboard immediately receives it
+  // Write to Firestore plans and users collections under all possible keys
   if (hasAdminCredentials) {
     try {
-      await adminDb.collection("plans").doc(userId).set(
+      const planDocPayload = {
+        ...pushedPlan,
+        status: "approved",
+        approvedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+
+      // 1. Primary write to plans collection under plan.id
+      await adminDb.collection("plans").doc(pushedPlan.id).set(planDocPayload, { merge: true });
+
+      // 2. Also write to plans collection under user.id if different
+      if (user.id !== pushedPlan.id) {
+        await adminDb.collection("plans").doc(user.id).set(planDocPayload, { merge: true });
+      }
+
+      // 3. Write to assessmentId if different
+      if (
+        pushedPlan.assessmentId &&
+        pushedPlan.assessmentId !== pushedPlan.id &&
+        pushedPlan.assessmentId !== user.id
+      ) {
+        await adminDb
+          .collection("plans")
+          .doc(pushedPlan.assessmentId)
+          .set(planDocPayload, { merge: true });
+      }
+
+      // 4. Update users collection doc
+      await adminDb.collection("users").doc(user.id).set(
         {
-          ...updatedPlan,
-          status: "approved",
-          approvedAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-      await adminDb.collection("users").doc(userId).set(
-        {
-          plan: updatedPlan,
+          plan: pushedPlan,
           needsPlanReview: false,
+          membershipCategory: "purchased",
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
       );
+
+      // 5. Update subscription status if exists
       if (user.subscription) {
         await adminDb.collection("subscriptions").doc(user.subscription.id).set(
           {
@@ -691,7 +899,7 @@ export async function pushPlanToUserDashboard(
     }
   }
 
-  return { success: true, pushedPlan: updatedPlan, user };
+  return { success: true, pushedPlan, user };
 }
 
 export interface RegisterPurchasedClientParams {
@@ -720,14 +928,7 @@ export async function updateAdminUserMedicalAssessment(
   medical: MedicalAssessment
 ): Promise<AdminUserRecord | null> {
   ensureMemoryStore();
-  const existing =
-    memoryStore.get(userIdOrAssessmentId) ||
-    Array.from(memoryStore.values()).find(
-      (u) =>
-        u.id === userIdOrAssessmentId ||
-        u.plan?.assessmentId === userIdOrAssessmentId ||
-        u.plan?.id === userIdOrAssessmentId
-    );
+  const existing = await findAdminUserByIdOrPlanId(userIdOrAssessmentId);
 
   if (!existing) return null;
 
@@ -750,6 +951,33 @@ export async function updateAdminUserMedicalAssessment(
   }
 
   memoryStore.set(existing.id, existing);
+
+  if (hasAdminCredentials) {
+    try {
+      await adminDb.collection("users").doc(existing.id).set(
+        {
+          medicalAssessment: medical,
+          needsPlanReview: true,
+          plan: existing.plan,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      if (existing.plan?.id) {
+        await adminDb.collection("plans").doc(existing.plan.id).set(
+          {
+            medicalSummary: existing.plan.medicalSummary,
+            status: "pending_review",
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+    } catch (err) {
+      console.warn("Firestore updateAdminUserMedicalAssessment error:", err);
+    }
+  }
+
   return existing;
 }
 
@@ -757,7 +985,10 @@ export async function registerPurchasedClient(
   params: RegisterPurchasedClientParams
 ): Promise<AdminUserRecord> {
   ensureMemoryStore();
-  const existing = memoryStore.get(params.userId) || memoryStore.get(params.assessmentId);
+  const existing =
+    memoryStore.get(params.userId) ||
+    memoryStore.get(params.assessmentId) ||
+    (await findAdminUserByIdOrPlanId(params.userId, params.assessmentId));
   const now = new Date().toISOString();
   const durationWeeks = params.durationWeeks || (params.durationMonths ? params.durationMonths * 4 : 8);
   const durationMonths = params.durationMonths || Math.max(1, Math.round(durationWeeks / 4));
@@ -982,6 +1213,16 @@ export async function registerPurchasedClient(
         },
         { merge: true }
       );
+
+      if (id && params.assessmentId && id !== params.assessmentId) {
+        await adminDb.collection("plans").doc(id).set(
+          {
+            ...plan,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
     } catch (err) {
       console.warn("Firestore sync registerPurchasedClient error:", err);
     }

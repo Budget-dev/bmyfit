@@ -228,7 +228,7 @@ export default function ContactPage() {
                   <div className="space-y-1 pb-2 border-b border-gray-100">
                     <p className="font-bold text-gray-900">How soon do I receive my plan after paying ₹99?</p>
                     <p className="text-gray-500">
-                      Instantly! Once payment is complete, your dashboard unlocks immediately with your 8-week workout and nutrition schedule.
+                      Instantly! Once payment is complete, your dashboard unlocks immediately with your personalized workout and nutrition schedule.
                     </p>
                   </div>
 

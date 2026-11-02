@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/icons";
 import type { AdminUserRecord } from "@/types/admin";
 import { adminFetch } from "@/lib/admin-api-client";
+import { saveStoredPlan, upsertStoredAdminUser } from "@/lib/storage/mock-storage";
 
 interface PushModalProps {
   user: AdminUserRecord | null;
@@ -32,22 +33,28 @@ export function PushModal({ user, onClose, onSuccess }: PushModalProps) {
     try {
       setPushing(true);
       setErrorMessage(null);
-      const planId = user.plan?.id || user.id;
-      const res = await adminFetch(`/api/admin/plans/${planId}/push`, {
+      const targetRouteId = user.id || user.plan?.id;
+      const res = await adminFetch(`/api/admin/plans/${encodeURIComponent(targetRouteId)}/push`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           coachName,
           notes: coachNotes,
+          userId: user.id,
+          planId: user.plan?.id,
         }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setPushedSuccess(true);
+        if (data.plan) {
+          saveStoredPlan(data.plan);
+        }
         if (data.user) {
+          upsertStoredAdminUser(data.user);
           onSuccess(data.user);
         }
+        setPushedSuccess(true);
       } else {
         setErrorMessage(data.message || "Failed to push plan to user dashboard.");
       }
@@ -117,7 +124,7 @@ export function PushModal({ user, onClose, onSuccess }: PushModalProps) {
 
               <div className="pt-2 flex flex-col gap-2">
                 <a
-                  href={`/plan/${user.plan.id}`}
+                  href={`/plan/${user.plan?.id || user.id}`}
                   target="_blank"
                   rel="noreferrer"
                   className="w-full py-2.5 rounded-xl bg-[#00c853] hover:bg-[#00b047] text-white font-black text-xs shadow-sm flex items-center justify-center gap-2 transition"

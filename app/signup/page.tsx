@@ -59,7 +59,7 @@ export default function SignupPage() {
               </div>
               <div className="p-2.5 rounded-xl bg-white/[0.04] border border-white/10">
                 <p className="text-xl font-black text-white">₹99</p>
-                <p className="text-[10px] text-gray-400">Full 8-Week Plan</p>
+                <p className="text-[10px] text-gray-400">Customized Plan</p>
               </div>
             </div>
 

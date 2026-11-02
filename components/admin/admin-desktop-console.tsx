@@ -19,8 +19,14 @@ import {
   MessageCircle,
 } from "@/components/ui/icons";
 import type { AdminUserRecord, AdminStats, MembershipCategory } from "@/types/admin";
-import type { PlanDashboardData } from "@/types/plan-dashboard";
-import { getStoredAdminUsers, sanitizeAdminUserRecord, syncFirestoreUsersDirectly } from "@/lib/storage/mock-storage";
+import type { PlanDashboardData, PlanReleaseHistoryItem } from "@/types/plan-dashboard";
+import {
+  getStoredAdminUsers,
+  sanitizeAdminUserRecord,
+  syncFirestoreUsersDirectly,
+  saveStoredPlan,
+  upsertStoredAdminUser,
+} from "@/lib/storage/mock-storage";
 import { formatPlanDuration, calculateDetailedAdherence } from "@/features/plan/dashboard-data";
 import { adminFetch } from "@/lib/admin-api-client";
 import { AdminErrorBoundary } from "./admin-error-boundary";
@@ -30,6 +36,7 @@ import { WeekPlanEditor } from "./week-plan-editor";
 import { AdminChatView } from "./admin-chat-view";
 import { ClientHealthDashboard } from "./client-health-dashboard";
 import { SubscriptionsDashboard } from "./subscriptions-dashboard";
+import { FunnelFootprintsDashboard } from "./funnel-footprints-dashboard";
 import { AlertDispatchModal } from "./alert-dispatch-modal";
 import { ClientDetailSidebar } from "./client-detail-sidebar";
 import type { PlanVideo, PlanSupplementRecommendation } from "@/types/plan-dashboard";
@@ -39,7 +46,7 @@ export function AdminDesktopConsole() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "directory" | "subscriptions" | "studio" | "dispatch" | "chats"
+    "overview" | "directory" | "subscriptions" | "footprints" | "studio" | "dispatch" | "chats"
   >("overview");
   const [categoryFilter, setCategoryFilter] = useState<
     "all" | MembershipCategory | "pending" | "medical"
@@ -158,7 +165,12 @@ export function AdminDesktopConsole() {
       });
 
       setSelectedUser((prev) => {
-        if (!prev && mergedUsers.length > 0) return mergedUsers[0];
+        if (!prev && mergedUsers.length > 0) {
+          return (
+            mergedUsers.find((u) => u.needsPlanReview || u.plan?.status === "pending_review") ||
+            mergedUsers[0]
+          );
+        }
         if (prev) {
           const updated = mergedUsers.find((u) => u.id === prev.id);
           if (updated) return updated;
@@ -230,20 +242,38 @@ export function AdminDesktopConsole() {
 
   const handleSavePlan = async (updatedPlan: PlanDashboardData) => {
     try {
-      const res = await adminFetch(`/api/admin/plans/${updatedPlan.id}`, {
+      const res = await adminFetch(`/api/admin/plans/${encodeURIComponent(updatedPlan.id)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedPlan),
       });
 
       if (res.ok) {
+        saveStoredPlan(updatedPlan);
         setUsers((prev) =>
           prev.map((u) =>
-            u.id === updatedPlan.id ? { ...u, plan: updatedPlan } : u
+            u.id === updatedPlan.id ||
+            u.plan?.id === updatedPlan.id ||
+            u.plan?.assessmentId === updatedPlan.id
+              ? {
+                  ...u,
+                  plan: updatedPlan,
+                  needsPlanReview: updatedPlan.status === "pending_review",
+                }
+              : u
           )
         );
-        if (selectedUser && selectedUser.id === updatedPlan.id) {
-          setSelectedUser({ ...selectedUser, plan: updatedPlan });
+        if (
+          selectedUser &&
+          (selectedUser.id === updatedPlan.id ||
+            selectedUser.plan?.id === updatedPlan.id ||
+            selectedUser.plan?.assessmentId === updatedPlan.id)
+        ) {
+          setSelectedUser({
+            ...selectedUser,
+            plan: updatedPlan,
+            needsPlanReview: updatedPlan.status === "pending_review",
+          });
         }
         setGlobalAlert(`Plan changes saved for ${updatedPlan.customerName}!`);
         setTimeout(() => setGlobalAlert(null), 3500);
@@ -255,8 +285,23 @@ export function AdminDesktopConsole() {
   };
 
   const handlePushSuccess = (updatedUser: AdminUserRecord) => {
-    setUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
-    if (selectedUser && selectedUser.id === updatedUser.id) {
+    saveStoredPlan(updatedUser.plan);
+    upsertStoredAdminUser(updatedUser);
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === updatedUser.id ||
+        (updatedUser.plan?.id && u.plan?.id === updatedUser.plan.id) ||
+        (updatedUser.plan?.assessmentId && u.plan?.assessmentId === updatedUser.plan.assessmentId)
+          ? updatedUser
+          : u
+      )
+    );
+    if (
+      selectedUser &&
+      (selectedUser.id === updatedUser.id ||
+        (updatedUser.plan?.id && selectedUser.plan?.id === updatedUser.plan.id) ||
+        (updatedUser.plan?.assessmentId && selectedUser.plan?.assessmentId === updatedUser.plan.assessmentId))
+    ) {
       setSelectedUser(updatedUser);
     }
     setGlobalAlert(`Plan for ${updatedUser.name} pushed live to client dashboard!`);
@@ -267,41 +312,65 @@ export function AdminDesktopConsole() {
     targetUser: AdminUserRecord,
     notes: string,
     video?: PlanVideo,
-    supplements?: PlanSupplementRecommendation[]
+    supplements?: PlanSupplementRecommendation[],
+    targets?: { calorieTarget?: number; proteinTargetGrams?: number; workoutDaysPerWeek?: number }
   ) => {
     const planId = targetUser.plan?.id || targetUser.id;
+    const currentWeeksCount = targetUser.plan?.weeksCount || targetUser.plan?.weeks?.length || 1;
+    const previousHistory = targetUser.plan?.planHistory || [];
+    const newVersion = previousHistory.length + 1;
+    const nowIso = new Date().toISOString();
+
+    const newHistoryItem: PlanReleaseHistoryItem = {
+      version: newVersion,
+      pushedAt: nowIso,
+      coachName: "Coach Naveen (Head Coach)",
+      notes: notes || targetUser.plan?.coachNotes || "Plan verified by Head Coach Naveen.",
+      weeksCount: currentWeeksCount,
+      summary: `Version ${newVersion} dispatched with ${currentWeeksCount} active week(s).`,
+    };
+
     const updatedPlan: PlanDashboardData = {
       ...(targetUser.plan || {}),
       id: planId,
       customerName: targetUser.name,
       status: "approved",
-      approvedAt: new Date().toISOString(),
+      approvedAt: nowIso,
       coachNotes: notes || targetUser.plan?.coachNotes || "Plan verified by Head Coach Naveen.",
-      video: video || targetUser.plan?.video,
-      suggestedSupplements: supplements || targetUser.plan?.suggestedSupplements,
-      weeksCount: targetUser.plan?.weeksCount || 8,
+      video: video !== undefined ? video : targetUser.plan?.video,
+      suggestedSupplements: supplements !== undefined ? supplements : targetUser.plan?.suggestedSupplements,
+      calorieTarget: targets?.calorieTarget ?? targetUser.plan?.calorieTarget ?? 1800,
+      proteinTargetGrams: targets?.proteinTargetGrams ?? targetUser.plan?.proteinTargetGrams ?? 120,
+      workoutDaysPerWeek: targets?.workoutDaysPerWeek ?? targetUser.plan?.workoutDaysPerWeek ?? 4,
+      weeksCount: currentWeeksCount,
       weeks: targetUser.plan?.weeks || [],
+      planHistory: [...previousHistory, newHistoryItem],
+      dailyLogs: targetUser.plan?.dailyLogs || targetUser.dailyLogs || {},
     };
 
     try {
-      await adminFetch(`/api/admin/plans/${planId}`, {
+      await adminFetch(`/api/admin/plans/${encodeURIComponent(planId)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedPlan),
       });
 
-      await adminFetch(`/api/admin/plans/${targetUser.id}/push`, {
+      const pushRes = await adminFetch(`/api/admin/plans/${encodeURIComponent(targetUser.id)}/push`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           coachName: "Coach Naveen (Head Coach)",
           notes,
+          userId: targetUser.id,
+          planId: planId,
         }),
       });
 
+      const pushData = await pushRes.json();
+      const finalPlan = pushData?.plan || updatedPlan;
       const updatedUser: AdminUserRecord = {
         ...targetUser,
-        plan: updatedPlan,
+        plan: finalPlan,
         needsPlanReview: false,
       };
 
@@ -428,7 +497,32 @@ export function AdminDesktopConsole() {
                 </span>
               </button>
 
-              {/* Tab 3: Users Directory */}
+              {/* Tab 3: Funnel & Footprints */}
+              <button
+                type="button"
+                onClick={() => setActiveTab("footprints")}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${
+                  activeTab === "footprints"
+                    ? "bg-[#032e1c] text-white shadow-xs"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Activity className="w-4 h-4 text-amber-500" />
+                  <span>Funnel &amp; Footprints</span>
+                </div>
+                <span
+                  className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                    activeTab === "footprints"
+                      ? "bg-amber-400 text-gray-950"
+                      : "bg-amber-100 text-amber-800"
+                  }`}
+                >
+                  LIVE
+                </span>
+              </button>
+
+              {/* Tab 4: Users Directory */}
               <button
                 type="button"
                 onClick={() => setActiveTab("directory")}
@@ -453,12 +547,17 @@ export function AdminDesktopConsole() {
                 </span>
               </button>
 
-              {/* Tab 4: Week Plan Studio */}
+              {/* Tab 4: Give & Edit Plan (Week Plan Studio) */}
               <button
                 type="button"
                 onClick={() => {
-                  if (selectedUser) setActiveTab("studio");
-                  else setActiveTab("directory");
+                  if (!selectedUser && users.length > 0) {
+                    const priority =
+                      users.find((u) => u.needsPlanReview || u.plan?.status === "pending_review") ||
+                      users[0];
+                    setSelectedUser(priority);
+                  }
+                  setActiveTab("studio");
                 }}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${
                   activeTab === "studio"
@@ -467,14 +566,18 @@ export function AdminDesktopConsole() {
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Edit3 className="w-4 h-4" />
-                  <span>Week Plan Studio</span>
+                  <Edit3 className="w-4 h-4 text-emerald-400" />
+                  <span>Give &amp; Edit Plan</span>
                 </div>
-                {selectedUser && (
+                {stats && stats.pendingReviewCount > 0 ? (
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500 text-gray-950 animate-pulse shadow-xs">
+                    ⚡ {stats.pendingReviewCount}
+                  </span>
+                ) : selectedUser ? (
                   <span className="text-[10px] font-bold text-gray-400 truncate max-w-[70px]">
                     {selectedUser.name.split(" ")[0]}
                   </span>
-                )}
+                ) : null}
               </button>
 
               {/* Tab 5: Push & Dispatch */}
@@ -650,7 +753,8 @@ export function AdminDesktopConsole() {
                 <h1 className="text-xl sm:text-2xl font-black text-gray-950 tracking-tight">
                   {activeTab === "overview" && "Client Performance & Health Status Dashboard"}
                   {activeTab === "subscriptions" && "Client Subscriptions & Entitlements Dashboard"}
-                  {activeTab === "directory" && "Client Management & Biometrics Dossier"}
+                  {activeTab === "footprints" && "Visitor Footprints & Funnel Drop-Off Analytics"}
+                  {activeTab === "directory" && "Client Management & Health Profiles"}
                   {activeTab === "studio" &&
                     `Week Plan Studio: ${selectedUser ? selectedUser.name : "Select Client"}`}
                   {activeTab === "dispatch" && "Plan Deployment & Push to User Console"}
@@ -661,6 +765,8 @@ export function AdminDesktopConsole() {
                     "Track real-time adherence, see who is doing good vs who needs coach attention, and dispatch instant alerts."}
                   {activeTab === "subscriptions" &&
                     "Monitor all ₹99 custom plans, subscription periods, payment verifications, and renewal alerts."}
+                  {activeTab === "footprints" &&
+                    "Live trail showing how far prospective athletes travel into your checkout before dropping off or paying."}
                   {activeTab === "directory" &&
                     "Search and filter client profiles, inspect body fat & medical reports, and launch plan adjustments."}
                   {activeTab === "studio" &&
@@ -793,6 +899,13 @@ export function AdminDesktopConsole() {
                   setAlertUser(u);
                 }}
               />
+            </div>
+          )}
+
+          {/* ================= TAB: FUNNEL & FOOTPRINTS ================= */}
+          {activeTab === "footprints" && (
+            <div className="p-6">
+              <FunnelFootprintsDashboard />
             </div>
           )}
 
@@ -955,8 +1068,7 @@ export function AdminDesktopConsole() {
                               className="hover:bg-emerald-50/40 transition group cursor-pointer"
                               onClick={() => {
                                 setSelectedUser(u);
-                                setSidebarInitialTab((u.needsPlanReview || u.plan?.status === "pending_review") ? "dispatch" : "biometrics");
-                                setIsSidebarOpen(true);
+                                setActiveTab("studio");
                               }}
                             >
                               {/* Client Profile */}
@@ -1126,35 +1238,33 @@ export function AdminDesktopConsole() {
                               {/* Actions */}
                               <td className="py-4 px-5 text-right" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-center justify-end gap-2 flex-nowrap">
-                                  {isPending ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setSelectedUser(u);
-                                        setSidebarInitialTab("dispatch");
-                                        setIsSidebarOpen(true);
-                                      }}
-                                      className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition inline-flex items-center gap-1.5 shrink-0 active:scale-95"
-                                      title="Send Customized Plan with Video & Supplements"
-                                    >
-                                      <Rocket className="w-3.5 h-3.5" />
-                                      <span>Send Plan</span>
-                                    </button>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setSelectedUser(u);
-                                        setSidebarInitialTab("dispatch");
-                                        setIsSidebarOpen(true);
-                                      }}
-                                      className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs shadow-2xs transition inline-flex items-center gap-1.5 shrink-0"
-                                      title="Open Client Dossier & Video Settings"
-                                    >
-                                      <Eye className="w-3.5 h-3.5 text-slate-500" />
-                                      <span>Dossier</span>
-                                    </button>
-                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedUser(u);
+                                      setStudioInitialMode("customize");
+                                      setActiveTab("studio");
+                                    }}
+                                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition inline-flex items-center gap-1.5 shrink-0 active:scale-95 cursor-pointer"
+                                    title="Open Week Plan Studio to customize and give plan"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                    <span>{isPending ? "Give Plan" : "Edit Plan"}</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedUser(u);
+                                      setSidebarInitialTab(isPending ? "dispatch" : "biometrics");
+                                      setIsSidebarOpen(true);
+                                    }}
+                                    className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs shadow-2xs transition inline-flex items-center gap-1.5 shrink-0 cursor-pointer"
+                                    title="Open Client Health Profile, Medical Reports & Video Settings"
+                                  >
+                                    <Eye className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>Profile</span>
+                                  </button>
 
                                   <button
                                     type="button"
@@ -1193,27 +1303,34 @@ export function AdminDesktopConsole() {
           {/* ================= TAB 2: WEEK PLAN STUDIO ================= */}
           {activeTab === "studio" && (
             <div className="p-6">
-              {selectedUser ? (
-                <WeekPlanEditor
-                  key={`${selectedUser.id}-${studioInitialMode}`}
-                  user={selectedUser}
-                  initialMode={studioInitialMode}
-                  onSavePlan={handleSavePlan}
-                  onPushToUser={(u) => setPushUser(u)}
-                  onBackToDirectory={() => setActiveTab("directory")}
-                />
-              ) : (
-                <div className="text-center py-16 bg-white rounded-3xl border border-gray-200">
-                  <p className="text-gray-500 font-bold">Please select a user from the directory to edit their week plan.</p>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("directory")}
-                    className="mt-3 px-4 py-2 rounded-xl bg-gray-900 text-white font-bold text-xs"
-                  >
-                    Go to Directory
-                  </button>
-                </div>
-              )}
+              {(() => {
+                const currentStudioUser =
+                  selectedUser ||
+                  users.find((u) => u.needsPlanReview || u.plan?.status === "pending_review") ||
+                  users[0];
+
+                if (currentStudioUser) {
+                  return (
+                    <WeekPlanEditor
+                      key={`${currentStudioUser.id}-${studioInitialMode}`}
+                      user={currentStudioUser}
+                      allUsers={users}
+                      onSelectUser={(u) => setSelectedUser(u)}
+                      initialMode={studioInitialMode}
+                      onSavePlan={handleSavePlan}
+                      onPushToUser={(u) => setPushUser(u)}
+                      onBackToDirectory={() => setActiveTab("directory")}
+                      onOpenBiometrics={(u) => setInspectUser(u)}
+                    />
+                  );
+                }
+
+                return (
+                  <div className="text-center py-16 bg-white rounded-3xl border border-gray-200 shadow-xs">
+                    <p className="text-gray-500 font-bold">No registered athletes found in the database.</p>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -1390,7 +1507,7 @@ export function AdminDesktopConsole() {
         </main>
       </div>
 
-      {/* Biometrics Inspection Dossier Modal */}
+      {/* Biometrics & Health Profile Modal */}
       {inspectUser && (
         <BiometricsModal
           user={inspectUser}

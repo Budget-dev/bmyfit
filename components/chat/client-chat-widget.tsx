@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import {
   MessageCircle,
@@ -42,10 +42,10 @@ export function ClientChatWidget({
   const [internalOpen, setInternalOpen] = useState<boolean>(initiallyOpen);
   const isOpen = isOpenControlled !== undefined ? isOpenControlled : internalOpen;
 
-  const setIsOpen = (open: boolean) => {
+  const setIsOpen = useCallback((open: boolean) => {
     setInternalOpen(open);
     onOpenChange?.(open);
-  };
+  }, [onOpenChange]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState<string>("");
   const [sending, setSending] = useState<boolean>(false);
@@ -67,7 +67,7 @@ export function ClientChatWidget({
     return () => {
       window.removeEventListener("bmyfit_open_chat", handleOpenChat);
     };
-  }, []);
+  }, [setIsOpen]);
 
   // Subscribe to real-time messages
   useEffect(() => {

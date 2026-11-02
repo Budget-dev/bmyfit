@@ -140,7 +140,7 @@ export function DesktopHomeView() {
     },
     {
       q: "Can I get a refund if I'm not satisfied?",
-      a: "Yes. BMYFIT offers a 100% money-back guarantee. If you follow the prescribed 8-week routine and don't see results, we refund your ₹99 without questions asked.",
+      a: "Yes. BMYFIT offers a 100% money-back guarantee. If you follow the prescribed routine and don't see results, we refund your ₹99 without questions asked.",
     },
   ];
 
@@ -375,11 +375,10 @@ export function DesktopHomeView() {
                     <button
                       type="button"
                       onClick={() => setGender("male")}
-                      className={`py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 cursor-pointer ${
-                        gender === "male"
+                      className={`py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 cursor-pointer ${gender === "male"
                           ? "bg-[#00e676] text-gray-950 shadow-md"
                           : "bg-emerald-950/80 text-gray-300 border border-emerald-800/40 hover:bg-emerald-900/60"
-                      }`}
+                        }`}
                     >
                       <FontAwesomeIcon icon={faUserCheck} className="w-3.5 h-3.5" />
                       <span>Male</span>
@@ -387,11 +386,10 @@ export function DesktopHomeView() {
                     <button
                       type="button"
                       onClick={() => setGender("female")}
-                      className={`py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 cursor-pointer ${
-                        gender === "female"
+                      className={`py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 cursor-pointer ${gender === "female"
                           ? "bg-[#00e676] text-gray-950 shadow-md"
                           : "bg-emerald-950/80 text-gray-300 border border-emerald-800/40 hover:bg-emerald-900/60"
-                      }`}
+                        }`}
                     >
                       <FontAwesomeIcon icon={faHeartPulse} className="w-3.5 h-3.5" />
                       <span>Female</span>
@@ -709,7 +707,7 @@ export function DesktopHomeView() {
                 What Our Clients Say
               </h2>
               <p className="text-sm text-gray-300 font-medium mt-1">
-                Real feedback from clients who unlocked their 8-week transformation blueprint.
+                Real feedback from clients who unlocked their personalized transformation blueprint.
               </p>
             </div>
 
@@ -916,7 +914,7 @@ export function DesktopHomeView() {
               One Plan. <span className="text-[#00e676]">Real Transformation.</span>
             </h2>
             <p className="text-sm text-gray-300 font-medium">
-              Everything you need for your 8-week body recomposition — zero recurring charges, zero hidden subscriptions.
+              Everything you need for your body recomposition — zero recurring charges, zero hidden subscriptions.
             </p>
           </div>
 
@@ -924,20 +922,20 @@ export function DesktopHomeView() {
           <Card className="max-w-2xl mx-auto bg-gradient-to-b from-[#052517] via-[#041d12] to-[#02140c] text-white p-8 lg:p-12 rounded-3xl border-2 border-[#00e676] shadow-2xl space-y-8 relative text-left">
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#00e676] text-gray-950 text-xs font-black uppercase tracking-wider px-5 py-1.5 rounded-full shadow-lg shadow-emerald-500/40 flex items-center gap-1.5">
               <FontAwesomeIcon icon={faFire} className="w-3.5 h-3.5 text-gray-950" />
-              <span>FLAGSHIP BLUEPRINT · 8 WEEKS</span>
+              <span>FLAGSHIP PERSONALIZED BLUEPRINT</span>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-emerald-900/60 pb-6">
               <div>
                 <span className="text-xs font-black uppercase tracking-wider text-emerald-400">Complete Personalized Roadmap</span>
-                <h3 className="text-2xl font-black text-white mt-1">BMYFIT 8-Week Transformation</h3>
+                <h3 className="text-2xl font-black text-white mt-1">BMYFIT Custom Transformation</h3>
               </div>
               <div className="text-left sm:text-right">
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-5xl font-black text-white">₹99</span>
                   <span className="text-xs text-emerald-300 font-bold">one-time</span>
                 </div>
-                <span className="text-[11px] text-gray-400">Includes all 8 weeks</span>
+                <span className="text-[11px] text-gray-400">Complete custom access</span>
               </div>
             </div>
 
@@ -947,7 +945,7 @@ export function DesktopHomeView() {
                 <span className="w-5 h-5 rounded-full bg-[#00e676] text-gray-950 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">
                   <FontAwesomeIcon icon={faCheck} className="w-3 h-3" />
                 </span>
-                <span>Personalized 8-Week Progressive Workout Routine</span>
+                <span>Personalized Progressive Workout Routine</span>
               </div>
               <div className="flex items-start gap-3">
                 <span className="w-5 h-5 rounded-full bg-[#00e676] text-gray-950 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">
@@ -986,7 +984,7 @@ export function DesktopHomeView() {
               onClick={scrollToCalculator}
               className="w-full py-4 bg-[#00e676] hover:bg-[#00c853] text-gray-950 font-black text-base rounded-2xl shadow-xl shadow-emerald-500/30 transition active:scale-95 flex items-center justify-center gap-3 cursor-pointer group"
             >
-              <span>Get Your 8-Week Plan for ₹99</span>
+              <span>Get Your Custom Plan for ₹99</span>
               <FontAwesomeIcon icon={faArrowRight} className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
 

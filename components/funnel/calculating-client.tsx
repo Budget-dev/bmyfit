@@ -40,7 +40,7 @@ const STEPS = [
 
 export function CalculatingClient() {
   const router = useRouter();
-  const { getIdToken, loading: authLoading } = useAuth();
+  const { getIdToken } = useAuth();
   const { getFullInput, hydrated } = useFunnelState();
 
   const [progress, setProgress] = useState(12);
@@ -161,6 +161,7 @@ export function CalculatingClient() {
       })();
     } catch (err) {
       console.warn("Instant calculation fallback:", err);
+      setErrorMessage(err instanceof Error ? err.message : "Calculation failed");
       targetResultUrlRef.current = "/result/local";
       calculationFinishedRef.current = true;
     }

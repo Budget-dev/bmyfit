@@ -323,12 +323,12 @@ export function BiometricsModal({
             )}
           </div>
 
-          {/* Section: Clinical Health Dossier & Uploaded Medical Documents */}
+          {/* Section: Clinical Health Assessment & Uploaded Medical Documents */}
           <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/60 border border-emerald-200/80 space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center gap-2">
                 <span className="text-base">🩺</span>
-                <span>Clinical Health Dossier &amp; Medical Reports</span>
+                <span>Clinical Health Assessment &amp; Medical Reports</span>
               </h4>
               <span
                 className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${

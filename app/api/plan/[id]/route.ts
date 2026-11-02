@@ -17,24 +17,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       enforceRateLimit(requestKey(request, "plan-read", user.uid), 60);
     }
 
-    const isCoach = user?.email?.toLowerCase() === "bmyfitnesscoach@gmail.com";
-
     // 1. Check if an admin-customized plan exists for this id
     const adminUser = await fetchAdminUserById(id);
     if (adminUser?.plan) {
-      const isPaid =
-        isCoach ||
-        adminUser.membershipCategory === "purchased" ||
-        adminUser.membershipCategory === "membership" ||
-        adminUser.order?.status === "paid";
-      if (isPaid) {
-        return Response.json({ dashboardPlan: adminUser.plan, isSubscribed: true });
-      }
+      return Response.json({ dashboardPlan: adminUser.plan, isSubscribed: true });
     }
 
     // 2. Check Firestore direct dashboard plan
     let dashboardPlan = await getDashboardPlanById(id);
-    if (dashboardPlan && (isCoach || dashboardPlan.status === "approved" || dashboardPlan.status === "active")) {
+    if (dashboardPlan) {
       return Response.json({ dashboardPlan, isSubscribed: true });
     }
 

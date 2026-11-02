@@ -43,7 +43,7 @@ export function PlanLockScreen({
 
         {/* Main Title */}
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-950 tracking-tight leading-tight max-w-xl">
-          Your 8-Week Personalized Plan is{" "}
+          Your Personalized Transformation Plan is{" "}
           <span className="text-[#00c853]">Ready to Unlock</span>
         </h1>
 
@@ -91,7 +91,7 @@ export function PlanLockScreen({
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-white leading-tight">Goal-Specific Training</p>
-                <p className="text-[10px] text-gray-400 leading-snug mt-0.5">8-week progression splits for gym &amp; home</p>
+                <p className="text-[10px] text-gray-400 leading-snug mt-0.5">Custom progressive splits for gym &amp; home</p>
               </div>
             </div>
 
@@ -122,7 +122,7 @@ export function PlanLockScreen({
             onClick={handleUnlockClick}
             className="w-full py-3 px-4 rounded-full bg-[#00e676] hover:bg-[#00c864] text-black font-black text-sm flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(0,230,118,0.4)] active:scale-95 transition-all cursor-pointer"
           >
-            <span>Unlock My 8-Week Plan — ₹99</span>
+            <span>Unlock My Personalized Plan — ₹99</span>
             <span className="text-base font-black">→</span>
           </button>
 

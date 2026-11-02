@@ -23,6 +23,7 @@ import {
   faBolt,
   faLock,
 } from "@/components/ui/font-awesome-icons";
+import { recordFootprint } from "@/lib/telemetry/footprints";
 
 export interface CheckoutClientProps {
   id?: string;
@@ -55,17 +56,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
-  // Direct PhonePe & Direct UPI payment mode (Recommended while gateway verification is pending)
-  const [paymentGatewayMode, setPaymentGatewayMode] = useState<"phonepe" | "razorpay">("phonepe");
-  const [showUtrVerification, setShowUtrVerification] = useState<boolean>(false);
-  const [utrInput, setUtrInput] = useState<string>("");
-  const [paymentAppUsed, setPaymentAppUsed] = useState<string>("PhonePe");
-  const [paymentScreenshotBase64, setPaymentScreenshotBase64] = useState<string | null>(null);
-  const [paymentScreenshotName, setPaymentScreenshotName] = useState<string | null>(null);
-  const [isVerifyingUtr, setIsVerifyingUtr] = useState<boolean>(false);
-  const [copiedUpi, setCopiedUpi] = useState<boolean>(false);
-
-  // Post-payment Medical Dossier & Documents State
+  // Post-payment Medical Health Profile & Documents State
   const [hasDisease, setHasDisease] = useState<boolean | null>(null);
   const [selectedDiseases, setSelectedDiseases] = useState<string[]>([]);
   const [customDiseaseDescription, setCustomDiseaseDescription] = useState<string>("");
@@ -80,7 +71,6 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
     email: "",
     phone: "",
   });
-  const [showEditContact, setShowEditContact] = useState(false);
 
   // Dev sandbox modal state when running locally without real Razorpay keys
   const [sandboxOrder, setSandboxOrder] = useState<{
@@ -122,6 +112,14 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
 
   const handlePaymentSuccessPostProcess = (paymentId?: string, orderId?: string) => {
     sessionStorage.setItem("bmyfit_local_paid", "true");
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("bmyfit_local_paid", "true");
+        localStorage.setItem("bmyfit_active_assessment_id", assessmentId);
+        localStorage.setItem("bmyfit_active_plan_id", assessmentId);
+        localStorage.setItem(`bmyfit_paid_${assessmentId}`, "true");
+      } catch { }
+    }
     try {
       const raw = sessionStorage.getItem("bmyfit_local_assessment");
       if (raw) {
@@ -129,7 +127,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         parsed.isPaid = true;
         sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(parsed));
       }
-    } catch {}
+    } catch { }
 
     const now = new Date().toISOString();
     const initialRecord: AdminUserRecord = {
@@ -142,7 +140,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       joinedAt: now,
       lastActive: "Active Now",
       membershipCategory: "purchased",
-      membershipTitle: "2-Month (8 Weeks) Custom Plan",
+      membershipTitle: "Custom Personalized Plan",
       goal: "fat-loss",
       goalDisplay: "Fat Loss & Metabolic Reset",
       needsPlanReview: true,
@@ -183,13 +181,22 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         weeksCount: 8,
         monthsCount: 2,
         status: "pending_review",
-        coachNotes: "NEW ₹99 PURCHASE: Client submitted payment. Awaiting health dossier.",
+        coachNotes: "NEW ₹99 PURCHASE: Client submitted payment. Awaiting health profile & medical inputs.",
       }),
     };
     upsertStoredAdminUser(initialRecord);
     if (initialRecord.plan) {
       saveStoredPlan(initialRecord.plan);
     }
+    recordFootprint("razorpay_payment_success", {
+      assessmentId,
+      paymentId,
+      orderId,
+      customerName: customerDetails.name,
+      customerEmail: customerDetails.email,
+      customerPhone: customerDetails.phone,
+      amount: 99,
+    });
     setFunnelStep("medical_questionnaire");
   };
 
@@ -209,30 +216,66 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
     });
   };
 
+  const compressImageFile = async (file: File, maxDim = 800, quality = 0.6): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (!file.type.startsWith("image/")) {
+          resolve((e.target?.result as string) || "");
+          return;
+        }
+        const img = new window.Image();
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL("image/jpeg", quality));
+          } else {
+            resolve((e.target?.result as string) || "");
+          }
+        };
+        img.onerror = () => resolve((e.target?.result as string) || "");
+        img.src = (e.target?.result as string) || "";
+      };
+      reader.onerror = () => resolve("");
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        const newDoc: MedicalDocument = {
-          id: `doc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-          name: file.name,
-          type: file.type.includes("pdf") ? "pdf" : "image",
-          sizeFormatted: `${Math.max(1, Math.round(file.size / 1024))} KB`,
-          dataUrl,
-          uploadedAt: new Date().toISOString(),
-          category: file.name.toLowerCase().includes("blood")
-            ? "blood_test"
-            : file.name.toLowerCase().includes("rx") || file.name.toLowerCase().includes("prescription")
+    Array.from(files).forEach(async (file) => {
+      const dataUrl = await compressImageFile(file, 800, 0.6);
+      const newDoc: MedicalDocument = {
+        id: `doc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name: file.name,
+        type: file.type.includes("pdf") ? "pdf" : "image",
+        sizeFormatted: `${Math.max(1, Math.round(dataUrl.length / 1024))} KB`,
+        dataUrl,
+        uploadedAt: new Date().toISOString(),
+        category: file.name.toLowerCase().includes("blood")
+          ? "blood_test"
+          : file.name.toLowerCase().includes("rx") || file.name.toLowerCase().includes("prescription")
             ? "prescription"
             : "other",
-        };
-        setUploadedDocuments((prev) => [...prev, newDoc]);
       };
-      reader.readAsDataURL(file);
+      setUploadedDocuments((prev) => [...prev, newDoc]);
     });
   };
 
@@ -313,7 +356,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
           weeksCount: 8,
           monthsCount: 2,
           status: "pending_review",
-          coachNotes: "NEW ₹99 PURCHASE: Client submitted health dossier and medical reports. Review documents before pushing plan.",
+          coachNotes: "NEW ₹99 PURCHASE: Client submitted health profile and medical reports. Review documents before pushing plan.",
           medicalSummary: {
             hasDisease: medicalData.hasDisease,
             diseases: medicalData.diseases,
@@ -342,6 +385,13 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         }),
       }).catch((err) => console.warn("Medical API sync warning (offline ok):", err));
 
+      recordFootprint("medical_submitted", {
+        customerName: customerDetails.name,
+        customerPhone: customerDetails.phone,
+        customerEmail: customerDetails.email,
+        diseases: medicalData.diseases,
+      });
+
       setFunnelStep("medical_submitted");
     } catch (err) {
       console.error("Submit medical error:", err);
@@ -355,6 +405,14 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       setPaymentStatus("creating");
       setErrorMessage(null);
       setSuccessNotice(null);
+
+      recordFootprint("razorpay_checkout_opened", {
+        assessmentId,
+        customerName: customerDetails.name,
+        customerEmail: customerDetails.email,
+        customerPhone: customerDetails.phone,
+        amount: 99,
+      });
 
       const token = await getIdToken();
       const headers: Record<string, string> = {
@@ -380,8 +438,8 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         const errorData = await createOrderRes.json().catch(() => ({}));
         throw new Error(
           errorData.error?.message ||
-            errorData.message ||
-            "Unable to initialize payment order. Please try again."
+          errorData.message ||
+          "Unable to initialize payment order. Please try again."
         );
       }
 
@@ -401,7 +459,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         amount,
         currency: currency || "INR",
         name: APP_CONFIG.brandName,
-        description: "8-Week Personalized Fitness & Nutrition Plan",
+        description: "Personalized Fitness & Nutrition Plan",
         order_id: orderId,
         prefill: {
           name: customerDetails.name,
@@ -414,7 +472,14 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         modal: {
           ondismiss: () => {
             setPaymentStatus("idle");
+            setErrorMessage("Payment was cancelled. You can choose any payment method and retry when ready.");
           },
+        },
+        onPaymentFailed: (failure) => {
+          setPaymentStatus("failed");
+          setErrorMessage(
+            failure.error?.description || "Payment failed. Please try a different payment method or card."
+          );
         },
         handler: async (response: VerifyPaymentRequest) => {
           try {
@@ -546,809 +611,432 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       {/* Main Content Area */}
       <main className="flex-1 max-w-md md:max-w-5xl lg:max-w-6xl mx-auto w-full px-3 sm:px-6 lg:px-8 pt-1 md:pt-6 pb-16 flex flex-col justify-between">
         {funnelStep === "payment" && (
-        <div>
-          {/* Subtitle & 4-Step Stepper Bar */}
-          <div className="flex items-center justify-between gap-1 pt-0.5 pb-1">
-            {/* Back button + UNLOCK YOUR PLAN */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="p-1 -ml-1 text-gray-700 hover:text-black transition-colors"
-                aria-label="Go back"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-              </button>
-              <span className="text-[10px] sm:text-[11px] md:text-xs font-extrabold uppercase tracking-wider text-[#00c853]">
-                UNLOCK YOUR PLAN
-              </span>
-            </div>
-
-            {/* 4-Step Stepper */}
-            <div className="flex items-center justify-end shrink-0">
-              {/* Step 1 */}
-              <div className="flex flex-col items-center">
-                <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-[#00c853] text-white flex items-center justify-center text-[8px] md:text-[9px] font-bold">
-                  ✓
-                </div>
-                <span className="text-[7.5px] md:text-[9px] text-gray-500 font-medium whitespace-nowrap mt-0.5">
-                  Select Goal
+          <div>
+            {/* Subtitle & 4-Step Stepper Bar */}
+            <div className="flex items-center justify-between gap-1 pt-0.5 pb-1">
+              {/* Back button + UNLOCK YOUR PLAN */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="p-1 -ml-1 text-gray-700 hover:text-black transition-colors"
+                  aria-label="Go back"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                </button>
+                <span className="text-[10px] sm:text-[11px] md:text-xs font-extrabold uppercase tracking-wider text-[#00c853]">
+                  UNLOCK YOUR PLAN
                 </span>
               </div>
-              <div className="w-3.5 sm:w-5 md:w-8 h-[1.5px] bg-[#00c853] -mt-3 mx-0.5" />
 
-              {/* Step 2 */}
-              <div className="flex flex-col items-center">
-                <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-[#00c853] text-white flex items-center justify-center text-[8px] md:text-[9px] font-bold">
-                  ✓
-                </div>
-                <span className="text-[7.5px] md:text-[9px] text-gray-500 font-medium whitespace-nowrap mt-0.5">
-                  Body Details
-                </span>
-              </div>
-              <div className="w-3.5 sm:w-5 md:w-8 h-[1.5px] bg-[#00c853] -mt-3 mx-0.5" />
-
-              {/* Step 3 */}
-              <div className="flex flex-col items-center">
-                <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-[#00c853] text-white flex items-center justify-center text-[8px] md:text-[9px] font-bold">
-                  ✓
-                </div>
-                <span className="text-[7.5px] md:text-[9px] text-gray-500 font-medium whitespace-nowrap mt-0.5">
-                  Analysis
-                </span>
-              </div>
-              <div className="w-3.5 sm:w-5 md:w-8 h-[1.5px] bg-[#00c853] -mt-3 mx-0.5" />
-
-              {/* Step 4 */}
-              <div className="flex flex-col items-center">
-                <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-[#073820] text-white flex items-center justify-center text-[8px] md:text-[9px] font-black">
-                  4
-                </div>
-                <span className="text-[7.5px] md:text-[9px] text-gray-900 font-bold whitespace-nowrap mt-0.5">
-                  Payment
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* 2-Column Responsive Grid for Payment */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10 items-start mt-1 md:mt-4">
-            {/* Left Column: Plan Benefits & Visual Previews (md:col-span-7) */}
-            <div className="md:col-span-7 space-y-4">
-              {/* Headline & Subtitle */}
-              <div className="mt-0.5 text-left">
-                <h1 className="text-[17px] sm:text-xl md:text-2xl lg:text-3xl font-black text-gray-900 tracking-tight leading-tight">
-                  Get Your Personalized <span className="text-[#00c853]">Fitness Plan</span>
-                </h1>
-                <p className="text-[8.5px] sm:text-xs md:text-sm text-gray-500 mt-1 leading-snug">
-                  Your analysis is complete. Unlock your full 8-week plan and start your transformation today.
-                </p>
-              </div>
-
-          {/* Dual Offer Comparison Cards */}
-          <div className="grid grid-cols-2 gap-2 md:gap-5 mt-2 md:mt-4">
-            {/* Card 1: Your Plan Includes */}
-            <div className="bg-white rounded-xl md:rounded-2xl border border-gray-150 md:border-gray-200 p-2 md:p-5 shadow-2xs md:shadow-sm flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between gap-1 mb-1.5 md:mb-3">
-                  <h2 className="font-bold text-gray-900 text-[9.5px] sm:text-[10.5px] md:text-base leading-tight">
-                    Your Plan Includes
-                  </h2>
-                  <span className="text-[7px] sm:text-[7.5px] md:text-xs font-bold text-emerald-700 bg-emerald-50 px-1 md:px-2.5 py-0.5 rounded-full whitespace-nowrap">
-                    8 WEEK PLAN
+              {/* 4-Step Stepper */}
+              <div className="flex items-center justify-end shrink-0">
+                {/* Step 1 */}
+                <div className="flex flex-col items-center">
+                  <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-[#00c853] text-white flex items-center justify-center text-[8px] md:text-[9px] font-bold">
+                    ✓
+                  </div>
+                  <span className="text-[7.5px] md:text-[9px] text-gray-500 font-medium whitespace-nowrap mt-0.5">
+                    Select Goal
                   </span>
                 </div>
+                <div className="w-3.5 sm:w-5 md:w-8 h-[1.5px] bg-[#00c853] -mt-3 mx-0.5" />
 
-                <div className="space-y-1.5">
-                  {/* 1. Nutrition */}
-                  <div className="flex items-start gap-1.5">
-                    <div className="w-4.5 h-4.5 rounded-full bg-[#e8f5e9] text-[#00c853] flex items-center justify-center shrink-0 mt-0.5">
-                      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
-                        <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
-                        <line x1="6" y1="1" x2="6" y2="4" />
-                        <line x1="10" y1="1" x2="10" y2="4" />
-                        <line x1="14" y1="1" x2="14" y2="4" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="text-[8px] sm:text-[9px] font-bold text-gray-900 leading-tight">
-                        Personalized Nutrition Plan
-                      </div>
-                      <div className="text-[7px] text-gray-500 leading-none mt-0.5">
-                        Daily calorie target + Indian meal options
-                      </div>
-                    </div>
+                {/* Step 2 */}
+                <div className="flex flex-col items-center">
+                  <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-[#00c853] text-white flex items-center justify-center text-[8px] md:text-[9px] font-bold">
+                    ✓
                   </div>
-
-                  {/* 2. Workout */}
-                  <div className="flex items-start gap-1.5">
-                    <div className="w-4.5 h-4.5 rounded-full bg-[#e8f5e9] text-[#00c853] flex items-center justify-center shrink-0 mt-0.5">
-                      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path d="M6 5v14M18 5v14M4 9h4M16 9h4M4 15h4M16 15h4M8 12h8" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="text-[8px] sm:text-[9px] font-bold text-gray-900 leading-tight">
-                        Goal-Specific Workout Plan
-                      </div>
-                      <div className="text-[7px] text-gray-500 leading-none mt-0.5">
-                        Sets, reps &amp; progressive structure
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 3. Progress Tracking */}
-                  <div className="flex items-start gap-1.5">
-                    <div className="w-4.5 h-4.5 rounded-full bg-[#e8f5e9] text-[#00c853] flex items-center justify-center shrink-0 mt-0.5">
-                      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <line x1="18" y1="20" x2="18" y2="10" />
-                        <line x1="12" y1="20" x2="12" y2="4" />
-                        <line x1="6" y1="20" x2="6" y2="14" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="text-[8px] sm:text-[9px] font-bold text-gray-900 leading-tight">
-                        Progress Tracking
-                      </div>
-                      <div className="text-[7px] text-gray-500 leading-none mt-0.5">
-                        Weekly milestones and adjustments
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 4. Body Data */}
-                  <div className="flex items-start gap-1.5">
-                    <div className="w-4.5 h-4.5 rounded-full bg-[#e8f5e9] text-[#00c853] flex items-center justify-center shrink-0 mt-0.5">
-                      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                        <line x1="16" y1="13" x2="8" y2="13" />
-                        <line x1="16" y1="17" x2="8" y2="17" />
-                        <line x1="10" y1="9" x2="8" y2="9" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="text-[8px] sm:text-[9px] font-bold text-gray-900 leading-tight">
-                        Built Around Your Body Data
-                      </div>
-                      <div className="text-[7px] text-gray-500 leading-none mt-0.5">
-                        Customized for your BMI, body fat and goal
-                      </div>
-                    </div>
-                  </div>
+                  <span className="text-[7.5px] md:text-[9px] text-gray-500 font-medium whitespace-nowrap mt-0.5">
+                    Body Details
+                  </span>
                 </div>
-              </div>
+                <div className="w-3.5 sm:w-5 md:w-8 h-[1.5px] bg-[#00c853] -mt-3 mx-0.5" />
 
-              {/* 3 Phone Screens Showcase */}
-              <div className="mt-1.5 md:mt-3 rounded-md md:rounded-xl overflow-hidden border border-gray-100 bg-gray-50">
-                <Image
-                  src="/images/plan-triple-screens.jpg"
-                  alt="Meal Plan, Workout Plan and Progress Tracker"
-                  width={400}
-                  height={250}
-                  className="w-full h-[62px] sm:h-[70px] md:h-[135px] object-cover md:object-contain bg-white"
-                />
+                {/* Step 3 */}
+                <div className="flex flex-col items-center">
+                  <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-[#00c853] text-white flex items-center justify-center text-[8px] md:text-[9px] font-bold">
+                    ✓
+                  </div>
+                  <span className="text-[7.5px] md:text-[9px] text-gray-500 font-medium whitespace-nowrap mt-0.5">
+                    Analysis
+                  </span>
+                </div>
+                <div className="w-3.5 sm:w-5 md:w-8 h-[1.5px] bg-[#00c853] -mt-3 mx-0.5" />
+
+                {/* Step 4 */}
+                <div className="flex flex-col items-center">
+                  <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-[#073820] text-white flex items-center justify-center text-[8px] md:text-[9px] font-black">
+                    4
+                  </div>
+                  <span className="text-[7.5px] md:text-[9px] text-gray-900 font-bold whitespace-nowrap mt-0.5">
+                    Payment
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Card 2: BMYFIT Personalized Plan */}
-            <div className="bg-white rounded-xl md:rounded-2xl border border-gray-150 md:border-gray-200 p-2 md:p-5 shadow-2xs md:shadow-sm flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between gap-1 mb-0.5 md:mb-2">
-                  <h2 className="font-bold text-gray-900 text-[9.5px] sm:text-[10.5px] md:text-base leading-tight">
-                    BMYFIT<br />Personalized Plan
-                  </h2>
-                  <span className="text-[7px] sm:text-[7.5px] md:text-xs font-bold text-white bg-[#00c853] px-1.5 md:px-2.5 py-0.5 rounded-full whitespace-nowrap self-start">
-                    BEST VALUE
-                  </span>
+            {/* 2-Column Responsive Grid for Payment */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10 items-start mt-1 md:mt-4">
+              {/* Left Column: Plan Benefits & Visual Previews (md:col-span-7) */}
+              <div className="md:col-span-7 space-y-4">
+                {/* Headline & Subtitle */}
+                <div className="mt-0.5 text-left">
+                  <h1 className="text-[17px] sm:text-xl md:text-2xl lg:text-3xl font-black text-gray-900 tracking-tight leading-tight">
+                    Get Your Personalized <span className="text-[#00c853]">Fitness Plan</span>
+                  </h1>
+                  <p className="text-[8.5px] sm:text-xs md:text-sm text-gray-500 mt-1 leading-snug">
+                    Your analysis is complete. Unlock your personalized plan and start your transformation today.
+                  </p>
                 </div>
 
-                {/* Price */}
-                <div className="mt-0.5 md:mt-2">
-                  <div className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tight leading-none">
-                    ₹99
-                  </div>
-                  <div className="text-[7.5px] sm:text-[8px] md:text-xs text-gray-500 font-medium mt-0.5">
-                    One-time payment
-                  </div>
-                </div>
+                {/* Dual Offer Comparison Cards */}
+                <div className="grid grid-cols-2 gap-2 md:gap-5 mt-2 md:mt-4">
+                  {/* Card 1: Your Plan Includes */}
+                  <div className="bg-white rounded-xl md:rounded-2xl border border-gray-150 md:border-gray-200 p-2 md:p-5 shadow-2xs md:shadow-sm flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between gap-1 mb-1.5 md:mb-3">
+                        <h2 className="font-bold text-gray-900 text-[9.5px] sm:text-[10.5px] md:text-base leading-tight">
+                          Your Plan Includes
+                        </h2>
+                        <span className="text-[7px] sm:text-[7.5px] md:text-xs font-bold text-emerald-700 bg-emerald-50 px-1 md:px-2.5 py-0.5 rounded-full whitespace-nowrap">
+                          CUSTOM PLAN
+                        </span>
+                      </div>
 
-                {/* 7 Checklist Points */}
-                <div className="bg-[#f8fafc] rounded-lg md:rounded-xl p-1.5 md:p-3 space-y-1 md:space-y-2 mt-1 md:mt-3 border border-gray-100">
-                  {[
-                    "Daily calorie target",
-                    "Protein target",
-                    "Personalized Indian diet",
-                    "Goal-specific workout",
-                    "8-week structure",
-                    "Progress tracking",
-                    "Lifetime access to your plan",
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-1.5 md:gap-2">
-                      <div className="w-3 h-3 md:w-4 md:h-4 rounded-full bg-[#00c853] text-white flex items-center justify-center shrink-0">
-                        <svg className="w-2.5 h-2.5 md:w-3 md:h-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.5 6.5l2.5 2.5 4.5-5" />
+                      <div className="space-y-1.5">
+                        {/* 1. Nutrition */}
+                        <div className="flex items-start gap-1.5">
+                          <div className="w-4.5 h-4.5 rounded-full bg-[#e8f5e9] text-[#00c853] flex items-center justify-center shrink-0 mt-0.5">
+                            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
+                              <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
+                              <line x1="6" y1="1" x2="6" y2="4" />
+                              <line x1="10" y1="1" x2="10" y2="4" />
+                              <line x1="14" y1="1" x2="14" y2="4" />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="text-[8px] sm:text-[9px] font-bold text-gray-900 leading-tight">
+                              Personalized Nutrition Plan
+                            </div>
+                            <div className="text-[7px] text-gray-500 leading-none mt-0.5">
+                              Daily calorie target + Indian meal options
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 2. Workout */}
+                        <div className="flex items-start gap-1.5">
+                          <div className="w-4.5 h-4.5 rounded-full bg-[#e8f5e9] text-[#00c853] flex items-center justify-center shrink-0 mt-0.5">
+                            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M6 5v14M18 5v14M4 9h4M16 9h4M4 15h4M16 15h4M8 12h8" />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="text-[8px] sm:text-[9px] font-bold text-gray-900 leading-tight">
+                              Goal-Specific Workout Plan
+                            </div>
+                            <div className="text-[7px] text-gray-500 leading-none mt-0.5">
+                              Sets, reps &amp; progressive structure
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 3. Progress Tracking */}
+                        <div className="flex items-start gap-1.5">
+                          <div className="w-4.5 h-4.5 rounded-full bg-[#e8f5e9] text-[#00c853] flex items-center justify-center shrink-0 mt-0.5">
+                            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <line x1="18" y1="20" x2="18" y2="10" />
+                              <line x1="12" y1="20" x2="12" y2="4" />
+                              <line x1="6" y1="20" x2="6" y2="14" />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="text-[8px] sm:text-[9px] font-bold text-gray-900 leading-tight">
+                              Progress Tracking
+                            </div>
+                            <div className="text-[7px] text-gray-500 leading-none mt-0.5">
+                              Weekly milestones and adjustments
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 4. Body Data */}
+                        <div className="flex items-start gap-1.5">
+                          <div className="w-4.5 h-4.5 rounded-full bg-[#e8f5e9] text-[#00c853] flex items-center justify-center shrink-0 mt-0.5">
+                            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                              <polyline points="14 2 14 8 20 8" />
+                              <line x1="16" y1="13" x2="8" y2="13" />
+                              <line x1="16" y1="17" x2="8" y2="17" />
+                              <line x1="10" y1="9" x2="8" y2="9" />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="text-[8px] sm:text-[9px] font-bold text-gray-900 leading-tight">
+                              Built Around Your Body Data
+                            </div>
+                            <div className="text-[7px] text-gray-500 leading-none mt-0.5">
+                              Customized for your BMI, body fat and goal
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 3 Phone Screens Showcase */}
+                    <div className="mt-1.5 md:mt-3 rounded-md md:rounded-xl overflow-hidden border border-gray-100 bg-gray-50">
+                      <Image
+                        src="/images/plan-triple-screens.jpg"
+                        alt="Meal Plan, Workout Plan and Progress Tracker"
+                        width={400}
+                        height={250}
+                        className="w-full h-[62px] sm:h-[70px] md:h-[135px] object-cover md:object-contain bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Card 2: BMYFIT Personalized Plan */}
+                  <div className="bg-white rounded-xl md:rounded-2xl border border-gray-150 md:border-gray-200 p-2 md:p-5 shadow-2xs md:shadow-sm flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between gap-1 mb-0.5 md:mb-2">
+                        <h2 className="font-bold text-gray-900 text-[9.5px] sm:text-[10.5px] md:text-base leading-tight">
+                          BMYFIT<br />Personalized Plan
+                        </h2>
+                        <span className="text-[7px] sm:text-[7.5px] md:text-xs font-bold text-white bg-[#00c853] px-1.5 md:px-2.5 py-0.5 rounded-full whitespace-nowrap self-start">
+                          BEST VALUE
+                        </span>
+                      </div>
+
+                      {/* Price */}
+                      <div className="mt-0.5 md:mt-2">
+                        <div className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tight leading-none">
+                          ₹99
+                        </div>
+                        <div className="text-[7.5px] sm:text-[8px] md:text-xs text-gray-500 font-medium mt-0.5">
+                          One-time payment
+                        </div>
+                      </div>
+
+                      {/* 7 Checklist Points */}
+                      <div className="bg-[#f8fafc] rounded-lg md:rounded-xl p-1.5 md:p-3 space-y-1 md:space-y-2 mt-1 md:mt-3 border border-gray-100">
+                        {[
+                          "Daily calorie target",
+                          "Protein target",
+                          "Personalized Indian diet",
+                          "Goal-specific workout",
+                          "Structured progressive phases",
+                          "Progress tracking",
+                          "Lifetime access to your plan",
+                        ].map((item, idx) => (
+                          <div key={idx} className="flex items-center gap-1.5 md:gap-2">
+                            <div className="w-3 h-3 md:w-4 md:h-4 rounded-full bg-[#00c853] text-white flex items-center justify-center shrink-0">
+                              <svg className="w-2.5 h-2.5 md:w-3 md:h-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.5 6.5l2.5 2.5 4.5-5" />
+                              </svg>
+                            </div>
+                            <span className="text-[7.5px] sm:text-[8px] md:text-xs text-gray-700 font-medium leading-none">
+                              {item}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Gift Box Guarantee callout */}
+                    <div className="mt-1 md:mt-3 flex items-center gap-1 md:gap-2 p-1 md:p-2.5 rounded-md md:rounded-xl bg-emerald-50/70 border border-emerald-100/60">
+                      <div className="w-4 h-4 md:w-6 md:h-6 rounded bg-emerald-100 text-[#00c853] flex items-center justify-center shrink-0">
+                        <svg className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <polyline points="20 12 20 22 4 22 4 12" />
+                          <rect x="2" y="7" width="20" height="5" />
+                          <line x1="12" y1="22" x2="12" y2="7" />
+                          <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+                          <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
                         </svg>
                       </div>
-                      <span className="text-[7.5px] sm:text-[8px] md:text-xs text-gray-700 font-medium leading-none">
-                        {item}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Gift Box Guarantee callout */}
-              <div className="mt-1 md:mt-3 flex items-center gap-1 md:gap-2 p-1 md:p-2.5 rounded-md md:rounded-xl bg-emerald-50/70 border border-emerald-100/60">
-                <div className="w-4 h-4 md:w-6 md:h-6 rounded bg-emerald-100 text-[#00c853] flex items-center justify-center shrink-0">
-                  <svg className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="20 12 20 22 4 22 4 12" />
-                    <rect x="2" y="7" width="20" height="5" />
-                    <line x1="12" y1="22" x2="12" y2="7" />
-                    <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
-                    <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
-                  </svg>
-                </div>
-                <p className="text-[6.5px] sm:text-[7.5px] md:text-xs text-gray-600 leading-tight">
-                  No subscription. No hidden charges. Just your personalized plan.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* 3 Trust Badges for Desktop Left Column */}
-          <div className="hidden md:grid grid-cols-3 gap-2.5 pt-2">
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center gap-2 text-center shadow-2xs">
-              <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                <FontAwesomeIcon icon={faShieldHalved} className="w-3.5 h-3.5 text-emerald-600" />
-              </div>
-              <span className="text-xs text-gray-700 font-bold leading-tight">
-                100% Secure Payments
-              </span>
-            </div>
-
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center gap-2 text-center shadow-2xs">
-              <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                <FontAwesomeIcon icon={faBolt} className="w-3.5 h-3.5 text-emerald-600" />
-              </div>
-              <span className="text-xs text-gray-700 font-bold leading-tight">
-                Instant Access After Payment
-              </span>
-            </div>
-
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center gap-2 text-center shadow-2xs">
-              <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                <FontAwesomeIcon icon={faLock} className="w-3.5 h-3.5 text-emerald-600" />
-              </div>
-              <span className="text-xs text-gray-700 font-bold leading-tight">
-                Your Data is Private
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Contact, Payment Methods & Pay CTA (md:col-span-5) */}
-        <div className="md:col-span-5 space-y-4 md:sticky md:top-20">
-
-          {/* Contact Details summary / edit row */}
-          <div className="mt-2 md:mt-3 bg-gray-50 border border-gray-200 rounded-lg md:rounded-xl p-2 md:p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 md:gap-2.5">
-                <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-[#00c853]/15 text-[#00c853] flex items-center justify-center text-[10px] md:text-xs font-bold">
-                  ✓
-                </div>
-                <div>
-                  <div className="text-[9.5px] md:text-sm font-bold text-gray-900 leading-tight">
-                    {customerDetails.name ? `Deliver Plan & Receipt To: ${customerDetails.name}` : "Deliver Plan & Instant Digital Receipt"}
-                  </div>
-                  <div className="text-[7.5px] md:text-xs text-gray-500 leading-tight mt-0.5">
-                    {customerDetails.email && customerDetails.phone
-                      ? `${customerDetails.email} • ${customerDetails.phone}`
-                      : (customerDetails.email || customerDetails.phone || "Instant delivery to WhatsApp & Email upon payment")}
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowEditContact(!showEditContact)}
-                className="text-[8px] md:text-xs font-bold text-[#00c853] hover:underline"
-              >
-                {showEditContact ? "Done" : "Edit Details"}
-              </button>
-            </div>
-
-            {showEditContact && (
-              <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-200 grid grid-cols-1 gap-1.5 md:gap-2.5">
-                <div>
-                  <label className="text-[7.5px] md:text-xs font-semibold text-gray-600 block mb-0.5">Your Full Name</label>
-                  <input
-                    type="text"
-                    value={customerDetails.name}
-                    onChange={(e) => setCustomerDetails({ ...customerDetails, name: e.target.value })}
-                    className="w-full text-[9px] md:text-sm px-2 md:px-3 py-1 md:py-2 border border-gray-300 rounded md:rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[#00c853]"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-1.5 md:gap-2.5">
-                  <div>
-                    <label className="text-[7.5px] md:text-xs font-semibold text-gray-600 block mb-0.5">Email Address</label>
-                    <input
-                      type="email"
-                      value={customerDetails.email}
-                      onChange={(e) => setCustomerDetails({ ...customerDetails, email: e.target.value })}
-                      className="w-full text-[9px] md:text-sm px-2 md:px-3 py-1 md:py-2 border border-gray-300 rounded md:rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[#00c853]"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[7.5px] md:text-xs font-semibold text-gray-600 block mb-0.5">WhatsApp / Phone</label>
-                    <input
-                      type="tel"
-                      value={customerDetails.phone}
-                      onChange={(e) => setCustomerDetails({ ...customerDetails, phone: e.target.value })}
-                      className="w-full text-[9px] md:text-sm px-2 md:px-3 py-1 md:py-2 border border-gray-300 rounded md:rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[#00c853]"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Payment Gateway Mode Selector Tabs (PhonePe Direct vs Razorpay) */}
-          <div className="mt-3">
-            <div className="flex items-center gap-1.5 p-1 bg-gray-100/90 rounded-2xl border border-gray-200/80">
-              <button
-                type="button"
-                onClick={() => setPaymentGatewayMode("phonepe")}
-                className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  paymentGatewayMode === "phonepe"
-                    ? "bg-[#5f259f] text-white shadow-sm scale-[1.01]"
-                    : "text-gray-600 hover:text-gray-950"
-                }`}
-              >
-                <div className="w-4 h-4 rounded-full bg-white text-[#5f259f] flex items-center justify-center text-[8px] font-black shrink-0">
-                  पे
-                </div>
-                <span>PhonePe & Direct UPI</span>
-                <span className="text-[9px] bg-emerald-400 text-gray-950 px-1.5 py-0.2 rounded-full font-black ml-0.5">
-                  FAST
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPaymentGatewayMode("razorpay")}
-                className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  paymentGatewayMode === "razorpay"
-                    ? "bg-slate-900 text-white shadow-sm scale-[1.01]"
-                    : "text-gray-600 hover:text-gray-950"
-                }`}
-              >
-                <span>💳 Razorpay Gateway</span>
-                <span className="text-[9px] bg-gray-200 text-gray-700 px-1.5 py-0.2 rounded-full font-bold ml-0.5">
-                  Cards
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* ================= MODE A: DIRECT PHONEPE & UPI (INSTANT APP REDIRECT) ================= */}
-          {paymentGatewayMode === "phonepe" && (
-            <div className="mt-3 space-y-3">
-              {/* PhonePe Direct Action Card */}
-              <div className="bg-gradient-to-br from-purple-50 via-white to-emerald-50/40 border-2 border-[#5f259f]/30 rounded-2xl p-3.5 space-y-3 shadow-xs">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-[#5f259f] text-white flex items-center justify-center text-sm font-black shadow-xs shrink-0">
-                      पे
-                    </div>
-                    <div>
-                      <h3 className="text-xs sm:text-sm font-black text-gray-950 flex items-center gap-1">
-                        <span>Pay ₹99 via PhonePe</span>
-                        <span className="text-[9px] bg-purple-100 text-[#5f259f] px-1.5 py-0.2 rounded-full font-bold">
-                          Direct App
-                        </span>
-                      </h3>
-                      <p className="text-[10px] text-gray-500 font-medium">
-                        Auto-opens PhonePe with ₹99 and Coach Naveen pre-filled
+                      <p className="text-[6.5px] sm:text-[7.5px] md:text-xs text-gray-600 leading-tight">
+                        No subscription. No hidden charges. Just your personalized plan.
                       </p>
                     </div>
                   </div>
-
-                  <span className="text-sm font-black text-gray-950 shrink-0">
-                    ₹99
-                  </span>
                 </div>
 
-                {/* Instant Deep Link Trigger Buttons */}
-                <div className="space-y-2">
-                  {/* Primary: Open PhonePe directly */}
-                  <a
-                    href="phonepe://pay?pa=9849012345@ybl&pn=BMYFIT%20Coach%20Naveen&am=99&cu=INR&tn=BMYFIT%208-Week%20Plan"
-                    onClick={() => {
-                      setShowUtrVerification(true);
-                      setPaymentAppUsed("PhonePe");
-                    }}
-                    className="w-full py-2.5 px-4 rounded-xl bg-[#5f259f] hover:bg-[#4d1d82] active:bg-[#3d1667] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] cursor-pointer"
-                  >
-                    <div className="w-4 h-4 rounded-full bg-white text-[#5f259f] flex items-center justify-center text-[9px] font-black">
+                {/* 3 Trust Badges for Desktop Left Column */}
+                <div className="hidden md:grid grid-cols-3 gap-2.5 pt-2">
+                  <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center gap-2 text-center shadow-2xs">
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <FontAwesomeIcon icon={faShieldHalved} className="w-3.5 h-3.5 text-emerald-600" />
+                    </div>
+                    <span className="text-xs text-gray-700 font-bold leading-tight">
+                      100% Secure Payments
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center gap-2 text-center shadow-2xs">
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <FontAwesomeIcon icon={faBolt} className="w-3.5 h-3.5 text-emerald-600" />
+                    </div>
+                    <span className="text-xs text-gray-700 font-bold leading-tight">
+                      Instant Access After Payment
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center gap-2 text-center shadow-2xs">
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <FontAwesomeIcon icon={faLock} className="w-3.5 h-3.5 text-emerald-600" />
+                    </div>
+                    <span className="text-xs text-gray-700 font-bold leading-tight">
+                      Your Data is Private
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ================= SECURE RAZORPAY PAYMENT GATEWAY (md:col-span-5) ================= */}
+              <div className="md:col-span-5 space-y-4">
+                <div className="mt-3">
+            <h2 className="text-[12px] sm:text-[13px] font-bold text-gray-900 leading-tight">
+              Choose a Payment Method
+            </h2>
+            <p className="text-[9px] sm:text-[10px] text-gray-500 mt-0.5 mb-2 leading-none">
+              Secure 256-bit encrypted checkout powered by Razorpay.
+            </p>
+
+            <div className="space-y-1.5">
+              {/* Option 1: UPI */}
+              <div
+                onClick={() => setSelectedMethod("upi")}
+                className={`p-2 rounded-xl cursor-pointer transition-all flex items-center justify-between border ${
+                  selectedMethod === "upi"
+                    ? "border-2 border-[#00c853] bg-[#f0fdf4] shadow-xs"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-1 shrink-0">
+                    <div className="h-4 px-1 rounded bg-white flex items-center justify-center border border-gray-200 shadow-2xs">
+                      <span className="text-[7px] font-black text-gray-800 tracking-tighter">UPI</span>
+                    </div>
+                    <div className="h-4 px-1 rounded bg-white flex items-center justify-center border border-gray-200 shadow-2xs">
+                      <span className="text-[7px] font-bold text-gray-700 flex items-center gap-0.5">
+                        <span className="text-blue-500 font-black">G</span>Pay
+                      </span>
+                    </div>
+                    <div className="w-4 h-4 rounded-full bg-[#5f259f] text-white flex items-center justify-center text-[7px] font-bold">
                       पे
                     </div>
-                    <span>Open PhonePe App (₹99 Pre-filled) →</span>
-                  </a>
-
-                  {/* Fallback: Universal UPI Intent for GPay, Paytm, BHIM, CRED */}
-                  <a
-                    href="upi://pay?pa=9849012345@ybl&pn=BMYFIT%20Coach%20Naveen&am=99&cu=INR&tn=BMYFIT%208-Week%20Plan"
-                    onClick={() => {
-                      setShowUtrVerification(true);
-                      setPaymentAppUsed("Google Pay");
-                    }}
-                    className="w-full py-2 px-3 rounded-xl bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 font-bold text-[11px] flex items-center justify-center gap-2 transition cursor-pointer"
-                  >
-                    <span>Or Pay via GPay / Paytm / Other UPI App</span>
-                  </a>
-                </div>
-
-                {/* Desktop / QR Fallback View */}
-                <div className="pt-2 border-t border-purple-100 space-y-2">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-gray-500 font-semibold">Payee UPI ID:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (typeof navigator !== "undefined" && navigator.clipboard) {
-                          void navigator.clipboard.writeText("9849012345@ybl");
-                          setCopiedUpi(true);
-                          setTimeout(() => setCopiedUpi(false), 2000);
-                        }
-                      }}
-                      className="font-mono font-bold text-purple-900 bg-purple-100 hover:bg-purple-200 px-2 py-0.5 rounded-lg flex items-center gap-1 cursor-pointer transition"
-                    >
-                      <span>9849012345@ybl</span>
-                      <span className="text-[10px]">{copiedUpi ? "✓ Copied" : "📋 Copy"}</span>
-                    </button>
-                  </div>
-
-                  {/* Collapsible Scannable QR Code */}
-                  <div className="text-center pt-1">
-                    <p className="text-[10px] text-gray-500 font-medium mb-1.5">
-                      On Laptop/Desktop? Scan this QR code with PhonePe or GPay:
-                    </p>
-                    <div className="inline-block p-2 bg-white rounded-xl border border-gray-200 shadow-2xs">
-                      <img
-                        src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=4&data=upi%3A%2F%2Fpay%3Fpa%3D9849012345%40ybl%26pn%3DBMYFIT%2520Coach%2520Naveen%26am%3D99%26cu%3DINR%26tn%3DBMYFIT%25208-Week%2520Plan"
-                        alt="Scan to pay ₹99 via PhonePe / UPI"
-                        className="w-36 h-36 mx-auto rounded-lg object-contain"
-                      />
+                    <div className="h-4 px-1 rounded bg-[#002e6e] text-white flex items-center justify-center text-[6.5px] font-bold">
+                      Pay<span className="text-[#00b9f5]">tm</span>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* ================= STEP 2: ENTER UTR & UPLOAD SCREENSHOT ================= */}
-              <div className="bg-white border-2 border-emerald-500/40 rounded-2xl p-3.5 space-y-3 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">
-                      ✓
-                    </div>
-                    <h3 className="text-xs sm:text-sm font-black text-gray-950">
-                      Step 2: Confirm Payment & Unlock Plan
-                    </h3>
-                  </div>
-                  <span className="text-[9px] font-black uppercase text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
-                    Required
-                  </span>
-                </div>
-
-                <p className="text-[11px] text-gray-500 leading-snug">
-                  Once paid in PhonePe, enter the <strong>12-digit UTR / Transaction ID</strong> from your receipt to verify and instantly unlock your dashboard.
-                </p>
-
-                {/* Form fields */}
-                <div className="space-y-2.5">
                   <div>
-                    <label className="text-[10px] font-bold text-gray-700 block mb-1">
-                      12-Digit UPI Reference / UTR Number *
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={18}
-                      placeholder="e.g. 430489123456 or T241031..."
-                      value={utrInput}
-                      onChange={(e) => setUtrInput(e.target.value.replace(/\s/g, ""))}
-                      className="w-full text-xs font-mono font-bold px-3 py-2 border border-gray-300 rounded-xl bg-gray-50/50 text-gray-900 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-700 block mb-1">
-                        App Used
-                      </label>
-                      <select
-                        value={paymentAppUsed}
-                        onChange={(e) => setPaymentAppUsed(e.target.value)}
-                        className="w-full text-xs font-semibold px-2.5 py-2 border border-gray-300 rounded-xl bg-white text-gray-900 focus:outline-none focus:border-emerald-500"
-                      >
-                        <option value="PhonePe">PhonePe</option>
-                        <option value="Google Pay">Google Pay</option>
-                        <option value="Paytm">Paytm</option>
-                        <option value="BHIM">BHIM</option>
-                        <option value="CRED">CRED</option>
-                        <option value="Other UPI">Other UPI</option>
-                      </select>
+                    <div className={`text-[10.5px] sm:text-[11.5px] font-bold ${selectedMethod === "upi" ? "text-[#00c853]" : "text-gray-900"}`}>
+                      UPI (Google Pay, PhonePe, Paytm, QR)
                     </div>
-
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-700 block mb-1">
-                        Screenshot (Optional)
-                      </label>
-                      <label className="w-full text-[10px] font-bold px-2.5 py-2 border border-dashed border-gray-300 hover:border-emerald-500 rounded-xl bg-gray-50 text-gray-700 flex items-center justify-center cursor-pointer transition truncate">
-                        <span>{paymentScreenshotName || "📎 Upload Receipt"}</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              setPaymentScreenshotName(file.name);
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                setPaymentScreenshotBase64(reader.result as string);
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                        />
-                      </label>
+                    <div className="text-[8px] sm:text-[8.5px] text-gray-500 leading-none">
+                      Zero convenience fee • Instant automated plan activation
                     </div>
                   </div>
+                </div>
 
-                  {paymentScreenshotBase64 && (
-                    <div className="flex items-center gap-2 p-1.5 rounded-xl bg-emerald-50 border border-emerald-200">
-                      <img
-                        src={paymentScreenshotBase64}
-                        alt="Payment Receipt Preview"
-                        className="w-9 h-9 rounded-lg object-cover border border-emerald-300"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold text-emerald-900 truncate">
-                          {paymentScreenshotName || "Receipt Attached"}
-                        </p>
-                        <p className="text-[9px] text-emerald-700 font-semibold">Attached for Coach verification</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPaymentScreenshotBase64(null);
-                          setPaymentScreenshotName(null);
-                        }}
-                        className="text-rose-600 hover:text-rose-800 text-[10px] font-bold px-1.5 cursor-pointer"
-                      >
-                        ✕
-                      </button>
+                <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ml-2 border-[#00c853]">
+                  {selectedMethod === "upi" && <div className="w-2 h-2 rounded-full bg-[#00c853]" />}
+                </div>
+              </div>
+
+              {/* Option 2: Card */}
+              <div
+                onClick={() => setSelectedMethod("card")}
+                className={`p-2 rounded-xl cursor-pointer transition-all flex items-center justify-between border ${
+                  selectedMethod === "card"
+                    ? "border-2 border-[#00c853] bg-[#f0fdf4] shadow-xs"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded bg-gray-100 flex items-center justify-center text-gray-700 shrink-0">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="2" y="5" width="20" height="14" rx="2" />
+                      <line x1="2" y1="10" x2="22" y2="10" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[10.5px] sm:text-[11.5px] font-bold text-gray-900">
+                      Debit / Credit Card
                     </div>
-                  )}
+                    <div className="text-[8px] sm:text-[8.5px] text-gray-500 leading-none">
+                      Visa, Mastercard, RuPay &amp; Diners Club
+                    </div>
+                  </div>
+                </div>
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ml-2 ${selectedMethod === "card" ? "border-[#00c853]" : "border-gray-300"}`}>
+                  {selectedMethod === "card" && <div className="w-2 h-2 rounded-full bg-[#00c853]" />}
+                </div>
+              </div>
 
-                  {/* Verification Submit Button */}
-                  <button
-                    type="button"
-                    disabled={isVerifyingUtr || !utrInput.trim()}
-                    onClick={async () => {
-                      const cleanUtr = utrInput.trim();
-                      if (cleanUtr.length < 6) {
-                        setErrorMessage("Please enter a valid UPI Reference / UTR Number (minimum 6 digits).");
-                        return;
-                      }
-
-                      try {
-                        setIsVerifyingUtr(true);
-                        setErrorMessage(null);
-
-                        const res = await fetch("/api/payments/manual-upi-verify", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            assessmentId,
-                            utr: cleanUtr,
-                            paymentApp: paymentAppUsed,
-                            paymentScreenshot: paymentScreenshotBase64,
-                            customerName: customerDetails.name,
-                            customerEmail: customerDetails.email,
-                            customerPhone: customerDetails.phone,
-                          }),
-                        });
-
-                        if (!res.ok) {
-                          const errData = await res.json().catch(() => ({}));
-                          throw new Error(errData.error?.message || "Verification failed. Please retry.");
-                        }
-
-                        // Unlock local session
-                        if (typeof window !== "undefined") {
-                          sessionStorage.setItem("bmyfit_local_paid", "true");
-                        }
-
-                        setSuccessNotice(`✓ Payment Confirmed! UTR ${cleanUtr} verified. Unlocking your 8-week plan...`);
-                        handlePaymentSuccessPostProcess(cleanUtr, `ord_upi_${cleanUtr}`);
-                        setTimeout(() => {
-                          setFunnelStep("medical_questionnaire");
-                        }, 900);
-                      } catch (err: unknown) {
-                        const error = err as { message?: string };
-                        setErrorMessage(error.message || "Failed to submit UTR verification.");
-                      } finally {
-                        setIsVerifyingUtr(false);
-                      }
-                    }}
-                    className="w-full py-2.5 px-4 rounded-full bg-[#00c853] hover:bg-[#00b34a] active:bg-[#009b40] text-white font-black text-xs sm:text-[13px] flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] cursor-pointer disabled:opacity-60"
-                  >
-                    {isVerifyingUtr ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-1.5 h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        <span>Verifying UTR Reference...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Submit UTR &amp; Unlock 8-Week Plan (₹99) →</span>
-                      </>
-                    )}
-                  </button>
+              {/* Option 3: Net Banking */}
+              <div
+                onClick={() => setSelectedMethod("netbanking")}
+                className={`p-2 rounded-xl cursor-pointer transition-all flex items-center justify-between border ${
+                  selectedMethod === "netbanking"
+                    ? "border-2 border-[#00c853] bg-[#f0fdf4] shadow-xs"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded bg-gray-100 flex items-center justify-center text-gray-700 shrink-0">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 21h18M3 10h18M5 10v11M9 10v11M15 10v11M19 10v11M12 2L2 7h20L12 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[10.5px] sm:text-[11.5px] font-bold text-gray-900">
+                      Net Banking &amp; Wallets
+                    </div>
+                    <div className="text-[8px] sm:text-[8.5px] text-gray-500 leading-none">
+                      HDFC, ICICI, SBI, Axis &amp; 50+ Indian banks
+                    </div>
+                  </div>
+                </div>
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ml-2 ${selectedMethod === "netbanking" ? "border-[#00c853]" : "border-gray-300"}`}>
+                  {selectedMethod === "netbanking" && <div className="w-2 h-2 rounded-full bg-[#00c853]" />}
                 </div>
               </div>
             </div>
-          )}
 
-          {/* ================= MODE B: RAZORPAY GATEWAY ================= */}
-          {paymentGatewayMode === "razorpay" && (
-            <div className="mt-2">
-              <h2 className="text-[11.5px] sm:text-[12.5px] font-bold text-gray-900 leading-tight">
-                Choose a Payment Method
-              </h2>
-              <p className="text-[8px] sm:text-[9px] text-gray-500 mt-0.5 mb-1.5 leading-none">
-                Secure and encrypted payment gateway powered by Razorpay.
-              </p>
-
-              <div className="space-y-1">
-                {/* Option 1: UPI */}
-                <div
-                  onClick={() => setSelectedMethod("upi")}
-                  className={`p-1.5 sm:p-2 rounded-lg cursor-pointer transition-all flex items-center justify-between border ${
-                    selectedMethod === "upi"
-                      ? "border-1.5 border-[#00c853] bg-[#f0fdf4]"
-                      : "border-gray-200 bg-white hover:border-gray-300"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 shrink-0">
-                      <div className="h-3.5 px-1 rounded bg-white flex items-center justify-center border border-gray-200 shadow-2xs">
-                        <span className="text-[6.5px] font-black text-gray-800 tracking-tighter">UPI</span>
-                      </div>
-                      <div className="h-3.5 px-1 rounded bg-white flex items-center justify-center border border-gray-200 shadow-2xs">
-                        <span className="text-[6.5px] font-bold text-gray-700 flex items-center gap-0.5">
-                          <span className="text-blue-500 font-black">G</span>Pay
-                        </span>
-                      </div>
-                      <div className="w-3.5 h-3.5 rounded-full bg-[#5f259f] text-white flex items-center justify-center text-[6.5px] font-bold">
-                        पे
-                      </div>
-                      <div className="h-3.5 px-1 rounded bg-[#002e6e] text-white flex items-center justify-center text-[6px] font-bold">
-                        Pay<span className="text-[#00b9f5]">tm</span>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className={`text-[9.5px] sm:text-[10.5px] font-bold ${selectedMethod === "upi" ? "text-[#00c853]" : "text-gray-900"}`}>
-                        UPI (Google Pay, PhonePe, Paytm, QR)
-                      </div>
-                      <div className="text-[7px] sm:text-[8px] text-gray-500 leading-none">
-                        Zero convenience fee • Instant plan activation
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="w-3.5 h-3.5 rounded-full border-1.5 flex items-center justify-center shrink-0 ml-2 border-[#00c853]">
-                    {selectedMethod === "upi" && <div className="w-1.5 h-1.5 rounded-full bg-[#00c853]" />}
-                  </div>
-                </div>
-
-                {/* Option 2: Card */}
-                <div
-                  onClick={() => setSelectedMethod("card")}
-                  className={`p-1.5 sm:p-2 rounded-lg cursor-pointer transition-all flex items-center justify-between border ${
-                    selectedMethod === "card"
-                      ? "border-1.5 border-[#00c853] bg-[#f0fdf4]"
-                      : "border-gray-200 bg-white hover:border-gray-300"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded bg-gray-100 flex items-center justify-center text-gray-700 shrink-0">
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="2" y="5" width="20" height="14" rx="2" />
-                        <line x1="2" y1="10" x2="22" y2="10" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="text-[9.5px] sm:text-[10.5px] font-bold text-gray-900">
-                        Debit / Credit Card
-                      </div>
-                      <div className="text-[7px] sm:text-[8px] text-gray-500 leading-none">
-                        Visa, Mastercard, RuPay &amp; Diners Club
-                      </div>
-                    </div>
-                  </div>
-                  <div className={`w-3.5 h-3.5 rounded-full border-1.5 flex items-center justify-center shrink-0 ml-2 ${selectedMethod === "card" ? "border-[#00c853]" : "border-gray-300"}`}>
-                    {selectedMethod === "card" && <div className="w-1.5 h-1.5 rounded-full bg-[#00c853]" />}
-                  </div>
-                </div>
-
-                {/* Option 3: Net Banking */}
-                <div
-                  onClick={() => setSelectedMethod("netbanking")}
-                  className={`p-1.5 sm:p-2 rounded-lg cursor-pointer transition-all flex items-center justify-between border ${
-                    selectedMethod === "netbanking"
-                      ? "border-1.5 border-[#00c853] bg-[#f0fdf4]"
-                      : "border-gray-200 bg-white hover:border-gray-300"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded bg-gray-100 flex items-center justify-center text-gray-700 shrink-0">
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M3 21h18M3 10h18M5 10v11M9 10v11M15 10v11M19 10v11M12 2L2 7h20L12 2z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="text-[9.5px] sm:text-[10.5px] font-bold text-gray-900">
-                        Net Banking &amp; Wallets
-                      </div>
-                      <div className="text-[7px] sm:text-[8px] text-gray-500 leading-none">
-                        HDFC, ICICI, SBI, Axis &amp; 50+ banks
-                      </div>
-                    </div>
-                  </div>
-                  <div className={`w-3.5 h-3.5 rounded-full border-1.5 flex items-center justify-center shrink-0 ml-2 ${selectedMethod === "netbanking" ? "border-[#00c853]" : "border-gray-300"}`}>
-                    {selectedMethod === "netbanking" && <div className="w-1.5 h-1.5 rounded-full bg-[#00c853]" />}
-                  </div>
-                </div>
-              </div>
-
-              {/* Main Action Button for Razorpay */}
-              <div className="mt-2.5">
-                <button
-                  type="button"
-                  onClick={handlePay}
-                  disabled={paymentStatus === "creating" || paymentStatus === "verifying"}
-                  className="w-full py-2.5 px-4 rounded-full bg-[#073820] hover:bg-[#052b18] active:bg-[#031d10] text-white font-bold text-xs sm:text-[13px] flex items-center justify-center gap-2 shadow-sm active:scale-[0.99] transition-all cursor-pointer disabled:opacity-75"
-                >
-                  {paymentStatus === "creating" || paymentStatus === "verifying" ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-1.5 h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      <span>
-                        {paymentStatus === "creating" ? "Initializing Gateway..." : "Verifying HMAC Signature..."}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Pay ₹99 via Razorpay &amp; Unlock</span>
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                    </>
-                  )}
-                </button>
-              </div>
+            {/* Main Action Button for Razorpay */}
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={handlePay}
+                disabled={paymentStatus === "creating" || paymentStatus === "verifying"}
+                className="w-full py-3 px-4 rounded-full bg-[#073820] hover:bg-[#052b18] active:bg-[#031d10] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md active:scale-[0.99] transition-all cursor-pointer disabled:opacity-75"
+              >
+                {paymentStatus === "creating" || paymentStatus === "verifying" ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-1.5 h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span>
+                      {paymentStatus === "creating" ? "Initializing Razorpay..." : "Verifying Payment..."}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span>Pay ₹99 via Razorpay &amp; Unlock</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </>
+                )}
+              </button>
             </div>
-          )}
+          </div>
 
           {/* Error notice if needed */}
           {errorMessage && (
@@ -1408,8 +1096,8 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
               <div className="p-1 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center gap-1 text-center">
                 <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                   <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    <circle cx="12" cy="11" r="1.5" />
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0110 0v4" />
                   </svg>
                 </div>
                 <span className="text-[7.5px] text-gray-700 font-semibold leading-tight">
@@ -1455,7 +1143,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
                   <div className="flex items-center gap-2">
                     <span className="text-xl">🩺</span>
                     <h1 className="text-sm font-black text-gray-900 leading-tight">
-                      Medical &amp; Clinical Health Dossier
+                      Medical &amp; Clinical Health Profile
                     </h1>
                   </div>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
@@ -1481,11 +1169,10 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
                           key={item.id}
                           type="button"
                           onClick={() => handleToggleDisease(item.label)}
-                          className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all flex items-center gap-2 ${
-                            isSelected
-                              ? "bg-emerald-600 text-white border-emerald-600 shadow-xs scale-[1.01]"
-                              : "bg-gray-50/80 hover:bg-gray-100 border-gray-200 text-gray-800"
-                          }`}
+                          className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all flex items-center gap-2 ${isSelected
+                            ? "bg-emerald-600 text-white border-emerald-600 shadow-xs scale-[1.01]"
+                            : "bg-gray-50/80 hover:bg-gray-100 border-gray-200 text-gray-800"
+                            }`}
                         >
                           <span className="text-base">{item.icon}</span>
                           <span className="text-[11px] leading-tight">{item.label}</span>
@@ -1615,13 +1302,13 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
                     className="w-full py-3.5 px-4 rounded-xl bg-[#00c853] hover:bg-[#00b047] active:bg-[#00963d] disabled:opacity-50 text-white font-black text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
                   >
                     {isSubmittingMedical ? (
-                      <span>Registering Dossier &amp; Notifying Coach...</span>
+                      <span>Registering Health Profile &amp; Notifying Coach...</span>
                     ) : (
-                      <span>✓ Submit Health Dossier to Head Coach</span>
+                      <span>✓ Submit Health Profile to Head Coach</span>
                     )}
                   </button>
                   <p className="text-[9.5px] text-center text-gray-400 mt-2">
-                    🔒 Stored securely in your private dossier. Head Coach will review these medical inputs before assigning your custom plan.
+                    🔒 Stored securely in your private profile. Head Coach will review these medical inputs before assigning your custom plan.
                   </p>
                 </div>
               </div>
@@ -1638,7 +1325,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
 
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
-                MEDICAL DOSSIER REGISTERED · COACH NOTIFIED
+                HEALTH PROFILE REGISTERED · COACH NOTIFIED
               </span>
               <h2 className="text-xl font-black text-gray-950 mt-2">
                 Health Assessment Submitted!

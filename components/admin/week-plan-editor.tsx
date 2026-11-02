@@ -17,6 +17,7 @@ import {
   Activity,
   Edit3,
   BarChart2,
+  Users,
 } from "@/components/ui/icons";
 import type { AdminUserRecord, MedicalDocument } from "@/types/admin";
 import type {
@@ -39,12 +40,15 @@ import {
 import { saveStoredPlan, upsertStoredAdminUser } from "@/lib/storage/mock-storage";
 import { db, doc, onSnapshot } from "@/lib/firebase/client";
 
-interface WeekPlanEditorProps {
+export interface WeekPlanEditorProps {
   user: AdminUserRecord;
+  allUsers?: AdminUserRecord[];
+  onSelectUser?: (user: AdminUserRecord) => void;
   initialMode?: "customize" | "progress";
   onSavePlan: (updatedPlan: PlanDashboardData) => Promise<void>;
   onPushToUser: (user: AdminUserRecord) => void;
   onBackToDirectory?: () => void;
+  onOpenBiometrics?: (user: AdminUserRecord) => void;
 }
 
 const PRESET_MEALS: Array<Omit<MealSlotItem, "id">> = [
@@ -158,10 +162,13 @@ const PRESET_MEALS: Array<Omit<MealSlotItem, "id">> = [
 
 export function WeekPlanEditor({
   user,
+  allUsers,
+  onSelectUser,
   initialMode = "customize",
   onSavePlan,
   onPushToUser,
   onBackToDirectory,
+  onOpenBiometrics,
 }: WeekPlanEditorProps) {
   const safeInitialPlan =
     user.plan && Array.isArray(user.plan.weeks) && user.plan.weeks.length > 0
@@ -218,6 +225,13 @@ export function WeekPlanEditor({
     }
   }, [plan.id, user.id, user.taskLogs]);
 
+  // Keep plan in sync with incoming user updates from parent
+  useEffect(() => {
+    if (user.plan && Array.isArray(user.plan.weeks) && user.plan.weeks.length > 0) {
+      setPlan(user.plan);
+    }
+  }, [user.id, user.plan]);
+
   const adherence = calculateDetailedAdherence(plan, taskLogs);
 
   const selectedWeek =
@@ -248,7 +262,13 @@ export function WeekPlanEditor({
       for (let w = currentWeeks.length + 1; w <= newCount; w++) {
         const monthNum = Math.ceil(w / 4);
         const weekInMonth = ((w - 1) % 4) + 1;
-        const cloned: WeekPlanData = JSON.parse(JSON.stringify(currentWeeks[0]));
+        const cloned: WeekPlanData = JSON.parse(JSON.stringify(currentWeeks[0] || {
+          weekNumber: 1,
+          phaseTitle: "Foundation",
+          phaseSubtitle: "Baseline conditioning",
+          nutrition: { calories: plan.calorieTarget, proteinGrams: plan.proteinTargetGrams, description: "Nutrition split", meals: [] },
+          workouts: { daysPerWeek: 4, description: "Training split", days: [] }
+        }));
         cloned.weekNumber = w;
         
         let phaseSubtitle = "Progressive overload & nutrient calibration";
@@ -288,30 +308,137 @@ export function WeekPlanEditor({
     }
   };
 
-  // Duplicate current week to next week
+  // Add a single week one-by-one
+  const handleAddWeek = () => {
+    const updatedWeeks = [...plan.weeks];
+    const nextWeekNum = updatedWeeks.length + 1;
+    const prevWeek = updatedWeeks[updatedWeeks.length - 1];
+
+    let newWeek: WeekPlanData;
+    if (prevWeek) {
+      newWeek = JSON.parse(JSON.stringify(prevWeek));
+      newWeek.weekNumber = nextWeekNum;
+      newWeek.phaseTitle = `Week ${nextWeekNum}: Progressive Overload`;
+      newWeek.phaseSubtitle = "Step up exercise intensity and maintain strict nutritional discipline.";
+      newWeek.nutrition.meals = newWeek.nutrition.meals.map((m, idx) => ({
+        ...m,
+        id: `m_${nextWeekNum}_${idx + 1}`,
+      }));
+      newWeek.workouts.days = newWeek.workouts.days.map((d, idx) => ({
+        ...d,
+        id: `w_${nextWeekNum}_d${idx + 1}`,
+      }));
+    } else {
+      newWeek = {
+        weekNumber: nextWeekNum,
+        phaseTitle: `Week ${nextWeekNum}: Foundation Kickoff`,
+        phaseSubtitle: "Establish clean meal timing and solid gym training form.",
+        nutrition: {
+          calories: plan.calorieTarget || 1800,
+          proteinGrams: plan.proteinTargetGrams || 120,
+          description: "Personalized Indian meal split",
+          meals: [],
+        },
+        workouts: {
+          daysPerWeek: 4,
+          description: "4 structured training days",
+          days: [],
+        },
+      };
+    }
+
+    updatedWeeks.push(newWeek);
+    const newCount = updatedWeeks.length;
+    const newMonths = Math.max(1, Math.round(newCount / 4));
+
+    const updatedPlan: PlanDashboardData = {
+      ...plan,
+      weeksCount: newCount,
+      monthsCount: newMonths,
+      weeks: updatedWeeks,
+    };
+
+    setPlan(updatedPlan);
+    setSelectedWeekNum(nextWeekNum);
+    setSaveBanner(`Added Week ${nextWeekNum}! Coach can now customize this week.`);
+    setTimeout(() => setSaveBanner(null), 3000);
+  };
+
+  // Remove a week
+  const handleRemoveWeek = (weekNum: number) => {
+    if (plan.weeks.length <= 1) {
+      alert("A fitness plan must contain at least 1 week.");
+      return;
+    }
+    if (!confirm(`Are you sure you want to remove Week ${weekNum}?`)) return;
+
+    const filtered = plan.weeks
+      .filter((w) => w.weekNumber !== weekNum)
+      .map((w, idx) => ({ ...w, weekNumber: idx + 1 }));
+
+    const newCount = filtered.length;
+    const newMonths = Math.max(1, Math.round(newCount / 4));
+
+    const updatedPlan: PlanDashboardData = {
+      ...plan,
+      weeksCount: newCount,
+      monthsCount: newMonths,
+      weeks: filtered,
+    };
+
+    setPlan(updatedPlan);
+    setSelectedWeekNum(Math.min(selectedWeekNum, newCount));
+    setSaveBanner(`Removed Week ${weekNum}. Plan now has ${newCount} week(s).`);
+    setTimeout(() => setSaveBanner(null), 3000);
+  };
+
+  // Duplicate current week to next week (creates next week if not existing)
   const handleDuplicateWeek = () => {
     if (!selectedWeek) return;
     const targetWeekNum = selectedWeek.weekNumber + 1;
-    if (targetWeekNum > plan.weeksCount) {
-      alert(`Cannot copy: Week ${selectedWeek.weekNumber} is the final week of this plan.`);
-      return;
+    const updatedWeeks = [...plan.weeks];
+
+    const duplicatedWeek: WeekPlanData = {
+      ...JSON.parse(JSON.stringify(selectedWeek)),
+      weekNumber: targetWeekNum,
+      phaseTitle: `Week ${targetWeekNum}: Progression Overload`,
+      phaseSubtitle: "Progressive load adjustment & macro consistency",
+      nutrition: {
+        ...selectedWeek.nutrition,
+        meals: selectedWeek.nutrition.meals.map((m, idx) => ({
+          ...m,
+          id: `m_${targetWeekNum}_${idx + 1}`,
+        })),
+      },
+      workouts: {
+        ...selectedWeek.workouts,
+        days: selectedWeek.workouts.days.map((d, idx) => ({
+          ...d,
+          id: `w_${targetWeekNum}_d${idx + 1}`,
+        })),
+      },
+    };
+
+    const existingTargetIndex = updatedWeeks.findIndex((w) => w.weekNumber === targetWeekNum);
+    if (existingTargetIndex >= 0) {
+      updatedWeeks[existingTargetIndex] = duplicatedWeek;
+    } else {
+      updatedWeeks.push(duplicatedWeek);
     }
 
-    const updatedWeeks = plan.weeks.map((w) => {
-      if (w.weekNumber === targetWeekNum) {
-        return {
-          ...JSON.parse(JSON.stringify(selectedWeek)),
-          weekNumber: targetWeekNum,
-          phaseTitle: `Week ${targetWeekNum}: Advanced Progression`,
-          phaseSubtitle: "Progressive load adjustment & macro consistency",
-        };
-      }
-      return w;
-    });
+    const newCount = updatedWeeks.length;
+    const newMonths = Math.max(1, Math.round(newCount / 4));
 
-    setPlan({ ...plan, weeks: updatedWeeks });
+    const updatedPlan: PlanDashboardData = {
+      ...plan,
+      weeksCount: newCount,
+      monthsCount: newMonths,
+      weeks: updatedWeeks,
+    };
+
+    setPlan(updatedPlan);
     setSelectedWeekNum(targetWeekNum);
-    setSaveBanner(`Copied Week ${selectedWeek.weekNumber} contents to Week ${targetWeekNum}!`);
+    setSaveBanner(`Copied Week ${selectedWeek.weekNumber} contents into Week ${targetWeekNum}!`);
     setTimeout(() => setSaveBanner(null), 3000);
   };
 
@@ -472,39 +599,92 @@ export function WeekPlanEditor({
     setPlan({ ...plan, weeks: updatedWeeks });
   };
 
-  // Add Workout Day
-  const handleAddWorkoutDay = () => {
+  // Add Workout Day with preset support
+  const handleAddWorkoutDay = (
+    presetType?: "push" | "pull" | "legs" | "arms" | "cardio" | "mobility" | "custom"
+  ) => {
     const updatedWeeks = [...plan.weeks];
     const targetW = updatedWeeks.find((w) => w.weekNumber === selectedWeek.weekNumber);
     if (!targetW) return;
     const nextDayNum = targetW.workouts.days.length + 1;
+
+    let dayTitle = `Day ${nextDayNum} - Custom Training Focus`;
+    let dayFocus = "Hypertrophy & Conditioning";
+    let exercises = [
+      { name: "Primary Compound Lift", sets: "4 sets", reps: "8-10 reps", rest: "90s", tips: "Strict form and controlled cadence." },
+      { name: "Secondary Accessory", sets: "3 sets", reps: "10-12 reps", rest: "60s", tips: "Focus on peak contraction." },
+      { name: "Isolation Movement", sets: "3 sets", reps: "12-15 reps", rest: "45s", tips: "Full range of motion and squeeze." },
+      { name: "Finisher / Core", sets: "3 sets", reps: "15-20 reps", rest: "45s", tips: "Burnout with perfect posture." },
+    ];
+
+    if (presetType === "push") {
+      dayTitle = `Day ${nextDayNum} – Push Focus`;
+      dayFocus = "Chest, Shoulders & Triceps";
+      exercises = [
+        { name: "Incline Dumbbell Bench Press", sets: "4 sets", reps: "10-12 reps", rest: "75s", tips: "Deep stretch at bottom, squeeze chest at top." },
+        { name: "Flat Dumbbell Press / Push-ups", sets: "3 sets", reps: "12 reps", rest: "60s", tips: "Keep elbows tucked at 45 degrees." },
+        { name: "Standing Dumbbell Lateral Raises", sets: "4 sets", reps: "15 reps", rest: "45s", tips: "Lead with elbows for side deltoid recruitment." },
+        { name: "Overhead Dumbbell Tricep Extension", sets: "3 sets", reps: "12 reps", rest: "60s", tips: "Keep elbows pointed forward." },
+      ];
+    } else if (presetType === "pull") {
+      dayTitle = `Day ${nextDayNum} – Pull Focus`;
+      dayFocus = "Back, Biceps & Rear Delts";
+      exercises = [
+        { name: "Lat Pulldowns / Pull-Ups", sets: "4 sets", reps: "10-12 reps", rest: "75s", tips: "Drive elbows down to hip pockets." },
+        { name: "One-Arm Dumbbell Rows", sets: "3 sets", reps: "10-12 reps/arm", rest: "60s", tips: "Pull toward hip, avoid jerking." },
+        { name: "Face Pulls / Rear Delt Flyes", sets: "4 sets", reps: "15 reps", rest: "45s", tips: "Retract scapulae and hold 1s at back." },
+        { name: "Incline Dumbbell Bicep Curls", sets: "3 sets", reps: "12 reps", rest: "45s", tips: "Full stretch at bottom." },
+      ];
+    } else if (presetType === "legs") {
+      dayTitle = `Day ${nextDayNum} – Lower Body (Legs & Glutes)`;
+      dayFocus = "Quads, Hamstrings & Calves";
+      exercises = [
+        { name: "Goblet Squats", sets: "4 sets", reps: "10-12 reps", rest: "90s", tips: "Deep depth, drive through heels." },
+        { name: "Romanian Deadlifts", sets: "4 sets", reps: "10-12 reps", rest: "90s", tips: "Hip hinge with soft knees, feel hamstring tension." },
+        { name: "Walking Lunges", sets: "3 sets", reps: "12 steps/leg", rest: "60s", tips: "Keep torso upright." },
+        { name: "Standing Calf Raises", sets: "4 sets", reps: "20 reps", rest: "45s", tips: "Pause 2 seconds at top contraction." },
+      ];
+    } else if (presetType === "arms") {
+      dayTitle = `Day ${nextDayNum} – Arms & Core`;
+      dayFocus = "Biceps, Triceps & Abs";
+      exercises = [
+        { name: "Standing Barbell / Dumbbell Curls", sets: "4 sets", reps: "10-12 reps", rest: "60s", tips: "Pin elbows to ribs, no swinging." },
+        { name: "Tricep Rope Pushdowns / Dips", sets: "4 sets", reps: "12 reps", rest: "60s", tips: "Lock out elbows at bottom." },
+        { name: "Hammer Curls", sets: "3 sets", reps: "12 reps", rest: "45s", tips: "Targets brachialis and forearm strength." },
+        { name: "Hanging Leg Raises / Forearm Plank", sets: "4 sets", reps: "15 reps / 60s", rest: "45s", tips: "Brace core tight." },
+      ];
+    } else if (presetType === "cardio") {
+      dayTitle = `Day ${nextDayNum} – HIIT Cardio & Abs`;
+      dayFocus = "Fat Burn, Conditioning & Core";
+      exercises = [
+        { name: "Jump Rope / High Knees Intervals", sets: "6 rounds", reps: "45s on / 30s off", rest: "30s", tips: "Maintain high heart rate cadence." },
+        { name: "Mountain Climbers", sets: "4 sets", reps: "30 reps", rest: "45s", tips: "Keep hips level, drive knees to chest." },
+        { name: "Russian Twists", sets: "4 sets", reps: "20 twists/side", rest: "45s", tips: "Rotate shoulders and engage obliques." },
+        { name: "Burpees / Squat Thrusts", sets: "3 sets", reps: "12 reps", rest: "60s", tips: "Explosive jump at top." },
+      ];
+    } else if (presetType === "mobility") {
+      dayTitle = `Day ${nextDayNum} – Active Recovery & Mobility`;
+      dayFocus = "Joint Mobility, Hips & Deep Stretch";
+      exercises = [
+        { name: "World's Greatest Stretch", sets: "3 sets", reps: "5 reps/side", rest: "30s", tips: "Open up thoracic spine and hip flexors." },
+        { name: "Cat-Cow & Child's Pose", sets: "3 sets", reps: "10 cycles", rest: "30s", tips: "Synchronize with deep nasal breathing." },
+        { name: "Pigeon Hip Opener", sets: "3 sets", reps: "60s hold/side", rest: "30s", tips: "Square hips and breathe through tight glutes." },
+        { name: "Brisk Outdoor Walk", sets: "1 set", reps: "30-45 mins", rest: "0s", tips: "Low-intensity steady state (LISS) recovery." },
+      ];
+    }
+
     targetW.workouts.days.push({
       id: `d${nextDayNum}_${Date.now().toString().slice(-4)}`,
       day: `Day ${nextDayNum}`,
-      title: `Day ${nextDayNum} - Custom Training Focus`,
-      focus: "Hypertrophy & Core Conditioning",
-      image: "/images/workout-push.jpg",
+      title: dayTitle,
+      focus: dayFocus,
+      image: presetType === "mobility" || presetType === "cardio" ? "/images/workout-day3-cardio.jpg" : "/images/workout-day1-upper.jpg",
       durationMinutes: 45,
-      exercises: [
-        {
-          name: "Primary Movement",
-          sets: "3-4 sets",
-          reps: "10-12 reps",
-          rest: "60 sec",
-          tips: "Controlled cadence and strict posture.",
-        },
-        {
-          name: "Secondary Accessory",
-          sets: "3 sets",
-          reps: "12-15 reps",
-          rest: "45 sec",
-          tips: "Peak contraction at top.",
-        },
-      ],
+      exercises,
     });
     targetW.workouts.daysPerWeek = targetW.workouts.days.length;
-    setPlan({ ...plan, weeks: updatedWeeks });
-    setSaveBanner(`Added Day ${nextDayNum} to Week ${selectedWeek.weekNumber}!`);
+    setPlan({ ...plan, weeks: updatedWeeks, workoutDaysPerWeek: targetW.workouts.days.length });
+    setSaveBanner(`Added ${dayTitle} to Week ${selectedWeek.weekNumber}!`);
     setTimeout(() => setSaveBanner(null), 3000);
   };
 
@@ -554,6 +734,154 @@ export function WeekPlanEditor({
             Dismiss
           </button>
         </div>
+      )}
+
+      {/* ================= ATHLETE SELECTOR & LIVE DISPATCH TOOLBAR ================= */}
+      {allUsers && allUsers.length > 0 && onSelectUser && (
+        <section className="bg-gradient-to-r from-gray-950 via-slate-900 to-[#032e1c] rounded-3xl p-5 text-white shadow-xl border border-emerald-900/40 space-y-4 animate-fade-in">
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+            {/* Athlete Dropdown */}
+            <div className="flex items-center gap-3.5 flex-wrap flex-1">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-emerald-400" />
+                <label htmlFor="athlete-quick-selector" className="text-xs font-black uppercase tracking-wider text-emerald-300">
+                  Select Athlete:
+                </label>
+              </div>
+
+              <div className="relative min-w-[300px] sm:min-w-[360px] flex-1 max-w-lg">
+                <select
+                  id="athlete-quick-selector"
+                  value={user.id}
+                  onChange={(e) => {
+                    const target = allUsers.find((u) => u.id === e.target.value);
+                    if (target) onSelectUser(target);
+                  }}
+                  className="w-full bg-white text-gray-950 font-black text-xs sm:text-sm px-4 py-2.5 rounded-xl border-2 border-emerald-500 shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer"
+                >
+                  {/* Category 1: Needs Coach Plan / Paid */}
+                  {allUsers.some((u) => u.needsPlanReview || u.plan?.status === "pending_review") && (
+                    <optgroup label="⚡ Needs Plan Review (Paid ₹99 - Awaiting Coach Plan)">
+                      {allUsers
+                        .filter((u) => u.needsPlanReview || u.plan?.status === "pending_review")
+                        .map((u) => (
+                          <option key={u.id} value={u.id}>
+                            ⚡ {u.name} — ₹99 Paid {u.order?.utr ? `(UTR: ${u.order.utr})` : "(Awaiting Plan)"}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+
+                  {/* Category 2: Active & Live Plans */}
+                  <optgroup label="✓ Published & Live Athlete Plans">
+                    {allUsers
+                      .filter(
+                        (u) =>
+                          !(u.needsPlanReview || u.plan?.status === "pending_review") &&
+                          u.membershipCategory !== "free"
+                      )
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>
+                          ✓ {u.name} — {u.goalDisplay} ({u.plan?.status === "approved" ? "Live" : "Active"})
+                        </option>
+                      ))}
+                  </optgroup>
+
+                  {/* Category 3: Free Leads */}
+                  {allUsers.some(
+                    (u) =>
+                      u.membershipCategory === "free" &&
+                      !(u.needsPlanReview || u.plan?.status === "pending_review")
+                  ) && (
+                    <optgroup label="Free Assessment Leads">
+                      {allUsers
+                        .filter(
+                          (u) =>
+                            u.membershipCategory === "free" &&
+                            !(u.needsPlanReview || u.plan?.status === "pending_review")
+                        )
+                        .map((u) => (
+                          <option key={u.id} value={u.id}>
+                            ○ {u.name} — Free Assessment ({u.goalDisplay})
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+
+              {/* Status Badge */}
+              {user.needsPlanReview || plan.status === "pending_review" ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/40 text-xs font-black animate-pulse">
+                  <span>⚡ Needs Plan Review</span>
+                  <span className="text-[10px] bg-amber-400 text-gray-950 px-1.5 py-0.5 rounded font-black">₹99 PAID</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-black">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>🟢 Live on Client Dashboard</span>
+                </span>
+              )}
+            </div>
+
+            {/* Quick Action Buttons */}
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {onOpenBiometrics && (
+                <button
+                  type="button"
+                  onClick={() => onOpenBiometrics(user)}
+                  className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-gray-200 transition border border-white/10 flex items-center gap-1.5 cursor-pointer"
+                  title="View full medical conditions, blood reports & biometric profile"
+                >
+                  <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Biometrics &amp; Reports</span>
+                </button>
+              )}
+
+              <a
+                href={`/plan/${plan.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-gray-200 transition border border-white/10 flex items-center gap-1.5 cursor-pointer"
+                title="Preview client live dashboard in new tab"
+              >
+                <span>Live View</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  await handleSave("approved");
+                  onPushToUser({
+                    ...user,
+                    plan: { ...plan, status: "approved", approvedAt: new Date().toISOString() },
+                    needsPlanReview: false,
+                  });
+                }}
+                className="px-5 py-2.5 rounded-xl bg-[#00c853] hover:bg-[#00b047] text-white text-xs font-black shadow-lg flex items-center gap-2 transition active:scale-95 cursor-pointer"
+                title="Save and instantly deliver plan to client dashboard"
+              >
+                <Rocket className="w-4 h-4" />
+                <span>{user.needsPlanReview || plan.status === "pending_review" ? "Give Plan & Push Live" : "Update Dashboard"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Client Metrics Strip */}
+          <div className="flex items-center gap-4 text-xs text-gray-300 font-medium pt-3 border-t border-white/10 flex-wrap">
+            <span className="flex items-center gap-1.5">
+              <span className="text-gray-400">Current Athlete:</span>
+              <strong className="text-white font-black">{user.name}</strong>
+            </span>
+            <span>•</span>
+            <span>Goal: <strong className="text-emerald-400 font-bold">{user.goalDisplay}</strong></span>
+            <span>•</span>
+            <span>Target: <strong className="text-white font-bold">{plan.calorieTarget || 1800} kcal</strong> · <strong className="text-white font-bold">{plan.proteinTargetGrams || 120}g protein</strong></span>
+            <span>•</span>
+            <span>Weight: <strong className="text-white font-bold">{user.biometrics?.weightKg || "—"} kg</strong> (BMI {user.biometrics?.bmi || "—"})</span>
+          </div>
+        </section>
       )}
 
       {/* Top Client Header & Global Controls Card */}
@@ -657,14 +985,14 @@ export function WeekPlanEditor({
                   className="px-5 py-2 rounded-xl bg-[#00c853] hover:bg-[#00b047] text-white text-xs font-black shadow-md flex items-center gap-2 transition cursor-pointer"
                 >
                   <Rocket className="w-4 h-4" />
-                  <span>Push Plan Live</span>
+                  <span>Give Plan & Push Live</span>
                 </button>
               </>
             )}
           </div>
         </div>
 
-        {/* Clinical Health Dossier & Medical Reports Review Banner */}
+        {/* Clinical Health Assessment & Medical Reports Review Banner */}
         {user.medicalAssessment && (
           <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-emerald-50/60 to-teal-50 border border-emerald-200/80 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -754,7 +1082,7 @@ export function WeekPlanEditor({
         )}
 
         {/* Global Targets & Parameters Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3.5">
           {/* Duration in Months & Weeks */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center justify-between mb-1">
@@ -780,6 +1108,9 @@ export function WeekPlanEditor({
                 }}
                 className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-black text-gray-900 bg-gray-50/70 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
+                <option value={1}>1 Week (Single Week / Add 1 by 1)</option>
+                <option value={2}>2 Weeks</option>
+                <option value={3}>3 Weeks</option>
                 <option value={4}>1 Month (4 Weeks)</option>
                 <option value={8}>2 Months (8 Weeks)</option>
                 <option value={12}>3 Months (12 Weeks - Transformation)</option>
@@ -974,33 +1305,58 @@ export function WeekPlanEditor({
         <>
           {/* Week-by-Week Navigation Bar */}
       <section className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-xs flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-xs font-black text-gray-400 uppercase tracking-wider mr-2">
-            Weeks:
+        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+          <span className="text-xs font-black text-gray-400 uppercase tracking-wider mr-1">
+            Weeks ({plan.weeks.length}):
           </span>
           {plan.weeks.map((w) => (
-            <button
-              key={w.weekNumber}
-              type="button"
-              onClick={() => setSelectedWeekNum(w.weekNumber)}
-              className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 ${
-                selectedWeekNum === w.weekNumber
-                  ? "bg-[#032e1c] text-white shadow-sm"
-                  : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-              }`}
-            >
-              <span>Week {w.weekNumber}</span>
-              <span className="text-[10px] opacity-75 font-normal">
-                ({w.nutrition.meals.length} meals · {w.workouts.days.length} workouts)
-              </span>
-            </button>
+            <div key={w.weekNumber} className="relative group inline-flex items-center">
+              <button
+                type="button"
+                onClick={() => setSelectedWeekNum(w.weekNumber)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer ${
+                  selectedWeekNum === w.weekNumber
+                    ? "bg-[#032e1c] text-white shadow-sm ring-2 ring-emerald-500/50"
+                    : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                }`}
+              >
+                <span>Week {w.weekNumber}</span>
+                <span className="text-[10px] opacity-75 font-normal">
+                  ({w.nutrition.meals.length} meals · {w.workouts.days.length} workouts)
+                </span>
+              </button>
+              {plan.weeks.length > 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveWeek(w.weekNumber);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center text-[10px] font-black shadow-md transition hover:scale-110 cursor-pointer"
+                  title={`Delete Week ${w.weekNumber}`}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           ))}
+
+          {/* Add Week Button (Week by Week progression) */}
+          <button
+            type="button"
+            onClick={handleAddWeek}
+            className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center gap-1.5 shadow-xs transition active:scale-95 cursor-pointer ml-1"
+            title="Add the next week to this plan (Week by Week progression)"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Week {plan.weeks.length + 1}</span>
+          </button>
         </div>
 
         <button
           type="button"
           onClick={handleDuplicateWeek}
-          className="flex-shrink-0 px-3 py-1.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold text-xs flex items-center gap-1.5 transition"
+          className="flex-shrink-0 px-3 py-1.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
           title="Duplicate this week to the next week"
         >
           <Copy className="w-3.5 h-3.5 text-gray-500" />
@@ -1181,7 +1537,7 @@ export function WeekPlanEditor({
                   </div>
 
                   {/* Macro Row */}
-                  <div className="grid grid-cols-4 gap-2 pt-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
                     <div>
                       <span className="text-[10px] font-bold text-gray-400 block uppercase">
                         Calories
@@ -1259,11 +1615,66 @@ export function WeekPlanEditor({
 
               <button
                 type="button"
-                onClick={handleAddWorkoutDay}
-                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs"
+                onClick={() => handleAddWorkoutDay()}
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add Workout Day</span>
+                <span>+ Custom Day</span>
+              </button>
+            </div>
+
+            {/* Quick Add Day Presets Strip */}
+            <div className="flex items-center gap-1.5 flex-wrap text-xs bg-emerald-50/50 p-2.5 rounded-2xl border border-emerald-100">
+              <span className="text-[11px] font-black text-emerald-950 uppercase tracking-wider mr-1">
+                Add Day ({selectedWeek.workouts.days.length} Currently):
+              </span>
+              <button
+                type="button"
+                onClick={() => handleAddWorkoutDay("push")}
+                className="px-2.5 py-1 rounded-lg bg-white border border-emerald-200 hover:border-emerald-500 hover:bg-emerald-100/70 text-gray-800 font-bold transition text-[11px] shadow-2xs cursor-pointer"
+                title="Add Day with Chest, Delts & Triceps exercises"
+              >
+                + Push Day
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddWorkoutDay("pull")}
+                className="px-2.5 py-1 rounded-lg bg-white border border-emerald-200 hover:border-emerald-500 hover:bg-emerald-100/70 text-gray-800 font-bold transition text-[11px] shadow-2xs cursor-pointer"
+                title="Add Day with Back, Biceps & Rear Delts exercises"
+              >
+                + Pull Day
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddWorkoutDay("legs")}
+                className="px-2.5 py-1 rounded-lg bg-white border border-emerald-200 hover:border-emerald-500 hover:bg-emerald-100/70 text-gray-800 font-bold transition text-[11px] shadow-2xs cursor-pointer"
+                title="Add Day with Quads, Hamstrings & Calves exercises"
+              >
+                + Leg Day
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddWorkoutDay("arms")}
+                className="px-2.5 py-1 rounded-lg bg-white border border-emerald-200 hover:border-emerald-500 hover:bg-emerald-100/70 text-gray-800 font-bold transition text-[11px] shadow-2xs cursor-pointer"
+                title="Add Day with Arms & Core exercises"
+              >
+                + Arms &amp; Core
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddWorkoutDay("cardio")}
+                className="px-2.5 py-1 rounded-lg bg-white border border-emerald-200 hover:border-emerald-500 hover:bg-emerald-100/70 text-gray-800 font-bold transition text-[11px] shadow-2xs cursor-pointer"
+                title="Add Day with HIIT Cardio & Abs exercises"
+              >
+                + HIIT Cardio
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddWorkoutDay("mobility")}
+                className="px-2.5 py-1 rounded-lg bg-white border border-emerald-200 hover:border-emerald-500 hover:bg-emerald-100/70 text-gray-800 font-bold transition text-[11px] shadow-2xs cursor-pointer"
+                title="Add Day with Mobility, Yoga & Active Rest"
+              >
+                + Active Recovery
               </button>
             </div>
 

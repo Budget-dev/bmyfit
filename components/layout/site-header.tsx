@@ -140,7 +140,7 @@ export function SiteHeader() {
                         onClick={() => setIsProfileOpen(false)}
                         className="flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-bold text-gray-800 hover:bg-emerald-50 hover:text-emerald-800 transition-colors"
                       >
-                        <span>My 8-Week Plan</span>
+                        <span>My Personalized Plan</span>
                         <span className="text-[#00c853]">→</span>
                       </Link>
                       <button

@@ -8,9 +8,7 @@ export const runtime = "nodejs";
 
 // Server memory store fallback when service account private key is not configured locally
 declare global {
-  // eslint-disable-next-line no-var
   var __bmyfit_server_chats__: Map<string, ChatMessage[]> | undefined;
-  // eslint-disable-next-line no-var
   var __bmyfit_server_threads__: Map<string, Record<string, unknown>> | undefined;
 }
 

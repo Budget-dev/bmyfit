@@ -48,7 +48,11 @@ export function PlanClient({ id }: { id: string }) {
 
       try {
         if (typeof window !== "undefined") {
-          isPaidLocal = sessionStorage.getItem("bmyfit_local_paid") === "true";
+          isPaidLocal =
+            sessionStorage.getItem("bmyfit_local_paid") === "true" ||
+            localStorage.getItem("bmyfit_local_paid") === "true" ||
+            localStorage.getItem(`bmyfit_paid_${id}`) === "true" ||
+            Boolean(userProfile?.uid && localStorage.getItem(`bmyfit_paid_${userProfile.uid}`) === "true");
           const rawLocal = sessionStorage.getItem("bmyfit_local_assessment");
           if (rawLocal) {
             localAssessment = JSON.parse(rawLocal);
@@ -95,39 +99,81 @@ export function PlanClient({ id }: { id: string }) {
       const userEntitled = isCoach || hasPurchasedProfile || isPaidLocal || isPaidFromAdmin;
 
       // 3. Try to fetch direct plan if entitled or looking up a specific id
-      const targetPlanId = (id === "local" || id === "demo") && userProfile?.uid ? userProfile.uid : id;
+      let targetPlanId = id;
+      if (id === "local" || id === "demo") {
+        if (userProfile?.uid) {
+          targetPlanId = userProfile.uid;
+        } else if (typeof window !== "undefined") {
+          const storedActivePlanId =
+            localStorage.getItem("bmyfit_active_plan_id") ||
+            sessionStorage.getItem("bmyfit_active_plan_id");
+          const storedAssessmentId =
+            localStorage.getItem("bmyfit_active_assessment_id") ||
+            sessionStorage.getItem("bmyfit_active_assessment_id");
+          const rawLocal = sessionStorage.getItem("bmyfit_local_assessment");
+          let localAsmId: string | undefined;
+          if (rawLocal) {
+            try {
+              const parsed = JSON.parse(rawLocal);
+              localAsmId = parsed.id || parsed.uid;
+            } catch {}
+          }
+          targetPlanId = storedActivePlanId || storedAssessmentId || localAsmId || "local";
+        }
+      }
 
       // First check local / Firestore stored plan
       const storedDirectPlan =
         getStoredPlan(targetPlanId) ||
         (await fetchFirebasePlan(targetPlanId)) ||
+        (targetPlanId !== id ? getStoredPlan(id) || (await fetchFirebasePlan(id)) : null) ||
         (userProfile?.uid && targetPlanId !== userProfile.uid
           ? getStoredPlan(userProfile.uid) || (await fetchFirebasePlan(userProfile.uid))
           : null);
 
-      if (userEntitled && storedDirectPlan) {
-        if (isMounted) {
-          const effectivePlan: PlanDashboardData =
-            !isCoach && storedDirectPlan.status !== "approved"
-              ? { ...storedDirectPlan, status: "pending_review" }
-              : storedDirectPlan;
-          setDashboardPlan(effectivePlan);
-          setIsSubscribed(true);
-          setFetching(false);
-          return;
+      if (storedDirectPlan) {
+        const isPlanApproved =
+          storedDirectPlan.status === "approved" ||
+          storedDirectPlan.status === "active" ||
+          isCoach;
+
+        if (isPlanApproved || userEntitled || storedDirectPlan.status === "pending_review") {
+          if (isMounted) {
+            const effectivePlan: PlanDashboardData = isPlanApproved
+              ? storedDirectPlan
+              : { ...storedDirectPlan, status: "pending_review" };
+            setDashboardPlan(effectivePlan);
+            setIsSubscribed(true);
+            setFetching(false);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("bmyfit_active_plan_id", effectivePlan.id);
+              localStorage.setItem("bmyfit_local_paid", "true");
+            }
+            return;
+          }
         }
       }
 
-      if (userEntitled && matchedUser?.plan) {
-        if (isMounted) {
-          const effectivePlan: PlanDashboardData =
-            !isCoach && matchedUser.plan.status !== "approved"
-              ? { ...matchedUser.plan, status: "pending_review" }
-              : matchedUser.plan;
-          setDashboardPlan(effectivePlan);
-          setIsSubscribed(true);
-          setFetching(false);
-          return;
+      if (matchedUser?.plan) {
+        const isPlanApproved =
+          matchedUser.plan.status === "approved" ||
+          matchedUser.plan.status === "active" ||
+          isCoach;
+
+        if (isPlanApproved || userEntitled || matchedUser.plan.status === "pending_review") {
+          if (isMounted) {
+            const effectivePlan: PlanDashboardData = isPlanApproved
+              ? matchedUser.plan
+              : { ...matchedUser.plan, status: "pending_review" };
+            setDashboardPlan(effectivePlan);
+            setIsSubscribed(true);
+            setFetching(false);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("bmyfit_active_plan_id", effectivePlan.id);
+              localStorage.setItem("bmyfit_local_paid", "true");
+            }
+            return;
+          }
         }
       }
 
@@ -197,7 +243,7 @@ export function PlanClient({ id }: { id: string }) {
     return () => {
       isMounted = false;
     };
-  }, [id, getIdToken, userProfile?.uid, userProfile?.email, userProfile?.isPaid, userProfile?.membershipCategory]);
+  }, [id, getIdToken, userProfile?.uid, userProfile?.email, userProfile?.name, userProfile?.isPaid, userProfile?.membershipCategory]);
 
   if (fetching || authLoading) {
     return (

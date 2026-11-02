@@ -165,6 +165,32 @@ export async function POST(request: Request) {
           hasScreenshot: Boolean(input.paymentScreenshot),
           createdAt: FieldValue.serverTimestamp(),
         }, { merge: true });
+
+        // Sync footprint in Firestore
+        const fpRef = adminDb.collection("visitor_footprints").doc(uid);
+        await fpRef.set(
+          {
+            visitorId: uid,
+            customerName,
+            customerEmail: input.customerEmail || "",
+            customerPhone: input.customerPhone || "",
+            isPaid: true,
+            utr: utrClean,
+            orderId: `upi_${utrClean}`,
+            highestStage: "utr_submitted",
+            highestStageTitle: "Submitted Payment UTR Reference",
+            lastActive: new Date().toISOString(),
+            timeline: FieldValue.arrayUnion({
+              stage: "utr_submitted",
+              title: `Submitted UTR (${utrClean}) via ${input.paymentApp || "PhonePe"}`,
+              path: "/checkout",
+              timestamp: new Date().toISOString(),
+              metadata: { utr: utrClean, paymentApp: input.paymentApp || "PhonePe" },
+            }),
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
       } catch (err) {
         console.warn("Firestore order sync warning:", err);
       }

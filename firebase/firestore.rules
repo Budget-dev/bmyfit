@@ -83,17 +83,22 @@ service cloud.firestore {
     //   - submittedAt: string / timestamp
     //
     // Collection: orders/{orderId}
-    // Document ID: orderId
+    // Document ID: orderId (auto-generated ID e.g. from addDoc or manual UPI prefix)
     // Fields:
-    //   - id: string
-    //   - uid / userId: string
-    //   - assessmentId: string
-    //   - amountPaise: number
-    //   - currency: string ("INR")
-    //   - status: string ("created" | "paid" | "failed" | "refunded")
-    //   - razorpayOrderId: string
-    //   - razorpayPaymentId: string
-    //   - idempotencyKey: string
+    //   - customerName: string (optional, max 100 chars)
+    //   - customerPhone: string (optional, max 50 chars)
+    //   - customerEmail: string (optional, max 100 chars)
+    //   - amount: number (> 0)
+    //   - status: string ('pending' | 'submitted' | 'verified' | 'rejected' | 'paid' | 'failed' | 'refunded')
+    //   - paymentMethod: string (optional, max 50 chars, e.g. 'phonepe_manual')
+    //   - paymentApp: string (optional, max 50 chars, e.g. 'PhonePe')
+    //   - upiTransactionId: string (optional, max 100 chars, null or string UTR)
+    //   - utr: string (optional, max 100 chars)
+    //   - createdAt: string / timestamp
+    //   - submittedAt: string / timestamp
+    //   - verifiedAt: string / timestamp
+    //   - verifiedBy: string (admin UID, max 128 chars)
+    //   - id, uid, userId, assessmentId, amountPaise, amountFormatted, currency, hasScreenshot: optional metadata
     //
     // Collection: paymentWebhooks/{eventId}
     // Document ID: eventId
@@ -150,7 +155,8 @@ service cloud.firestore {
           request.auth.token.email == 'bmyfitnesscoach@gmail.com' ||
           request.auth.token.email.matches('(?i)^bmyfitnesscoach@gmail\\.com$')
         )) ||
-        ('role' in request.auth.token && request.auth.token.role == 'admin')
+        ('role' in request.auth.token && request.auth.token.role == 'admin') ||
+        ('admin' in request.auth.token && request.auth.token.admin == true)
       );
     }
 
@@ -235,6 +241,49 @@ service cloud.firestore {
              (isAdmin() || (!('senderRole' in data) || data.senderRole == 'client'));
     }
 
+    function isValidOrder(data) {
+      return (!('customerName' in data) || (data.customerName is string && data.customerName.size() <= 100)) &&
+             (!('customerPhone' in data) || (data.customerPhone is string && data.customerPhone.size() <= 50)) &&
+             (!('customerEmail' in data) || (data.customerEmail is string && data.customerEmail.size() <= 100)) &&
+             (!('amount' in data) || (data.amount is number && data.amount > 0)) &&
+             (!('amountPaise' in data) || (data.amountPaise is number && data.amountPaise > 0)) &&
+             (!('amountFormatted' in data) || (data.amountFormatted is string && data.amountFormatted.size() <= 50)) &&
+             (!('currency' in data) || (data.currency is string && data.currency.size() <= 10)) &&
+             (!('status' in data) || (data.status is string && data.status in ['pending', 'submitted', 'verified', 'rejected', 'paid', 'failed', 'refunded', 'created'])) &&
+             (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod.size() <= 50)) &&
+             (!('paymentApp' in data) || (data.paymentApp is string && data.paymentApp.size() <= 50)) &&
+             (!('upiTransactionId' in data) || data.upiTransactionId == null || (data.upiTransactionId is string && data.upiTransactionId.size() <= 100)) &&
+             (!('utr' in data) || (data.utr is string && data.utr.size() <= 100)) &&
+             (!('createdAt' in data) || data.createdAt is timestamp || (data.createdAt is string && data.createdAt.size() <= 100)) &&
+             (!('submittedAt' in data) || data.submittedAt is timestamp || (data.submittedAt is string && data.submittedAt.size() <= 100)) &&
+             (!('verifiedAt' in data) || data.verifiedAt is timestamp || (data.verifiedAt is string && data.verifiedAt.size() <= 100)) &&
+             (!('verifiedBy' in data) || data.verifiedBy == null || (data.verifiedBy is string && data.verifiedBy.size() <= 128)) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp || (data.updatedAt is string && data.updatedAt.size() <= 100)) &&
+             (!('id' in data) || (data.id is string && data.id.size() <= 128)) &&
+             (!('uid' in data) || (data.uid is string && data.uid.size() <= 128)) &&
+             (!('userId' in data) || (data.userId is string && data.userId.size() <= 128)) &&
+             (!('assessmentId' in data) || (data.assessmentId is string && data.assessmentId.size() <= 128)) &&
+             (!('hasScreenshot' in data) || data.hasScreenshot is bool);
+    }
+
+    function isValidOrderCreate(data) {
+      return isValidOrder(data) &&
+             data.keys().hasOnly(['customerName', 'customerPhone', 'amount', 'status', 'paymentMethod', 'upiTransactionId', 'createdAt']) &&
+             data.status == 'pending' &&
+             data.amount is number &&
+             data.amount > 0;
+    }
+
+    function isValidOrderCustomerUpdate() {
+      return isValidOrder(request.resource.data) &&
+             resource.data.status == 'pending' &&
+             request.resource.data.status == 'submitted' &&
+             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upiTransactionId', 'status', 'submittedAt']) &&
+             request.resource.data.upiTransactionId is string &&
+             request.resource.data.upiTransactionId.size() > 0 &&
+             request.resource.data.upiTransactionId.size() <= 100;
+    }
+
     // ===============================================================
     // Collection Rules
     // ===============================================================
@@ -300,7 +349,7 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // 6. Health dossier & medical consultations
+    // 6. Health profile & medical consultations
     // Submitted during intake funnel by anonymous or signed-in leads; managed by coach admin
     match /medical_consultations/{consultationId} {
       allow read: if signedIn() || isAdmin() || true;
@@ -308,10 +357,24 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // 7. Payment orders (strictly server-managed writes via Firebase Admin)
+    // 7. Payment orders (UPI PhonePe Manual and automated checkout orders)
     match /orders/{orderId} {
-      allow read: if signedIn() || isAdmin() || true;
-      allow write: if false;
+      // Only admins can read order documents or query the orders collection
+      allow read: if isAdmin();
+
+      // Anyone (client customer, including unauthenticated) can START an order:
+      // Must start with status == 'pending', amount must be number and > 0,
+      // and allowed fields are strictly limited to ['customerName', 'customerPhone', 'amount', 'status', 'paymentMethod', 'upiTransactionId', 'createdAt']
+      allow create: if isValidOrderCreate(request.resource.data) || isAdmin();
+
+      // Anyone who has the order ID can submit a transaction ID / UTR ONCE:
+      // Only while resource.data.status == 'pending', can only touch fields ['upiTransactionId', 'status', 'submittedAt'],
+      // and must set request.resource.data.status == 'submitted' (customers can NEVER set status to 'verified' or 'rejected').
+      // Only admins can update order status to 'verified' or 'rejected', or edit orders.
+      allow update: if (isAdmin() && isValidOrder(request.resource.data)) || isValidOrderCustomerUpdate();
+
+      // Only admins can delete orders
+      allow delete: if isAdmin();
     }
 
     // 8. Payment webhook event receipts (strictly server-managed idempotency)

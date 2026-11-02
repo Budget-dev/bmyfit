@@ -46,7 +46,7 @@ export function subscribeToChatMessages(
   if (!inMemoryMessages.has(userId)) {
     const greetingText =
       userCategory === "purchased" || userCategory === "membership"
-        ? `Namaste ${targetName}! Coach Naveen here from BMYFIT. Your 8-week personalized plan and nutrition targets are ready. How is your energy and meal prep feeling today?`
+        ? `Namaste ${targetName}! Coach Naveen here from BMYFIT. Your personalized plan and nutrition targets are ready. How is your energy and meal prep feeling today?`
         : `Namaste ${targetName}! Coach Naveen here from BMYFIT. I've reviewed your body metrics and clinical assessment. Let me know if you have any questions about your results!`;
 
     const greeting: ChatMessage = {

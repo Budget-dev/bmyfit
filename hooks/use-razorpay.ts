@@ -59,6 +59,11 @@ export function useRazorpay() {
       }
 
       const rzp = new window.Razorpay(options);
+      if (options.onPaymentFailed) {
+        rzp.on("payment.failed", (response: unknown) => {
+          options.onPaymentFailed?.(response as Parameters<NonNullable<RazorpayOptions["onPaymentFailed"]>>[0]);
+        });
+      }
       rzp.open();
     },
     [loadScript],

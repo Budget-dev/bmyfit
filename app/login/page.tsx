@@ -7,7 +7,7 @@ import { BmyFitLogo } from "@/components/layout/logo";
 
 export const metadata: Metadata = {
   title: "Sign In · BMYFIT",
-  description: "Sign in to your BMYFIT dashboard to access your customized 8-week nutrition & workout roadmap.",
+  description: "Sign in to your BMYFIT dashboard to access your customized nutrition & workout roadmap.",
 };
 
 export default function LoginPage() {
@@ -57,7 +57,7 @@ export default function LoginPage() {
                 <div className="w-5 h-5 rounded-lg bg-[#00e676]/20 text-[#00e676] flex items-center justify-center shrink-0 text-xs font-bold">
                   ✓
                 </div>
-                <span>Full 8-Week Nutrition &amp; Workout Plan Access</span>
+                <span>Full Nutrition &amp; Workout Plan Access</span>
               </div>
               <div className="flex items-center gap-2.5 text-xs font-semibold text-gray-200 bg-white/[0.04] p-2 rounded-xl border border-white/5">
                 <div className="w-5 h-5 rounded-lg bg-[#00e676]/20 text-[#00e676] flex items-center justify-center shrink-0 text-xs font-bold">

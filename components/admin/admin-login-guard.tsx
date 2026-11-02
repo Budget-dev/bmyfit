@@ -235,7 +235,7 @@ export function AdminLoginGuard({ children }: AdminLoginGuardProps) {
               Coach Admin Console
             </h2>
             <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
-              Sign in with your authorized coach credentials to review paid client dossiers and dispatch weekly plans.
+              Sign in with your authorized coach credentials to review paid client profiles and dispatch weekly plans.
             </p>
           </div>
 

@@ -234,7 +234,7 @@ export function PlanPendingScreen({ plan, onPlanApproved }: PlanPendingScreenPro
           <p className="text-xs sm:text-base text-gray-300 leading-relaxed max-w-xl mx-auto">
             <strong>Please be awaited!</strong> Our certified clinical nutritionist and head fitness trainer are
             carefully reviewing your intake biometrics, metabolic deficit requirements, and dietary preferences to
-            craft your customized 8-week nutrition and workout roadmap.
+            craft your customized nutrition and workout roadmap.
           </p>
         </div>
 
@@ -341,7 +341,7 @@ export function PlanPendingScreen({ plan, onPlanApproved }: PlanPendingScreenPro
               </div>
             </div>
 
-            {/* Step 3: Nutritionist & Health Dossier Review */}
+            {/* Step 3: Nutritionist & Health Assessment Review */}
             <div className="flex items-start gap-3.5 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 shadow-inner">
               <div className="w-7 h-7 rounded-xl bg-emerald-400 text-gray-950 flex items-center justify-center shrink-0 font-black text-xs">
                 <FontAwesomeIcon icon={faUtensils} className="w-3.5 h-3.5 text-gray-950" />
@@ -373,7 +373,7 @@ export function PlanPendingScreen({ plan, onPlanApproved }: PlanPendingScreenPro
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-black text-white">Trainer Structuring 8-Week Workout Roadmap</h4>
+                  <h4 className="text-xs font-black text-white">Trainer Structuring Customized Workout Roadmap</h4>
                   <span className="text-[10px] font-black text-[#00e676] uppercase tracking-wide animate-pulse">
                     Crafting Now
                   </span>

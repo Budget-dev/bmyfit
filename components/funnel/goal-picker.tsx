@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useFunnelState } from "@/hooks/use-funnel-state";
 import { DEFAULT_ACTIVITY_LEVEL, DEFAULT_DIET_PREFERENCE } from "@/lib/config";
+import { recordFootprint } from "@/lib/telemetry/footprints";
 
 const GOAL_OPTIONS: Array<{
   value: FitnessGoal;
@@ -89,6 +90,7 @@ export function GoalPicker() {
   const handleCalculate = () => {
     if (!selectedGoal) return;
     updateGoal({ goal: selectedGoal, activityLevel, dietPreference });
+    recordFootprint("goal_selected", { goal: selectedGoal, activityLevel, dietPreference });
     router.push("/calculating");
   };
 

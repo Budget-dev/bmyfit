@@ -1,5 +1,4 @@
 import { adminDb, hasAdminCredentials } from "@/lib/firebase/admin";
-import { optionalUser } from "@/lib/firebase/auth";
 import { toErrorResponse } from "@/lib/errors";
 import type { ChatMessage } from "@/types/chat";
 import { FieldValue } from "firebase-admin/firestore";
@@ -8,9 +7,7 @@ export const runtime = "nodejs";
 
 // Server memory store fallback when service account private key is not configured locally
 declare global {
-  // eslint-disable-next-line no-var
   var __bmyfit_server_chats__: Map<string, ChatMessage[]> | undefined;
-  // eslint-disable-next-line no-var
   var __bmyfit_server_threads__: Map<string, Record<string, unknown>> | undefined;
 }
 

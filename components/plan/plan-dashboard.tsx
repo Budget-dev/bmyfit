@@ -17,6 +17,8 @@ import {
   Target,
   ChevronRight,
   CheckCircle2,
+  Check,
+  Edit3,
   Circle,
   Clock,
   ArrowRight,
@@ -28,6 +30,9 @@ import {
   Menu,
   MessageCircle,
   Video,
+  Activity,
+  Send,
+  Sparkles,
 } from "@/components/ui/icons";
 import type {
   PlanDashboardData,
@@ -35,6 +40,7 @@ import type {
   WorkoutDayItem,
   WeekPlanData,
   TaskLogState,
+  DailyCheckInLog,
 } from "@/types/plan-dashboard";
 import {
   getStoredTaskLogs,
@@ -79,6 +85,78 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
   const [activeReviewMode, setActiveReviewMode] = useState<boolean>(
     initialPlan.status === "pending_review" && !isDevPreview
   );
+
+  const [dailyLogs, setDailyLogs] = useState<Record<string, DailyCheckInLog>>(plan.dailyLogs || {});
+  const todayDate = new Date().toISOString().split("T")[0];
+  const todayLog = dailyLogs[todayDate];
+
+  // Daily check-in input states
+  const [workoutDone, setWorkoutDone] = useState<boolean>(true);
+  const [workoutDayTitle, setWorkoutDayTitle] = useState<string>("Today's Scheduled Workout");
+  const [workoutNotes, setWorkoutNotes] = useState<string>("");
+  const [dietAdherence, setDietAdherence] = useState<"100% on track" | "Minor deviation" | "Off track">("100% on track");
+  const [caloriesActual, setCaloriesActual] = useState<number>(plan.calorieTarget || 1800);
+  const [proteinGramsActual, setProteinGramsActual] = useState<number>(plan.proteinTargetGrams || 120);
+  const [waterLitres, setWaterLitres] = useState<number>(plan.waterLitres || 3.0);
+  const [stepsCompleted, setStepsCompleted] = useState<number>(plan.dailyStepGoal || 8000);
+  const [supplementsTaken, setSupplementsTaken] = useState<boolean>(true);
+  const [energyLevel, setEnergyLevel] = useState<"High" | "Moderate" | "Low">("High");
+  const [clientNote, setClientNote] = useState<string>("");
+  const [isSubmittingCheckin, setIsSubmittingCheckin] = useState<boolean>(false);
+  const [checkinSubmittedSuccess, setCheckinSubmittedSuccess] = useState<boolean>(false);
+  const [isEditingTodayLog, setIsEditingTodayLog] = useState<boolean>(false);
+
+  // Load live daily check-ins
+  useEffect(() => {
+    let active = true;
+    void fetch(`/api/plan/${encodeURIComponent(plan.id)}/daily-log`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active && data?.dailyLogs) {
+          setDailyLogs((prev) => ({ ...prev, ...data.dailyLogs }));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [plan.id]);
+
+  const handleSubmitDailyCheckin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsSubmittingCheckin(true);
+    try {
+      const res = await fetch(`/api/plan/${encodeURIComponent(plan.id)}/daily-log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: todayDate,
+          workoutCompleted: workoutDone,
+          workoutDayTitle,
+          workoutNotes,
+          dietAdherence,
+          caloriesActual,
+          proteinGramsActual,
+          waterLitres,
+          stepsCompleted,
+          supplementsTaken,
+          energyLevel,
+          clientNote,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data?.dailyLog) {
+        setDailyLogs((prev) => ({ ...prev, [todayDate]: data.dailyLog }));
+        setCheckinSubmittedSuccess(true);
+        setIsEditingTodayLog(false);
+        setTimeout(() => setCheckinSubmittedSuccess(false), 5000);
+      }
+    } catch (err) {
+      console.error("Failed to submit daily check-in:", err);
+    } finally {
+      setIsSubmittingCheckin(false);
+    }
+  };
 
   // Load task completion state from Firebase Firestore
   useEffect(() => {
@@ -234,7 +312,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
               </p>
               {plan.medicalSummary?.diseases && plan.medicalSummary.diseases.length > 0 && (
                 <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-[11px]">
-                  <span className="text-white/70">Submitted Dossier:</span>
+                  <span className="text-white/70">Health Profile:</span>
                   {plan.medicalSummary.diseases.map((d, i) => (
                     <span key={i} className="px-1.5 py-0.5 rounded bg-black/30 text-white font-bold">
                       🩺 {d}
@@ -506,6 +584,343 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
               <span className="block text-[11px] text-black/80 font-bold">Coach recommendations &rarr;</span>
             </div>
           </Link>
+        </section>
+
+        {/* ================= TODAY'S DAILY PLAN TRACKER ================= */}
+        <section className="animate-in fade-in">
+          {todayLog && !isEditingTodayLog ? (
+            <div className="bg-gradient-to-br from-[#022c19] via-[#043d23] to-[#011f12] text-white rounded-3xl p-5 sm:p-7 shadow-lg border border-emerald-500/30 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black border border-emerald-500/30">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/40">
+                        TODAY&apos;S PLAN LOGGED · COACH NOTIFIED
+                      </span>
+                    </div>
+                    <h2 className="text-lg sm:text-xl font-black text-white mt-1">
+                      Great job, {plan.customerName.split(" ")[0]}! Today&apos;s routine is submitted.
+                    </h2>
+                    <p className="text-xs text-emerald-200/80 font-medium">
+                      Coach Naveen can see your completed tasks in the real-time coach portal.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsEditingTodayLog(true)}
+                  className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-emerald-200 hover:text-white text-xs font-bold transition border border-white/10 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Update Today&apos;s Entry</span>
+                </button>
+              </div>
+
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 text-xs">
+                <div className="p-3 rounded-2xl bg-white/10 border border-white/10 space-y-0.5">
+                  <span className="block text-[10px] text-emerald-300 font-bold uppercase">Workout</span>
+                  <span className="font-black text-white text-sm">
+                    {todayLog.workoutCompleted ? "Completed ✓" : "Rest Day"}
+                  </span>
+                  <span className="block text-[10px] text-emerald-200 truncate">
+                    {todayLog.workoutDayTitle}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-white/10 border border-white/10 space-y-0.5">
+                  <span className="block text-[10px] text-emerald-300 font-bold uppercase">Nutrition Target</span>
+                  <span className="font-black text-white text-sm capitalize">
+                    {todayLog.dietAdherence}
+                  </span>
+                  <span className="block text-[10px] text-emerald-200">
+                    {todayLog.caloriesActual ? `${todayLog.caloriesActual} kcal` : "Hit target"}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-white/10 border border-white/10 space-y-0.5">
+                  <span className="block text-[10px] text-emerald-300 font-bold uppercase">Hydration &amp; Steps</span>
+                  <span className="font-black text-white text-sm">
+                    {todayLog.waterLitres ?? 3.0} L
+                  </span>
+                  <span className="block text-[10px] text-emerald-200">
+                    {(todayLog.stepsCompleted ?? 8000).toLocaleString()} steps
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-white/10 border border-white/10 space-y-0.5">
+                  <span className="block text-[10px] text-emerald-300 font-bold uppercase">Supplements</span>
+                  <span className="font-black text-white text-sm">
+                    {todayLog.supplementsTaken ? "Taken ✓" : "Missed"}
+                  </span>
+                  <span className="block text-[10px] text-emerald-200">
+                    Energy: {todayLog.energyLevel || "High"}
+                  </span>
+                </div>
+              </div>
+
+              {todayLog.clientNote && (
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs text-emerald-100">
+                  <span className="font-bold text-[10px] text-emerald-400 block uppercase">Your Note to Coach:</span>
+                  <p className="italic">&ldquo;{todayLog.clientNote}&rdquo;</p>
+                </div>
+              )}
+
+              {todayLog.coachFeedback && (
+                <div className="p-3.5 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-xs text-white space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-emerald-300 text-[11px]">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
+                    <span>Coach Naveen Feedback:</span>
+                  </div>
+                  <p className="font-medium text-emerald-50">{todayLog.coachFeedback}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white rounded-3xl p-5 sm:p-7 border-2 border-emerald-400/80 shadow-md space-y-5">
+              {/* Header */}
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-black">
+                    <Activity className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                      DAILY PLAN TRACKER · TODAY
+                    </span>
+                    <h2 className="text-lg sm:text-xl font-black text-gray-950 mt-1">
+                      Did you follow your plan today?
+                    </h2>
+                    <p className="text-xs text-gray-500">
+                      Mark your workout, diet &amp; hydration so Head Coach Naveen can evaluate your daily consistency.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-xs font-black text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl block">
+                    {new Date().toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" })}
+                  </span>
+                  {isEditingTodayLog && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingTodayLog(false)}
+                      className="text-[11px] text-gray-500 hover:text-gray-800 underline mt-1 block"
+                    >
+                      Cancel edit
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Form Controls */}
+              <form onSubmit={handleSubmitDailyCheckin} className="space-y-4">
+                {/* 1. Workout Done */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                  <label className="block text-xs font-black text-gray-900 uppercase tracking-wider">
+                    1. Workout Status Today
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setWorkoutDone(true)}
+                      className={`p-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                        workoutDone
+                          ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Completed Workout</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setWorkoutDone(false)}
+                      className={`p-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                        !workoutDone
+                          ? "bg-slate-800 text-white border-slate-800 shadow-xs"
+                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      <span>🧘 Active Rest / Rest Day</span>
+                    </button>
+                  </div>
+
+                  {workoutDone && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                      <input
+                        type="text"
+                        value={workoutDayTitle}
+                        onChange={(e) => setWorkoutDayTitle(e.target.value)}
+                        placeholder="Workout Title (e.g. Day 1: Upper Body Focus)"
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                      <input
+                        type="text"
+                        value={workoutNotes}
+                        onChange={(e) => setWorkoutNotes(e.target.value)}
+                        placeholder="Notes: sets, reps, or how exercises felt..."
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Diet & Nutrition Adherence */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                  <label className="block text-xs font-black text-gray-900 uppercase tracking-wider">
+                    2. Nutrition &amp; Diet Adherence
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["100% on track", "Minor deviation", "Off track"] as const).map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setDietAdherence(opt)}
+                        className={`p-2.5 rounded-xl border text-xs font-bold transition capitalize cursor-pointer ${
+                          dietAdherence === opt
+                            ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                            : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                        }`}
+                      >
+                        {opt === "100% on track" ? "🥗 100% on Plan" : opt === "Minor deviation" ? "🥪 Slight Deviation" : "🍕 Off Track"}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase">Estimated Calories</label>
+                      <input
+                        type="number"
+                        value={caloriesActual}
+                        onChange={(e) => setCaloriesActual(Number(e.target.value))}
+                        className="w-full px-3 py-1.5 text-xs font-bold rounded-xl border border-gray-200 bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase">Protein Consumed (g)</label>
+                      <input
+                        type="number"
+                        value={proteinGramsActual}
+                        onChange={(e) => setProteinGramsActual(Number(e.target.value))}
+                        className="w-full px-3 py-1.5 text-xs font-bold rounded-xl border border-gray-200 bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Water, Steps & Supplements */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase">Water Intake (L)</label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setWaterLitres(Math.max(0.5, Number((waterLitres - 0.5).toFixed(1))))}
+                        className="w-8 h-8 rounded-lg bg-white border border-gray-200 font-bold text-sm hover:bg-gray-100"
+                      >
+                        -
+                      </button>
+                      <span className="flex-1 text-center font-black text-sm text-gray-900">{waterLitres} L</span>
+                      <button
+                        type="button"
+                        onClick={() => setWaterLitres(Number((waterLitres + 0.5).toFixed(1)))}
+                        className="w-8 h-8 rounded-lg bg-white border border-gray-200 font-bold text-sm hover:bg-gray-100"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase">Step Count</label>
+                    <input
+                      type="number"
+                      value={stepsCompleted}
+                      onChange={(e) => setStepsCompleted(Number(e.target.value))}
+                      className="w-full px-3 py-1.5 text-xs font-bold rounded-xl border border-gray-200 bg-white"
+                    />
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 flex flex-col justify-between">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase">Supplements Taken</label>
+                    <button
+                      type="button"
+                      onClick={() => setSupplementsTaken(!supplementsTaken)}
+                      className={`w-full py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        supplementsTaken
+                          ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                          : "bg-white text-gray-600 border border-gray-200"
+                      }`}
+                    >
+                      {supplementsTaken ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : null}
+                      <span>{supplementsTaken ? "Taken ✓" : "Not Today"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Energy Rating */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-700">
+                    Energy Level Today
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["High", "Moderate", "Low"] as const).map((lvl) => (
+                      <button
+                        key={lvl}
+                        type="button"
+                        onClick={() => setEnergyLevel(lvl)}
+                        className={`py-1.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                          energyLevel === lvl
+                            ? "bg-emerald-600 text-white shadow-xs"
+                            : "bg-slate-50 text-gray-700 border border-gray-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span>{lvl === "High" ? "⚡ High" : lvl === "Moderate" ? "😊 Moderate" : "😴 Low"}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 4. Client Note for Coach Naveen */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-700">
+                    Daily Note / Feedback for Head Coach Naveen
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={clientNote}
+                    onChange={(e) => setClientNote(e.target.value)}
+                    placeholder="e.g. Energy felt great, hit all reps on incline bench press, consumed whey on time."
+                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* Submit Action */}
+                <div className="pt-1">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingCheckin}
+                    className="w-full py-3.5 px-4 rounded-2xl bg-[#00c853] hover:bg-[#00b047] active:scale-[0.99] text-white font-black text-sm shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>{isSubmittingCheckin ? "Saving to Coach Log..." : "✓ Submit Today's Log to Head Coach"}</span>
+                  </button>
+                  {checkinSubmittedSuccess && (
+                    <p className="text-xs text-center text-emerald-600 font-bold mt-2 animate-in fade-in">
+                      ✓ Successfully submitted! Coach Naveen can now view your daily adherence.
+                    </p>
+                  )}
+                </div>
+              </form>
+            </div>
+          )}
         </section>
 
         {/* ================= 5 NAVIGATION TABS ================= */}
@@ -934,6 +1349,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
                             src={supp.image || "/images/creatine-monohydrate.jpg"}
                             alt={supp.name}
                             fill
+                            unoptimized
                             className="object-contain p-0.5"
                             sizes="48px"
                           />
@@ -959,7 +1375,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
                       className="w-full py-2.5 px-3 rounded-xl bg-[#00c853] hover:bg-[#00b34a] text-black font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition"
                     >
                       <ShoppingBag className="w-3.5 h-3.5 fill-black" />
-                      <span>Order on Amazon &rarr;</span>
+                      <span>View / Order Product &rarr;</span>
                     </a>
                   </div>
                 ))}

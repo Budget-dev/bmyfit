@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/font-awesome-icons";
 import type { Assessment } from "@/types/fitness";
 import { calculateBodyFat } from "@/features/calculator";
+import { recordFootprint } from "@/lib/telemetry/footprints";
 
 export interface ResultClientProps {
   id?: string;
@@ -93,6 +94,16 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
       isMounted = false;
     };
   }, [id, initialAssessment, getIdToken]);
+
+  useEffect(() => {
+    if (assessment) {
+      recordFootprint("result_viewed", {
+        bmi: assessment.bmi,
+        bodyFatPercent: assessment.bodyFatPercent,
+        goal: assessment.goal,
+      });
+    }
+  }, [assessment]);
 
   // Default fallback data for visual rendering if state is empty
   const data: Assessment = assessment ?? {
@@ -466,7 +477,7 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
                     </h3>
                   </div>
                   <p className="text-[7.5px] min-[390px]:text-[8px] md:text-sm text-gray-300 mt-0.5 md:mt-1">
-                    Get a complete 8-week plan based on your body data and goal.
+                    Get a complete personalized plan based on your body data and goal.
                   </p>
                 </div>
 
@@ -549,14 +560,14 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
                       </div>
                     </div>
 
-                    {/* 6. 8-week structure */}
+                    {/* 6. Structured progression */}
                     <div className="flex items-start gap-1 md:gap-2">
                       <div className="w-4.5 h-4.5 md:w-8 md:h-8 rounded-full bg-emerald-900/60 border border-emerald-500/30 text-[#00e676] flex items-center justify-center shrink-0">
                         <FontAwesomeIcon icon={faCalendarDays} className="w-2.5 h-2.5 md:w-4 md:h-4 text-[#00e676]" />
                       </div>
                       <div className="min-w-0">
                         <div className="text-[8px] min-[390px]:text-[8.5px] md:text-xs font-bold text-white leading-tight">
-                          8-week structure
+                          Custom Structure
                         </div>
                         <div className="text-[6.5px] min-[390px]:text-[7px] md:text-[11px] text-gray-400 leading-none mt-0.5 truncate">
                           Step-by-step guidance

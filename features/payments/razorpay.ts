@@ -1,4 +1,5 @@
 import "server-only";
+import Razorpay from "razorpay";
 import { AppError } from "@/lib/errors";
 import { serverEnv } from "@/lib/env/server";
 import { PLAN_PRICE_PAISE, APP_CONFIG } from "@/lib/config";
@@ -6,7 +7,6 @@ import {
   verifyPaymentHmacSignature,
   verifyWebhookHmacSignature,
   generatePaymentHmacSignature,
-  generateWebhookHmacSignature,
 } from "./verify-signature";
 
 export { PLAN_PRICE_PAISE };
@@ -121,46 +121,40 @@ export async function createRazorpayOrder(
   const keyId = serverEnv.RAZORPAY_KEY_ID!;
   const secret = serverEnv.RAZORPAY_KEY_SECRET!;
 
-  const authHeader = Buffer.from(`${keyId}:${secret}`).toString("base64");
-  const payload: Record<string, unknown> = {
-    amount: PLAN_PRICE_PAISE,
-    currency: "INR",
-    receipt: cleanReceipt,
-    payment_capture: 1,
-    notes: {
-      planName: "8-Week Personalized Nutrition & Workout Plan",
-      brand: APP_CONFIG.brandName,
-      ...options.notes,
-    },
-  };
+  try {
+    const razorpay = new Razorpay({
+      key_id: keyId,
+      key_secret: secret,
+    });
 
-  const response = await fetch(`${serverEnv.RAZORPAY_API_BASE_URL}/orders`, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${authHeader}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+    const order = await razorpay.orders.create({
+      amount: PLAN_PRICE_PAISE,
+      currency: "INR",
+      receipt: cleanReceipt,
+      payment_capture: true,
+      notes: {
+        planName: "Personalized Nutrition & Workout Plan",
+        brand: APP_CONFIG.brandName,
+        ...options.notes,
+      },
+    });
 
-  if (!response.ok) {
-    const errorBody = await response.text().catch(() => "");
-    console.error("Razorpay order creation failed:", response.status, errorBody);
+    if (!order || typeof order.id !== "string") {
+      throw new AppError("PAYMENT_PROVIDER_ERROR", "Invalid response from payment gateway", 502);
+    }
+
+    return {
+      id: order.id,
+      amount: PLAN_PRICE_PAISE,
+      currency: "INR",
+      isSandbox: false,
+      keyId,
+    };
+  } catch (err: unknown) {
+    if (err instanceof AppError) throw err;
+    console.error("Razorpay order creation failed:", err);
     throw new AppError("PAYMENT_PROVIDER_ERROR", "Unable to create payment order with gateway", 502);
   }
-
-  const data = (await response.json()) as { id?: unknown; amount?: unknown; currency?: unknown };
-  if (typeof data.id !== "string" || !data.id) {
-    throw new AppError("PAYMENT_PROVIDER_ERROR", "Invalid response from payment gateway", 502);
-  }
-
-  return {
-    id: data.id,
-    amount: PLAN_PRICE_PAISE,
-    currency: "INR",
-    isSandbox: false,
-    keyId,
-  };
 }
 
 /**

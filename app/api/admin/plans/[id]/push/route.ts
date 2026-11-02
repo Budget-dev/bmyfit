@@ -13,7 +13,7 @@ export async function POST(
     const { id } = await params;
     if (!id) throw new AppError("INVALID_REQUEST", "Plan ID is required", 400);
 
-    let body: { coachName?: string; notes?: string } = {};
+    let body: { coachName?: string; notes?: string; userId?: string; planId?: string } = {};
     try {
       body = await request.json();
     } catch {
@@ -23,7 +23,8 @@ export async function POST(
     const result = await pushPlanToUserDashboard(
       id,
       body.coachName || "Coach Naveen (Blaze Gym Owner & Head Coach)",
-      body.notes
+      body.notes,
+      body.userId || body.planId
     );
 
     return Response.json({

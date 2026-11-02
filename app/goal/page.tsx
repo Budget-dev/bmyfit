@@ -204,7 +204,7 @@ export default function GoalPage() {
                 <span className="text-[11px] text-gray-500 hidden sm:inline">Select 1 option</span>
               </div>
               <p className="text-[11px] md:text-xs text-gray-500">
-                Select the primary transformation focus for your 8-week blueprint.
+                Select the primary transformation focus for your custom blueprint.
               </p>
 
               {/* 2x2 Grid of Focus Radio Cards */}
@@ -492,7 +492,7 @@ export default function GoalPage() {
 
                 <div className="space-y-2 pt-2 border-t border-emerald-950/80">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
-                    What You Get in 8 Weeks:
+                    What You Get in Your Plan:
                   </span>
                   <ul className="space-y-1.5">
                     {activeHero.benefits.map((b, idx) => (

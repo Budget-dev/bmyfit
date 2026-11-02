@@ -65,10 +65,10 @@ export function generateDashboardPlan(
   assessmentId: string = "local",
   options: PlanGeneratorOptions = {}
 ): PlanDashboardData {
+  // Default to 1 week initially so admin can add weeks one-by-one
+  const weeksCount = options.weeksCount ?? 1;
   const monthsCount =
-    options.monthsCount ||
-    (options.weeksCount ? Math.max(1, Math.round(options.weeksCount / 4)) : 2);
-  const weeksCount = options.weeksCount || (monthsCount * 4);
+    options.monthsCount || Math.max(1, Math.round(weeksCount / 4));
   const goal: FitnessGoal = options.goal || "fat-loss";
   const status: PlanStatus = options.status || "active";
   const customerName = options.customerName || "Fit Pioneer";
@@ -162,7 +162,7 @@ export function generateDashboardPlan(
       },
     ];
 
-    const workoutDays: WorkoutDayItem[] = [
+    const fullSplit: WorkoutDayItem[] = [
       {
         id: `w_${w}_d1`,
         day: "Day 1",
@@ -208,8 +208,8 @@ export function generateDashboardPlan(
       {
         id: `w_${w}_d4`,
         day: "Day 4",
-        title: "Day 4 – Full Body",
-        focus: "Compound Movements",
+        title: "Day 4 – Full Body & Back",
+        focus: "Back, Biceps & Compound",
         image: "/images/workout-day4-compound.jpg",
         durationMinutes: 50,
         exercises: [
@@ -219,7 +219,52 @@ export function generateDashboardPlan(
           { name: "Push-Up to Renegade Row", sets: "3 sets", reps: "8 reps/side", rest: "60s", tips: "Keeps hips square and resist rotation." },
         ],
       },
+      {
+        id: `w_${w}_d5`,
+        day: "Day 5",
+        title: "Day 5 – Pull & Arms",
+        focus: "Lats, Biceps, Rear Delts",
+        image: "/images/workout-day1-upper.jpg",
+        durationMinutes: 45,
+        exercises: [
+          { name: "Lat Pulldowns / Pull-Ups", sets: "4 sets", reps: "10-12 reps", rest: "75s", tips: "Lead with elbows down to ribcage for full lat engagement." },
+          { name: "Incline Dumbbell Bicep Curls", sets: "3 sets", reps: "12 reps", rest: "60s", tips: "Keep elbows back and feel stretch at bottom." },
+          { name: "Face Pulls / Rear Delt Flyes", sets: "4 sets", reps: "15 reps", rest: "45s", tips: "Retract scapulae and squeeze rear delts." },
+          { name: "Hammer Curls", sets: "3 sets", reps: "12 reps", rest: "45s", tips: "Focus on brachialis and forearm thickness." },
+        ],
+      },
+      {
+        id: `w_${w}_d6`,
+        day: "Day 6",
+        title: "Day 6 – Conditioning & Functional",
+        focus: "Athletic Agility & Core",
+        image: "/images/workout-day3-cardio.jpg",
+        durationMinutes: 40,
+        exercises: [
+          { name: "Dumbbell Kettlebell Swings", sets: "4 sets", reps: "15-20 reps", rest: "60s", tips: "Powerful hip hinge and glute drive." },
+          { name: "Farmer's Carries", sets: "4 sets", reps: "40 meters", rest: "60s", tips: "Stand tall, packed shoulders, tight grip." },
+          { name: "Box Jumps / Step Ups", sets: "3 sets", reps: "10 reps/leg", rest: "60s", tips: "Soft landing with bent knees." },
+          { name: "Hanging Knee Tuck Holds", sets: "3 sets", reps: "30s hold", rest: "45s", tips: "Do not swing, squeeze lower abs." },
+        ],
+      },
+      {
+        id: `w_${w}_d7`,
+        day: "Day 7",
+        title: "Day 7 – Active Recovery & Mobility",
+        focus: "Full Body Mobility & Stretch",
+        image: "/images/workout-day2-lower.jpg",
+        durationMinutes: 30,
+        exercises: [
+          { name: "World's Greatest Stretch", sets: "3 sets", reps: "5 reps/side", rest: "30s", tips: "Open up hips, thoracic spine, and hamstrings." },
+          { name: "Cat-Cow & Child's Pose", sets: "3 sets", reps: "10 cycles", rest: "30s", tips: "Synchronize movement with slow deep diaphragmatic breathing." },
+          { name: "Pigeon Hip Stretch", sets: "3 sets", reps: "45s hold/side", rest: "30s", tips: "Square hips to floor, breathe into tight glutes." },
+          { name: "Easy Recovery Walk", sets: "1 set", reps: "30 mins", rest: "0s", tips: "Outdoor light walking to stimulate blood flow." },
+        ],
+      },
     ];
+
+    const effectiveDaysCount = Math.min(7, Math.max(1, workoutDaysPerWeek));
+    const workoutDays: WorkoutDayItem[] = fullSplit.slice(0, effectiveDaysCount);
 
     weeks.push({
       weekNumber: w,

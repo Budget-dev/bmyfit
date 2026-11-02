@@ -116,7 +116,7 @@ export async function POST(request: Request) {
           bodyFatPercent: assessment.bodyFatPercent ?? undefined,
           weeksCount: 8,
           customerName,
-          coachNotes: "WEBHOOK FULFILLMENT: Payment captured by Razorpay. 8-Week plan created in pending review status for Coach dispatch.",
+          coachNotes: "WEBHOOK FULFILLMENT: Payment captured by Razorpay. Custom plan created in pending review status for Coach dispatch.",
         });
         await storeDashboardPlan(order.uid, order.assessmentId, dashboardPlan);
 

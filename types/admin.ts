@@ -6,7 +6,7 @@ import type {
   BodyFatCategory,
   FitnessGoal,
 } from "./fitness";
-import type { PlanDashboardData, PlanStatus, TaskLogState } from "./plan-dashboard";
+import type { PlanDashboardData, TaskLogState, DailyCheckInLog } from "./plan-dashboard";
 
 export type MembershipCategory = "free" | "membership" | "purchased";
 
@@ -114,6 +114,7 @@ export interface AdminUserRecord {
   medicalAssessment?: MedicalAssessment;
   needsPlanReview?: boolean;
   taskLogs?: TaskLogState;
+  dailyLogs?: Record<string, DailyCheckInLog>;
 }
 
 export interface AdminStats {
