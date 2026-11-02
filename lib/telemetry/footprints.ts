@@ -50,7 +50,7 @@ export interface VisitorFootprintRecord {
   timeline: FootprintEvent[];
 }
 
-const STAGE_TITLES: Record<FootprintStage, string> = {
+export const STAGE_TITLES: Record<FootprintStage, string> = {
   landing: "Landed on BMYFIT",
   goal_selected: "Selected Fitness Goal",
   details_entered: "Entered Body Measurements & Biometrics",
@@ -149,61 +149,14 @@ export function getStoredVisitorMetadata(): Record<string, unknown> {
 
 /**
  * Records a visitor footprint transition event.
- * Fire-and-forget: does not block the UI.
+ * Disabled: Footprint telemetry deactivated per admin privacy & user requirement.
  */
 export function recordFootprint(
-  stage: FootprintStage,
-  customMeta?: Record<string, unknown>
+  _stage?: FootprintStage,
+  _customMeta?: Record<string, unknown>
 ): void {
-  if (typeof window === "undefined") return;
-
-  try {
-    const visitorId = getOrCreateVisitorId();
-    const storedMeta = getStoredVisitorMetadata();
-    const mergedMeta = { ...storedMeta, ...(customMeta || {}) };
-    const stageTitle = STAGE_TITLES[stage] || stage;
-    const path = window.location.pathname || "/";
-    const device = detectDeviceType();
-
-    const payload = {
-      visitorId,
-      stage,
-      stageTitle,
-      path,
-      device,
-      userAgent: navigator.userAgent || "",
-      referrer: document.referrer || "",
-      metadata: mergedMeta,
-      timestamp: new Date().toISOString(),
-    };
-
-    // Keep local session trace
-    try {
-      const sessionTrace = JSON.parse(sessionStorage.getItem("bmyfit_session_trail") || "[]");
-      sessionTrace.push({ stage, title: stageTitle, timestamp: payload.timestamp, path });
-      sessionStorage.setItem("bmyfit_session_trail", JSON.stringify(sessionTrace.slice(-15)));
-    } catch {
-      // Ignore sessionStorage quota errors
-    }
-
-    // Send payload to backend telemetry API
-    if (navigator.sendBeacon) {
-      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
-      const sent = navigator.sendBeacon("/api/telemetry/footprint", blob);
-      if (sent) return;
-    }
-
-    // Fallback to fetch
-    void fetch("/api/telemetry/footprint", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      keepalive: true,
-    }).catch((err) => {
-      console.debug("[Footprint Telemetry Notice]", err);
-    });
-  } catch (err) {
-    console.debug("[Footprint Telemetry Exception]", err);
-  }
+  void _stage;
+  void _customMeta;
+  // Intentionally disabled: visitor footprints deactivated
 }
 

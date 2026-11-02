@@ -5,6 +5,7 @@ import {
   registerPurchasedClient,
   registerOrUpdateAuthUser,
 } from "@/features/admin/admin-data";
+import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 
 describe("Admin User Management & Paid Customer Promotion", () => {
   beforeEach(() => {
@@ -85,6 +86,7 @@ describe("Admin User Management & Paid Customer Promotion", () => {
         email: "test_1793282473121@test.com",
         phone: "",
         city: "",
+        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120",
         membershipCategory: "free",
         membershipTitle: "Free Assessment Lead",
         goal: "fat-loss",
@@ -112,25 +114,11 @@ describe("Admin User Management & Paid Customer Promotion", () => {
           waterLitres: 3.5,
           dailyStepGoal: 10000,
         },
-        plan: {
-          id: "plan_test",
+        plan: generateDashboardPlan("plan_test", {
           customerName: "Test Athlete",
-          weeksCount: 8,
           status: "pending_review",
-          updatedAt: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          goal: "fat-loss",
-          goalDisplay: "Fat Loss",
-          bmi: 22.8,
-          bodyFatPercent: 18,
-          calorieTarget: 1800,
-          proteinTargetGrams: 120,
-          waterLitres: 3.5,
-          dailyStepGoal: 10000,
-          workoutDaysPerWeek: 4,
-          coachNotes: "",
-          weeks: [],
-        },
+          weeksCount: 8,
+        }),
       });
 
       // Anonymous assessment visitor with no registered account
@@ -140,6 +128,7 @@ describe("Admin User Management & Paid Customer Promotion", () => {
         email: "anon_visitor_99@lead.bmyfit.in",
         phone: "+91 98000 00000",
         city: "Online Intake",
+        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120",
         membershipCategory: "free",
         membershipTitle: "Free Assessment Lead",
         goal: "fat-loss",
@@ -167,25 +156,11 @@ describe("Admin User Management & Paid Customer Promotion", () => {
           waterLitres: 3.5,
           dailyStepGoal: 10000,
         },
-        plan: {
-          id: "plan_anon",
+        plan: generateDashboardPlan("plan_anon", {
           customerName: "Free Score Lead",
-          weeksCount: 8,
           status: "pending_review",
-          updatedAt: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          goal: "fat-loss",
-          goalDisplay: "Fat Loss",
-          bmi: 25.5,
-          bodyFatPercent: 22,
-          calorieTarget: 1850,
-          proteinTargetGrams: 130,
-          waterLitres: 3.5,
-          dailyStepGoal: 10000,
-          workoutDaysPerWeek: 4,
-          coachNotes: "",
-          weeks: [],
-        },
+          weeksCount: 8,
+        }),
       });
     }
 
@@ -203,3 +178,4 @@ describe("Admin User Management & Paid Customer Promotion", () => {
     expect(users.some((u) => u.name?.startsWith("Free Score Lead"))).toBe(false);
   });
 });
+

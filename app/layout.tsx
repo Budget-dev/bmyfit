@@ -7,7 +7,6 @@ import "@fortawesome/fontawesome-svg-core/styles.css";
 config.autoAddCss = false;
 import { SiteStructuredData } from "@/components/seo/json-ld";
 import { GlobalCoachChat } from "@/components/chat/global-coach-chat";
-import { FootprintTracker } from "@/components/telemetry/footprint-tracker";
 import { APP_CONFIG } from "@/lib/config";
 
 const inter = Inter({
@@ -140,7 +139,6 @@ export default function RootLayout({
           </>
         )}
         <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
-        <FootprintTracker />
         {children}
         <GlobalCoachChat />
       </body>

@@ -37,7 +37,6 @@ import { WeekPlanEditor } from "./week-plan-editor";
 import { AdminChatView } from "./admin-chat-view";
 import { ClientHealthDashboard } from "./client-health-dashboard";
 import { SubscriptionsDashboard } from "./subscriptions-dashboard";
-import { FunnelFootprintsDashboard } from "./funnel-footprints-dashboard";
 import { AlertDispatchModal } from "./alert-dispatch-modal";
 import { ClientDetailSidebar } from "./client-detail-sidebar";
 import type { PlanVideo, PlanSupplementRecommendation } from "@/types/plan-dashboard";
@@ -47,7 +46,7 @@ export function AdminDesktopConsole() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "directory" | "subscriptions" | "footprints" | "studio" | "dispatch" | "chats"
+    "overview" | "directory" | "subscriptions" | "studio" | "dispatch" | "chats"
   >("overview");
   const [categoryFilter, setCategoryFilter] = useState<
     "all" | MembershipCategory | "pending" | "medical"
@@ -139,8 +138,10 @@ export function AdminDesktopConsole() {
 
       const mergedUsers = Array.from(userMap.values()).filter((u) => {
         const email = u.email?.toLowerCase() || "";
-        // Strictly exclude test emails and test athlete account
+        // Strictly exclude Coach Naveen, test emails, and test athlete account
         if (
+          email === "bmyfitnesscoach@gmail.com" ||
+          u.id === "coach_naveen" ||
           email.includes("@test.com") ||
           email.startsWith("test_") ||
           u.id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
@@ -148,14 +149,27 @@ export function AdminDesktopConsole() {
         ) {
           return false;
         }
-        // Strictly exclude anonymous funnel leads who only checked analysis without registering or paying
-        const isAnonymousLead =
-          (email.includes("@lead.bmyfit.in") || u.name?.startsWith("Free Score Lead")) &&
-          u.membershipCategory === "free" &&
-          !u.order &&
-          !(u as { isPaid?: boolean }).isPaid;
-        if (isAnonymousLead) {
-          return false;
+
+        const isPaid =
+          u.membershipCategory === "purchased" ||
+          u.membershipCategory === "membership" ||
+          Boolean(u.order && u.order.status === "paid") ||
+          Boolean((u as { isPaid?: boolean }).isPaid);
+
+        // If not a paid customer, must be a real registered user (never an anonymous plan or guest lead)
+        if (!isPaid) {
+          if (
+            email.includes("@lead.bmyfit.in") ||
+            email.includes("@client.bmyfit.in") ||
+            (email.includes("@example.com") && u.id.startsWith("plan_")) ||
+            u.name?.startsWith("Free Score Lead") ||
+            u.id.startsWith("plan_") ||
+            u.id.startsWith("asm_") ||
+            u.id.startsWith("guest_") ||
+            u.id.startsWith("anon_")
+          ) {
+            return false;
+          }
         }
         return true;
       });
@@ -590,32 +604,7 @@ export function AdminDesktopConsole() {
                 </span>
               </button>
 
-              {/* Tab 3: Funnel & Footprints */}
-              <button
-                type="button"
-                onClick={() => setActiveTab("footprints")}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${
-                  activeTab === "footprints"
-                    ? "bg-[#032e1c] text-white shadow-xs"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Activity className="w-4 h-4 text-amber-500" />
-                  <span>Funnel &amp; Footprints</span>
-                </div>
-                <span
-                  className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                    activeTab === "footprints"
-                      ? "bg-amber-400 text-gray-950"
-                      : "bg-amber-100 text-amber-800"
-                  }`}
-                >
-                  LIVE
-                </span>
-              </button>
-
-              {/* Tab 4: Users Directory */}
+              {/* Tab 3: Users Directory */}
               <button
                 type="button"
                 onClick={() => setActiveTab("directory")}
@@ -846,7 +835,6 @@ export function AdminDesktopConsole() {
                 <h1 className="text-xl sm:text-2xl font-black text-gray-950 tracking-tight">
                   {activeTab === "overview" && "Client Performance & Health Status Dashboard"}
                   {activeTab === "subscriptions" && "Client Subscriptions & Entitlements Dashboard"}
-                  {activeTab === "footprints" && "Visitor Footprints & Funnel Drop-Off Analytics"}
                   {activeTab === "directory" && "Client Management & Health Profiles"}
                   {activeTab === "studio" &&
                     `Week Plan Studio: ${selectedUser ? selectedUser.name : "Select Client"}`}
@@ -858,8 +846,6 @@ export function AdminDesktopConsole() {
                     "Track real-time adherence, see who is doing good vs who needs coach attention, and dispatch instant alerts."}
                   {activeTab === "subscriptions" &&
                     "Monitor all ₹99 custom plans, subscription periods, payment verifications, and renewal alerts."}
-                  {activeTab === "footprints" &&
-                    "Live trail showing how far prospective athletes travel into your checkout before dropping off or paying."}
                   {activeTab === "directory" &&
                     "Search and filter client profiles, inspect body fat & medical reports, and launch plan adjustments."}
                   {activeTab === "studio" &&
@@ -992,13 +978,6 @@ export function AdminDesktopConsole() {
                   setAlertUser(u);
                 }}
               />
-            </div>
-          )}
-
-          {/* ================= TAB: FUNNEL & FOOTPRINTS ================= */}
-          {activeTab === "footprints" && (
-            <div className="p-6">
-              <FunnelFootprintsDashboard />
             </div>
           )}
 

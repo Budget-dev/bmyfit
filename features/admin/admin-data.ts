@@ -129,28 +129,81 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
   memoryStore.delete("nqOlc3cJFVIzJB3oGRVyu4g9r4L2");
 
   // 0.1 Discover registered Firebase Auth clients (Exact UIDs from Firebase Auth console)
-  const venkateshUid = "vovsLoxTftM6lNs7hstEKDD31iK2";
+  const knownAuthUsers = [
+    {
+      id: "vovsLoxTftM6lNs7hstEKDD31iK2",
+      name: "Venkatesh Choppa",
+      email: "venkateshchop14@gmail.com",
+      phone: "+91 98490 12345",
+      city: "Bengaluru, KA",
+      goal: "fat-loss" as const,
+      goalDisplay: "Fat Loss & Muscle",
+      joinedAt: "2026-10-28T12:00:00.000Z",
+    },
+    {
+      id: "RLuiNcGHWgTmdYmBkkr2fSL4k8h2",
+      name: "Athlete",
+      email: "www.arjunshiva@gmail.com",
+      phone: "+91 98000 00000",
+      city: "Online Client",
+      goal: "fat-loss" as const,
+      goalDisplay: "Fat Loss & Conditioning",
+      joinedAt: "2026-11-02T12:00:00.000Z",
+    },
+    {
+      id: "ilSFiN2OmBNTBgHwVr1UZJV1vgh1",
+      name: "DevOps Frontend",
+      email: "devopsfrontend64@gmail.com",
+      phone: "+91 98000 00000",
+      city: "Online Client",
+      goal: "fat-loss" as const,
+      goalDisplay: "Fat Loss & Conditioning",
+      joinedAt: "2026-10-31T12:00:00.000Z",
+    },
+    {
+      id: "YFMqdXMQFzSilXzb32qMJrP53vB3",
+      name: "Hradsh",
+      email: "hradsh@gmail.com",
+      phone: "+91 98000 00000",
+      city: "Online Client",
+      goal: "fat-loss" as const,
+      goalDisplay: "Fat Loss & Conditioning",
+      joinedAt: "2026-10-30T12:00:00.000Z",
+    },
+    {
+      id: "rMIFPh8BFGTaCXvS9YGRKRo24g72",
+      name: "Haradah",
+      email: "haradah@gmail.com",
+      phone: "+91 98000 00000",
+      city: "Online Client",
+      goal: "fat-loss" as const,
+      goalDisplay: "Fat Loss & Conditioning",
+      joinedAt: "2026-10-30T12:00:00.000Z",
+    },
+  ];
 
-  if (!memoryStore.has(venkateshUid)) {
-    memoryStore.set(
-      venkateshUid,
-      sanitizeAdminUser(
-        {
-          id: venkateshUid,
-          name: "Venkatesh Choppa",
-          email: "venkateshchop14@gmail.com",
-          phone: "",
-          city: "",
-          membershipCategory: "free",
-          membershipTitle: "Registered Member",
-          goal: "fat-loss",
-          goalDisplay: "Fat Loss & Muscle",
-          joinedAt: "2026-10-28T12:00:00.000Z",
-          lastActive: "Active Today",
-        },
-        venkateshUid
-      )
-    );
+  for (const client of knownAuthUsers) {
+    if (!memoryStore.has(client.id)) {
+      memoryStore.set(
+        client.id,
+        sanitizeAdminUser(
+          {
+            id: client.id,
+            name: client.name,
+            email: client.email,
+            phone: client.phone,
+            city: client.city,
+            membershipCategory: "free",
+            membershipTitle: "Registered Member",
+            goal: client.goal,
+            goalDisplay: client.goalDisplay,
+            joinedAt: client.joinedAt,
+            lastActive: "Active Today",
+          },
+          client.id
+        )
+      );
+    }
   }
 
   if (hasAdminCredentials) {
@@ -205,6 +258,37 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
       if (!usersSnap.empty) {
         for (const doc of usersSnap.docs) {
           const userData = doc.data();
+          const email = (userData.email || "").toLowerCase();
+          if (
+            email === "bmyfitnesscoach@gmail.com" ||
+            doc.id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
+            email.includes("@test.com") ||
+            email.startsWith("test_") ||
+            userData.name?.toLowerCase().includes("test athlete")
+          ) {
+            continue;
+          }
+
+          const isPaid =
+            userData.membershipCategory === "purchased" ||
+            userData.membershipCategory === "membership" ||
+            Boolean(userData.isPaid) ||
+            Boolean(userData.order && userData.order.status === "paid");
+
+          if (!isPaid) {
+            if (
+              email.includes("@lead.bmyfit.in") ||
+              email.includes("@client.bmyfit.in") ||
+              userData.name?.startsWith("Free Score Lead") ||
+              doc.id.startsWith("plan_") ||
+              doc.id.startsWith("asm_") ||
+              doc.id.startsWith("guest_") ||
+              doc.id.startsWith("anon_")
+            ) {
+              continue;
+            }
+          }
+
           const existing = memoryStore.get(doc.id);
           if (existing) {
             if (userData.name) existing.name = userData.name;
@@ -219,7 +303,7 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
             memoryStore.set(doc.id, {
               id: doc.id,
               name: userData.name || "BMYFIT Member",
-              email: userData.email || `${doc.id}@client.bmyfit.in`,
+              email: userData.email,
               phone: userData.phone || "",
               city: userData.city || "",
               avatar:
@@ -323,7 +407,7 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
       console.warn("Firestore assessments collection fetch notice:", asmErr);
     }
 
-  // 2. Fetch live plans from Firestore "plans" collection
+  // 2. Fetch live plans from Firestore "plans" collection (Plans ONLY attach to registered/paid users; never create synthetic users)
   try {
     const plansSnap = await adminDb.collection("plans").get();
     if (!plansSnap.empty) {
@@ -332,44 +416,6 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
         const existing = memoryStore.get(doc.id);
         if (existing) {
           existing.plan = { ...existing.plan, ...planData };
-        } else if (planData.customerName) {
-          memoryStore.set(doc.id, {
-            id: doc.id,
-            name: planData.customerName,
-            email: `${planData.customerName.toLowerCase().replace(/\s+/g, ".")}@example.com`,
-            phone: "+91 98000 00000",
-            city: "Online Funnel",
-            avatar:
-              "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
-            joinedAt: planData.createdAt || new Date().toISOString(),
-            lastActive: "Just now",
-            membershipCategory: "purchased",
-            membershipTitle: `${planData.weeksCount}-Week Custom Plan`,
-            goal: planData.goal || "fat-loss",
-            goalDisplay: planData.goalDisplay || "Custom Goal",
-            biometrics: {
-              gender: "male",
-              age: 29,
-              heightCm: 175,
-              weightKg: 78,
-              targetWeightKg: 70,
-              waistIn: 34,
-              neckIn: 15.5,
-              bmi: planData.bmi || 24.2,
-              bmiCategory: "normal",
-              bodyFatPercent: planData.bodyFatPercent || 18.4,
-              bodyFatCategory: "fitness",
-              bmr: 1700,
-              tdee: 2350,
-              caloricTarget: planData.calorieTarget || 1800,
-              proteinTargetGrams: planData.proteinTargetGrams || 120,
-              activityLevel: "moderately-active",
-              dietPreference: "non-vegetarian",
-              waterLitres: 3.5,
-              dailyStepGoal: 10000,
-            },
-            plan: planData,
-          });
         }
       }
     }
@@ -524,12 +570,18 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
 
   const rawUsers = Array.from(memoryStore.entries())
     .filter(([id, u]) => {
-      if (id.startsWith("user_membership_") || id.startsWith("user_purchase_") || id.startsWith("mock_")) {
+      if (
+        id.startsWith("user_membership_") ||
+        id.startsWith("user_purchase_") ||
+        id.startsWith("mock_") ||
+        id === "coach_naveen"
+      ) {
         return false;
       }
-      // Strictly exclude test emails and test athlete accounts
+      // Strictly exclude Coach Naveen, test emails, and test athlete accounts
       const email = u.email?.toLowerCase() || "";
       if (
+        email === "bmyfitnesscoach@gmail.com" ||
         email.includes("@test.com") ||
         email.startsWith("test_") ||
         id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
@@ -537,14 +589,27 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
       ) {
         return false;
       }
-      // Strictly exclude anonymous funnel leads who just checked analysis without logging in, signing up, or paying
-      const isAnonymousLead =
-        (email.includes("@lead.bmyfit.in") || u.name?.startsWith("Free Score Lead")) &&
-        u.membershipCategory === "free" &&
-        !u.order &&
-        !(u as { isPaid?: boolean }).isPaid;
-      if (isAnonymousLead) {
-        return false;
+
+      const isPaid =
+        u.membershipCategory === "purchased" ||
+        u.membershipCategory === "membership" ||
+        Boolean(u.order && u.order.status === "paid") ||
+        Boolean((u as { isPaid?: boolean }).isPaid);
+
+      // Strictly exclude anonymous funnel leads and unauthenticated calculation sessions
+      if (!isPaid) {
+        if (
+          email.includes("@lead.bmyfit.in") ||
+          email.includes("@client.bmyfit.in") ||
+          (email.includes("@example.com") && id.startsWith("plan_")) ||
+          u.name?.startsWith("Free Score Lead") ||
+          id.startsWith("plan_") ||
+          id.startsWith("asm_") ||
+          id.startsWith("guest_") ||
+          id.startsWith("anon_")
+        ) {
+          return false;
+        }
       }
       return true;
     })
