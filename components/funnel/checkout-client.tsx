@@ -453,7 +453,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       let orderId = "";
       let amount = 9900;
       let currency = "INR";
-      let keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_Tv8FVtCJC1WhXF";
+      let keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_live_Tv9FNcDsjXLKfQ";
       let isSandbox = false;
 
       // Primary attempt: /api/payments/create-order

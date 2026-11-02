@@ -16,8 +16,8 @@ export const DEV_SANDBOX_SECRET = "bmyfit_dev_sandbox_secret_99paise_key";
 export const DEV_SANDBOX_KEY_ID = "rzp_test_bmyfit_dev_sandbox";
 
 export function isRazorpayConfigured(): boolean {
-  const keyId = (process.env.RAZORPAY_KEY_ID || serverEnv.RAZORPAY_KEY_ID || "rzp_test_Tv8FVtCJC1WhXF").trim();
-  const secret = (process.env.RAZORPAY_KEY_SECRET || serverEnv.RAZORPAY_KEY_SECRET || "M0qJ21yHzkGOFMalpe3Pyak5").trim();
+  const keyId = (process.env.RAZORPAY_KEY_ID || serverEnv.RAZORPAY_KEY_ID || "rzp_live_Tv9FNcDsjXLKfQ").trim();
+  const secret = (process.env.RAZORPAY_KEY_SECRET || serverEnv.RAZORPAY_KEY_SECRET || "wGkDJh04CNC0QS436zic3JZe").trim();
   return Boolean(keyId !== "" && secret !== "");
 }
 
@@ -29,7 +29,7 @@ export function isWebhookConfigured(): boolean {
 }
 
 function getRequiredSecret(secret: string | undefined, errorCode: string): string {
-  const activeSecret = secret || process.env.RAZORPAY_KEY_SECRET || "M0qJ21yHzkGOFMalpe3Pyak5";
+  const activeSecret = secret || process.env.RAZORPAY_KEY_SECRET || "wGkDJh04CNC0QS436zic3JZe";
   if (activeSecret && activeSecret.trim() !== "") {
     return activeSecret.trim();
   }
@@ -116,8 +116,8 @@ export async function createRazorpayOrder(
     };
   }
 
-  const keyId = (process.env.RAZORPAY_KEY_ID || serverEnv.RAZORPAY_KEY_ID || "rzp_test_Tv8FVtCJC1WhXF").trim();
-  const secret = (process.env.RAZORPAY_KEY_SECRET || serverEnv.RAZORPAY_KEY_SECRET || "M0qJ21yHzkGOFMalpe3Pyak5").trim();
+  const keyId = (process.env.RAZORPAY_KEY_ID || serverEnv.RAZORPAY_KEY_ID || "rzp_live_Tv9FNcDsjXLKfQ").trim();
+  const secret = (process.env.RAZORPAY_KEY_SECRET || serverEnv.RAZORPAY_KEY_SECRET || "wGkDJh04CNC0QS436zic3JZe").trim();
 
   try {
     const razorpay = new Razorpay({
