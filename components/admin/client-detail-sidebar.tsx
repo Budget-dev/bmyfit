@@ -19,13 +19,25 @@ import {
   Send,
   CheckCheck,
   Sparkles,
+  Dumbbell,
+  Utensils,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
 } from "@/components/ui/icons";
 import { ShoppingBag } from "@/components/ui/supplement-icons";
 import type { AdminUserRecord } from "@/types/admin";
-import type { PlanVideo, PlanSupplementRecommendation } from "@/types/plan-dashboard";
+import type {
+  PlanVideo,
+  PlanSupplementRecommendation,
+  WeekPlanData,
+  MealSlotItem,
+  WorkoutDayItem,
+  PlanReleaseHistoryItem,
+} from "@/types/plan-dashboard";
 import type { ChatMessage } from "@/types/chat";
 import { subscribeToChatMessages, sendChatMessage, markChatThreadRead } from "@/lib/firestore/chat";
-import { SUPPLEMENT_PRODUCTS, type SupplementProduct } from "@/features/supplements/supplements-data";
+import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 import { parseVideoUrl } from "@/lib/video-helper";
 
 interface ClientDetailSidebarProps {
@@ -37,7 +49,8 @@ interface ClientDetailSidebarProps {
     coachNotes: string,
     video?: PlanVideo,
     supplements?: PlanSupplementRecommendation[],
-    targets?: { calorieTarget?: number; proteinTargetGrams?: number; workoutDaysPerWeek?: number }
+    targets?: { calorieTarget?: number; proteinTargetGrams?: number; workoutDaysPerWeek?: number },
+    customWeeks?: WeekPlanData[]
   ) => Promise<void>;
   onOpenStudio: (user: AdminUserRecord) => void;
   onOpenChat: (user: AdminUserRecord) => void;
@@ -131,8 +144,14 @@ export function ClientDetailSidebar({
   const [sendingFeedback, setSendingFeedback] = useState<boolean>(false);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
 
-  // Version history accordion
+  // Version history & snapshot inspection state
   const [showVersionHistory, setShowVersionHistory] = useState<boolean>(false);
+  const [inspectedSnapshot, setInspectedSnapshot] = useState<PlanReleaseHistoryItem | null>(null);
+
+  // Week-by-week customization state
+  const [weeks, setWeeks] = useState<WeekPlanData[]>([]);
+  const [selectedWeekNum, setSelectedWeekNum] = useState<number>(1);
+  const [editingProduct, setEditingProduct] = useState<PlanSupplementRecommendation | null>(null);
 
   // Loading & success
   const [isPushing, setIsPushing] = useState<boolean>(false);
@@ -144,6 +163,7 @@ export function ClientDetailSidebar({
       setActiveTab(initialTab);
       setSuccessMessage(null);
       setFeedbackNotice(null);
+      setInspectedSnapshot(null);
       setCoachNotes(user.plan?.coachNotes || "Plan customized & verified by Head Coach Naveen. Ready for execution!");
       setCalorieTarget(user.plan?.calorieTarget || 1800);
       setProteinTargetGrams(user.plan?.proteinTargetGrams || 120);
@@ -167,6 +187,19 @@ export function ClientDetailSidebar({
         // Admin will manually add or recommend products (no hardcoded mock supplements)
         setSelectedSupplements([]);
       }
+
+      // Initialize weeks
+      const initialWeeks = (user.plan?.weeks && user.plan.weeks.length > 0)
+        ? user.plan.weeks
+        : generateDashboardPlan(user.id, {
+            customerName: user.name,
+            weeksCount: user.plan?.weeksCount || 8,
+            calorieTarget: user.plan?.calorieTarget || 1800,
+            proteinTargetGrams: user.plan?.proteinTargetGrams || 120,
+            workoutDaysPerWeek: user.plan?.workoutDaysPerWeek || 4,
+          }).weeks;
+      setWeeks(initialWeeks);
+      setSelectedWeekNum(1);
     }
   }, [user, initialTab]);
 
@@ -185,27 +218,6 @@ export function ClientDetailSidebar({
 
   const isPending = (user.plan?.status === "pending_review") || user.needsPlanReview;
   const parsedVideo = parseVideoUrl(videoUrl);
-
-  const handleToggleSupplement = (product: SupplementProduct) => {
-    const exists = selectedSupplements.some((s) => s.productId === product.id);
-    if (exists) {
-      setSelectedSupplements(selectedSupplements.filter((s) => s.productId !== product.id));
-    } else {
-      setSelectedSupplements([
-        ...selectedSupplements,
-        {
-          productId: product.id,
-          name: product.name,
-          subtitle: product.subtitle,
-          affiliateUrl: product.amazonUrl,
-          price: product.price,
-          originalPrice: product.originalPrice,
-          image: product.image,
-          customCoachNote: "Recommended based on your daily targets.",
-        },
-      ]);
-    }
-  };
 
   const handleAddCustomProduct = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -294,11 +306,18 @@ export function ClientDetailSidebar({
         }
         : undefined;
 
-      await onPushPlan(user, coachNotes, videoPayload, selectedSupplements, {
-        calorieTarget,
-        proteinTargetGrams,
-        workoutDaysPerWeek,
-      });
+      await onPushPlan(
+        user,
+        coachNotes,
+        videoPayload,
+        selectedSupplements,
+        {
+          calorieTarget,
+          proteinTargetGrams,
+          workoutDaysPerWeek,
+        },
+        weeks
+      );
       setSuccessMessage(`Plan successfully delivered and published to ${user.name}'s live dashboard!`);
       setTimeout(() => {
         setSuccessMessage(null);
@@ -311,11 +330,115 @@ export function ClientDetailSidebar({
     }
   };
 
-  const filteredCatalog = SUPPLEMENT_PRODUCTS.filter(
-    (p) =>
-      p.name.toLowerCase().includes(supplementSearch.toLowerCase()) ||
-      p.category.toLowerCase().includes(supplementSearch.toLowerCase())
-  );
+  const handleRestoreVersion = (h: PlanReleaseHistoryItem) => {
+    if (!h.snapshot) {
+      if (h.notes) setCoachNotes(h.notes);
+      alert(`Restored notes from Version ${h.version}.`);
+      return;
+    }
+    if (h.snapshot.coachNotes) setCoachNotes(h.snapshot.coachNotes);
+    if (h.snapshot.calorieTarget) setCalorieTarget(h.snapshot.calorieTarget);
+    if (h.snapshot.proteinTargetGrams) setProteinTargetGrams(h.snapshot.proteinTargetGrams);
+    if (h.snapshot.workoutDaysPerWeek) setWorkoutDaysPerWeek(h.snapshot.workoutDaysPerWeek);
+    if (h.snapshot.video) {
+      setVideoUrl(h.snapshot.video.url || "");
+      setVideoTitle(h.snapshot.video.title || "");
+      setVideoRatio(h.snapshot.video.aspectRatio || "16:9");
+      setVideoNotes(h.snapshot.video.notes || "");
+    }
+    if (h.snapshot.suggestedSupplements) {
+      setSelectedSupplements(h.snapshot.suggestedSupplements);
+    }
+    if (h.snapshot.weeks && h.snapshot.weeks.length > 0) {
+      setWeeks(h.snapshot.weeks);
+    }
+    alert(`✓ Restored all plan targets and settings from Version ${h.version}! Click "Update & Re-send Live Plan" to push these live.`);
+  };
+
+  const handleAddWeek = () => {
+    const nextWeekNum = weeks.length + 1;
+    const lastWeek = weeks[weeks.length - 1];
+    const newWeek: WeekPlanData = lastWeek
+      ? {
+          ...JSON.parse(JSON.stringify(lastWeek)),
+          weekNumber: nextWeekNum,
+          phaseTitle: `Week ${nextWeekNum} Progression`,
+          phaseSubtitle: "Progressive overload & nutrition consistency",
+        }
+      : {
+          weekNumber: nextWeekNum,
+          phaseTitle: `Week ${nextWeekNum} Foundation`,
+          phaseSubtitle: "Building solid daily routine",
+          nutrition: {
+            calories: calorieTarget,
+            proteinGrams: proteinTargetGrams,
+            description: "Personalized Indian balanced diet",
+            meals: [],
+          },
+          workouts: {
+            daysPerWeek: workoutDaysPerWeek,
+            description: `${workoutDaysPerWeek} structured workout sessions`,
+            days: [],
+          },
+        };
+    setWeeks([...weeks, newWeek]);
+    setSelectedWeekNum(nextWeekNum);
+  };
+
+  const handleUpdateWeekPhase = (field: "phaseTitle" | "phaseSubtitle", val: string) => {
+    setWeeks(
+      weeks.map((w) => (w.weekNumber === selectedWeekNum ? { ...w, [field]: val } : w))
+    );
+  };
+
+  const handleUpdateWeekNutrition = (field: "calories" | "proteinGrams", val: number) => {
+    setWeeks(
+      weeks.map((w) =>
+        w.weekNumber === selectedWeekNum
+          ? { ...w, nutrition: { ...w.nutrition, [field]: val } }
+          : w
+      )
+    );
+  };
+
+  const handleUpdateWorkoutDayTitle = (dayIdx: number, val: string) => {
+    setWeeks(
+      weeks.map((w) => {
+        if (w.weekNumber !== selectedWeekNum) return w;
+        const newDays = [...(w.workouts.days || [])];
+        if (newDays[dayIdx]) {
+          newDays[dayIdx] = { ...newDays[dayIdx], title: val };
+        }
+        return { ...w, workouts: { ...w.workouts, days: newDays } };
+      })
+    );
+  };
+
+  const handleUpdateMealName = (mealIdx: number, val: string) => {
+    setWeeks(
+      weeks.map((w) => {
+        if (w.weekNumber !== selectedWeekNum) return w;
+        const newMeals = [...(w.nutrition.meals || [])];
+        if (newMeals[mealIdx]) {
+          newMeals[mealIdx] = { ...newMeals[mealIdx], name: val };
+        }
+        return { ...w, nutrition: { ...w.nutrition, meals: newMeals } };
+      })
+    );
+  };
+
+  const handleUpdateMealPortion = (mealIdx: number, val: string) => {
+    setWeeks(
+      weeks.map((w) => {
+        if (w.weekNumber !== selectedWeekNum) return w;
+        const newMeals = [...(w.nutrition.meals || [])];
+        if (newMeals[mealIdx]) {
+          newMeals[mealIdx] = { ...newMeals[mealIdx], portion: val };
+        }
+        return { ...w, nutrition: { ...w.nutrition, meals: newMeals } };
+      })
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -328,7 +451,7 @@ export function ClientDetailSidebar({
 
       {/* Slide-over Right Panel */}
       <div className="fixed inset-y-0 right-0 flex max-w-full pl-0 sm:pl-10">
-        <div className="w-screen max-w-2xl bg-white shadow-2xl border-l border-slate-200 flex flex-col h-full animate-in slide-in-from-right duration-300">
+        <div className="w-full max-w-full sm:max-w-2xl lg:max-w-3xl bg-white shadow-2xl border-l border-slate-200 flex flex-col h-full animate-in slide-in-from-right duration-300">
 
           {/* ================= HEADER ================= */}
           <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/70 flex items-start justify-between gap-4">
@@ -457,7 +580,7 @@ export function ClientDetailSidebar({
                   }`}
               >
                 <Edit3 className="w-4 h-4" />
-                <span>Targets &amp; Routine</span>
+                <span>Weekly Plan &amp; Routine</span>
               </button>
 
               <button
@@ -511,7 +634,7 @@ export function ClientDetailSidebar({
             {activeTab === "dispatch" && (
               <div className="space-y-6">
 
-                {/* Section 0: Payment & UTR Verification Record (Direct PhonePe / Razorpay) */}
+                {/* Section 0: Payment & UTR Verification Record */}
                 {user.order && (
                   <div className="bg-emerald-50/70 rounded-2xl p-4 border border-emerald-200/80 space-y-2.5 text-xs text-left">
                     <div className="flex items-center justify-between">
@@ -521,22 +644,25 @@ export function ClientDetailSidebar({
                           Payment Verification ({user.order.amountFormatted || "₹99"})
                         </span>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        {user.order.paymentMethod === "phonepe"
-                          ? "🟣 PhonePe Direct UPI"
-                          : user.order.paymentMethod === "upi_manual"
-                          ? "🟢 Direct UPI"
-                          : "Razorpay Gateway"}
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                        <span>
+                          {user.order.razorpayPaymentId || user.order.razorpayOrderId
+                            ? "Razorpay Gateway Verified"
+                            : user.order.paymentMethod === "upi_manual"
+                            ? "Direct UPI Verified"
+                            : "Payment Verified (₹99)"}
+                        </span>
                       </span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-700 pt-1">
                       <div>
                         <span className="text-slate-400 block text-[10px] uppercase font-semibold">
-                          UTR / Transaction ID
+                          UTR / Payment ID
                         </span>
                         <span className="font-mono font-bold text-slate-900 select-all">
-                          {user.order.utr || user.order.razorpayPaymentId || user.order.orderId}
+                          {user.order.razorpayPaymentId || user.order.utr || user.order.orderId}
                         </span>
                       </div>
                       <div>
@@ -549,6 +675,16 @@ export function ClientDetailSidebar({
                             : "Active Today"}
                         </span>
                       </div>
+                      {user.order.razorpayOrderId && (
+                        <div className="col-span-2 pt-1 border-t border-emerald-200/50">
+                          <span className="text-slate-400 block text-[10px] uppercase font-semibold">
+                            Razorpay Order ID
+                          </span>
+                          <span className="font-mono text-slate-800 text-[10.5px] select-all">
+                            {user.order.razorpayOrderId}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {user.order.paymentScreenshot && (
@@ -707,7 +843,7 @@ export function ClientDetailSidebar({
                   </div>
                 </div>
 
-                {/* Section B: Suggested Supplements & Custom Products */}
+                {/* Section B: Prescribed Supplements & Custom Products (Admin Provided URLs) */}
                 <div className="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80 space-y-4">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
@@ -716,17 +852,17 @@ export function ClientDetailSidebar({
                       </div>
                       <div>
                         <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                          Suggested Supplements &amp; Products
+                          Prescribed Products &amp; Supplements
                         </h3>
                         <p className="text-[11px] text-slate-500">
-                          Recommend verified supplements with store links &amp; image URLs
+                          Coach-prescribed products with direct store links &amp; image URLs (No heavy file uploads)
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
-                        {selectedSupplements.length} Selected
+                        {selectedSupplements.length} Prescribed
                       </span>
                       <button
                         type="button"
@@ -734,7 +870,7 @@ export function ClientDetailSidebar({
                         className="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 transition shadow-2xs cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>Add Product</span>
+                        <span>{showAddCustomProduct ? "Close Form" : "Prescribe Product"}</span>
                       </button>
                     </div>
                   </div>
@@ -744,7 +880,7 @@ export function ClientDetailSidebar({
                     <div className="p-4 bg-white rounded-xl border-2 border-emerald-300 shadow-sm space-y-3 animate-in fade-in">
                       <div className="flex items-center justify-between">
                         <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider">
-                          + Add Coach-Recommended Product
+                          + Prescribe Verified Product for {user.name}
                         </h4>
                         <button
                           type="button"
@@ -790,15 +926,29 @@ export function ClientDetailSidebar({
                         </div>
 
                         <div className="space-y-1">
-                          <label className="block text-[10px] font-bold text-slate-600 uppercase">Image URL (Web Link)</label>
-                          <input
-                            type="url"
-                            placeholder="e.g. https://images.unsplash.com/... or img link"
-                            value={customProdImageUrl}
-                            onChange={(e) => setCustomProdImageUrl(e.target.value)}
-                            className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono text-[11px]"
-                          />
-                          <p className="text-[9.5px] text-slate-400">Uses direct URL to keep Firestore lean &amp; fast.</p>
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase">Image URL (Direct Web Link)</label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="url"
+                              placeholder="e.g. https://m.media-amazon.com/images/... or public link"
+                              value={customProdImageUrl}
+                              onChange={(e) => setCustomProdImageUrl(e.target.value)}
+                              className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono text-[11px]"
+                            />
+                            {customProdImageUrl && (
+                              <div className="w-8 h-8 rounded-lg border border-slate-200 overflow-hidden bg-slate-50 shrink-0">
+                                <img
+                                  src={customProdImageUrl}
+                                  alt="Preview"
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=80&auto=format&fit=crop&q=80";
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-[9.5px] text-slate-400">Uses direct web URL to keep Firebase fast and avoid heavy file uploads.</p>
                         </div>
                       </div>
 
@@ -827,7 +977,7 @@ export function ClientDetailSidebar({
                           disabled={!customProdName.trim()}
                           className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-xs font-bold text-white shadow-xs cursor-pointer"
                         >
-                          + Add to Recommendations
+                          + Prescribe This Product
                         </button>
                       </div>
                     </div>
@@ -837,7 +987,7 @@ export function ClientDetailSidebar({
                   {selectedSupplements.length > 0 ? (
                     <div className="space-y-3">
                       <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                        Attached Recommendations for {user.name}
+                        Active Prescribed Products for {user.name}
                       </span>
                       <div className="space-y-2.5">
                         {selectedSupplements.map((supp) => (
@@ -847,13 +997,12 @@ export function ClientDetailSidebar({
                           >
                             <div className="flex items-center justify-between gap-3">
                               <div className="flex items-center gap-2.5 min-w-0">
-                                <div className="relative w-10 h-10 rounded-lg bg-slate-50 p-1 shrink-0 border border-slate-100 overflow-hidden">
+                                <div className="relative w-12 h-12 rounded-lg bg-slate-50 p-1 shrink-0 border border-slate-100 overflow-hidden">
                                   <img
                                     src={supp.image || "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&auto=format&fit=crop&q=80"}
                                     alt={supp.name}
                                     className="w-full h-full object-contain"
                                     onError={(e) => {
-                                      // Fallback on broken image link
                                       (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&auto=format&fit=crop&q=80";
                                     }}
                                   />
@@ -862,7 +1011,7 @@ export function ClientDetailSidebar({
                                   <span className="block text-xs font-bold text-slate-900 truncate">
                                     {supp.name}
                                   </span>
-                                  <span className="block text-[10px] text-slate-500 font-semibold">
+                                  <span className="block text-[11px] text-emerald-700 font-bold">
                                     ₹{supp.price ? supp.price.toLocaleString() : "Free / Included"}
                                   </span>
                                 </div>
@@ -871,7 +1020,7 @@ export function ClientDetailSidebar({
                                 type="button"
                                 onClick={() => handleRemoveSupplement(supp.productId)}
                                 className="inline-flex items-center gap-1 text-rose-600 hover:text-rose-800 px-2 py-1 rounded-lg hover:bg-rose-50 text-[11px] font-bold transition cursor-pointer"
-                                title="Remove supplement"
+                                title="Remove product"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                                 <span>Remove</span>
@@ -881,7 +1030,7 @@ export function ClientDetailSidebar({
                             {/* Coach Custom Note for this Supplement */}
                             <div className="space-y-1">
                               <label className="block text-[10px] font-bold text-slate-500 uppercase">
-                                Prescription / Coach Note
+                                Prescription / Dosage Instructions
                               </label>
                               <input
                                 type="text"
@@ -894,7 +1043,7 @@ export function ClientDetailSidebar({
                               />
                             </div>
 
-                            {/* Affiliate URL & Image URL */}
+                            {/* Store URL & Image URL */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               <div className="space-y-1">
                                 <label className="block text-[10px] font-bold text-slate-500 uppercase">
@@ -946,68 +1095,10 @@ export function ClientDetailSidebar({
                   ) : (
                     <div className="p-4 rounded-xl border border-dashed border-slate-200 bg-white text-center space-y-2">
                       <p className="text-xs text-slate-500 font-medium">
-                        No products recommended yet. Click <strong>+ Add Product</strong> above to suggest specific brands, protein, creatine or multivitamins.
+                        No custom products prescribed yet. Click <strong>+ Prescribe Product</strong> above to add supplements, protein or multivitamins using direct image URLs.
                       </p>
                     </div>
                   )}
-
-                  {/* Add More from Catalog */}
-                  <div className="space-y-2 pt-2 border-t border-slate-200">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                        Or Pick From Verified Catalog
-                      </span>
-                      <input
-                        type="text"
-                        placeholder="Filter catalog..."
-                        value={supplementSearch}
-                        onChange={(e) => setSupplementSearch(e.target.value)}
-                        className="px-2.5 py-1 text-[11px] rounded-lg border border-slate-200 bg-white"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                      {filteredCatalog.slice(0, 6).map((product) => {
-                        const isSelected = selectedSupplements.some((s) => s.productId === product.id);
-                        return (
-                          <div
-                            key={product.id}
-                            onClick={() => handleToggleSupplement(product)}
-                            className={`p-2 rounded-xl border text-left cursor-pointer transition flex items-center justify-between gap-2 ${isSelected
-                              ? "bg-emerald-50 border-emerald-300 ring-1 ring-emerald-200"
-                              : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                              }`}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className="relative w-7 h-7 rounded-md bg-slate-50 p-0.5 shrink-0 overflow-hidden">
-                                <img
-                                  src={product.image}
-                                  alt={product.name}
-                                  className="w-full h-full object-contain"
-                                />
-                              </div>
-                              <div className="min-w-0">
-                                <span className="block text-xs font-bold text-slate-800 truncate">
-                                  {product.name}
-                                </span>
-                                <span className="block text-[10px] text-slate-500 font-medium">
-                                  ₹{product.price}
-                                </span>
-                              </div>
-                            </div>
-                            <span
-                              className={`p-1 rounded-md text-[10px] font-bold shrink-0 ${isSelected
-                                ? "bg-emerald-600 text-white"
-                                : "bg-slate-100 text-slate-600"
-                                }`}
-                            >
-                              {isSelected ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
                 </div>
 
                 {/* Section C: Daily Nutrition & Training Calibrations */}
@@ -1104,16 +1195,82 @@ export function ClientDetailSidebar({
                     💡 <strong>Safe Updates:</strong> Re-sending or updating the plan preserves all existing weeks, athlete task completions, and daily compliance records.
                   </p>
 
-                  {/* Expandable Release History Log */}
+                  {/* Expandable Release History Log with Restore & Inspect */}
                   {showVersionHistory && user.plan?.planHistory && (
-                    <div className="pt-2 border-t border-emerald-200 space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                    <div className="pt-2 border-t border-emerald-200 space-y-2 max-h-56 overflow-y-auto pr-1">
                       {user.plan.planHistory.map((h, idx) => (
-                        <div key={idx} className="p-2 rounded-lg bg-white border border-emerald-100 text-[10px] space-y-0.5">
-                          <div className="flex items-center justify-between font-bold text-slate-800">
-                            <span>Version {h.version} · {h.weeksCount} Week(s)</span>
-                            <span className="text-slate-400 font-normal">{new Date(h.pushedAt).toLocaleString()}</span>
+                        <div key={idx} className="p-2.5 rounded-xl bg-white border border-emerald-200 shadow-2xs text-[11px] space-y-1.5">
+                          <div className="flex items-center justify-between font-bold text-slate-800 flex-wrap gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black">
+                                Version {h.version}
+                              </span>
+                              <span>{h.weeksCount} Week(s)</span>
+                              {h.snapshot?.calorieTarget && (
+                                <span className="text-slate-500 font-medium">({h.snapshot.calorieTarget} kcal)</span>
+                              )}
+                            </div>
+                            <span className="text-slate-400 font-normal text-[10px]">
+                              {new Date(h.pushedAt).toLocaleString()}
+                            </span>
                           </div>
-                          <p className="text-slate-600 truncate">{h.notes || h.summary}</p>
+
+                          <p className="text-slate-600 line-clamp-2 italic">
+                            &ldquo;{h.notes || h.summary}&rdquo;
+                          </p>
+
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-100 gap-2">
+                            <span className="text-[10px] text-slate-400">
+                              By {h.coachName}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {h.snapshot && (
+                                <button
+                                  type="button"
+                                  onClick={() => setInspectedSnapshot(inspectedSnapshot?.version === h.version ? null : h)}
+                                  className="text-[10px] font-bold text-slate-600 hover:text-slate-900 px-2 py-0.5 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer"
+                                >
+                                  {inspectedSnapshot?.version === h.version ? "Close Snapshot" : "Inspect Snapshot"}
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleRestoreVersion(h)}
+                                className="text-[10px] font-bold text-emerald-700 hover:text-emerald-900 px-2 py-0.5 rounded border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 cursor-pointer flex items-center gap-1"
+                                title="Load this version's targets, video, and workouts into current editor"
+                              >
+                                <RefreshCw className="w-2.5 h-2.5" />
+                                <span>Restore This Version</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Inline Snapshot Preview */}
+                          {inspectedSnapshot?.version === h.version && h.snapshot && (
+                            <div className="mt-2 p-2 rounded-lg bg-slate-50 border border-slate-200 text-[10px] space-y-1 animate-in fade-in">
+                              <span className="block font-bold text-slate-700 uppercase">Snapshot Details:</span>
+                              <div className="grid grid-cols-3 gap-1 text-slate-600">
+                                <div>Calories: <strong>{h.snapshot.calorieTarget ?? 1800}</strong></div>
+                                <div>Protein: <strong>{h.snapshot.proteinTargetGrams ?? 120}g</strong></div>
+                                <div>Workouts: <strong>{h.snapshot.workoutDaysPerWeek ?? 4}d</strong></div>
+                              </div>
+                              {h.snapshot.video?.url && (
+                                <div className="text-slate-600 truncate">
+                                  Video: <strong>{h.snapshot.video.title || h.snapshot.video.url}</strong>
+                                </div>
+                              )}
+                              {h.snapshot.suggestedSupplements && h.snapshot.suggestedSupplements.length > 0 && (
+                                <div className="text-slate-600">
+                                  Supplements: <strong>{h.snapshot.suggestedSupplements.map((s) => s.name).join(", ")}</strong>
+                                </div>
+                              )}
+                              {h.snapshot.weeks && h.snapshot.weeks.length > 0 && (
+                                <div className="text-slate-600">
+                                  Weeks configured: <strong>{h.snapshot.weeks.length} week(s)</strong>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1519,51 +1676,231 @@ export function ClientDetailSidebar({
               </div>
             )}
 
-            {/* ---------------- TAB 3: TARGETS & ROUTINE ---------------- */}
+            {/* ---------------- TAB 3: TARGETS & WEEK PLAN ROUTINE ---------------- */}
             {activeTab === "plan" && (
               <div className="space-y-5">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
                     <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                      Week-by-Week Plan Overview
+                      Weekly Workout &amp; Indian Diet Plan
                     </h3>
                     <p className="text-[11px] text-slate-500">
-                      Total duration: {user.plan?.weeksCount || 8} Weeks ({user.plan?.weeks?.length || 0} active phases)
+                      Customize daily workout splits, Indian meals, and target calibrations
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onOpenStudio(user)}
-                    className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-xs"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Launch Studio Editor</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAddWeek}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Add Week</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onOpenStudio(user)}
+                      className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Studio View ↗</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="space-y-3">
-                  {(user.plan?.weeks || []).slice(0, 4).map((w) => (
-                    <div
+                {/* Week Selector Tabs */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                  {weeks.map((w) => (
+                    <button
                       key={w.weekNumber}
-                      className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-2"
+                      type="button"
+                      onClick={() => setSelectedWeekNum(w.weekNumber)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer flex items-center gap-1 ${
+                        selectedWeekNum === w.weekNumber
+                          ? "bg-slate-900 text-white shadow-xs"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-slate-900">
-                          Week {w.weekNumber}: {w.phaseTitle}
-                        </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
-                          {(w.workouts?.days || []).length} Workout Days
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 line-clamp-1">{w.phaseSubtitle}</p>
-                      <div className="flex items-center gap-3 pt-1 text-[11px] text-slate-600">
-                        <span>🥗 {w.nutrition?.calories || 1800} kcal</span>
-                        <span>🥩 {w.nutrition?.proteinGrams || 120}g Protein</span>
-                        <span>🏋️ {w.workouts?.daysPerWeek || 4}d Training</span>
-                      </div>
-                    </div>
+                      <span>Week {w.weekNumber}</span>
+                      {selectedWeekNum === w.weekNumber && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      )}
+                    </button>
                   ))}
                 </div>
+
+                {/* Current Selected Week Editor */}
+                {(() => {
+                  const currentWeek =
+                    weeks.find((w) => w.weekNumber === selectedWeekNum) || weeks[0];
+                  if (!currentWeek) return null;
+
+                  return (
+                    <div className="space-y-4">
+                      {/* Week Phase Card */}
+                      <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                            Week {currentWeek.weekNumber} Phase &amp; Targets
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            {(currentWeek.workouts?.days || []).length} Training Days
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase">
+                              Phase Heading / Title
+                            </label>
+                            <input
+                              type="text"
+                              value={currentWeek.phaseTitle}
+                              onChange={(e) => handleUpdateWeekPhase("phaseTitle", e.target.value)}
+                              className="w-full px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase">
+                              Phase Subtitle / Focus
+                            </label>
+                            <input
+                              type="text"
+                              value={currentWeek.phaseSubtitle}
+                              onChange={(e) => handleUpdateWeekPhase("phaseSubtitle", e.target.value)}
+                              className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase">
+                              Week Calories (kcal)
+                            </label>
+                            <input
+                              type="number"
+                              value={currentWeek.nutrition?.calories || calorieTarget}
+                              onChange={(e) => handleUpdateWeekNutrition("calories", Number(e.target.value))}
+                              className="w-full px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase">
+                              Week Protein Target (g)
+                            </label>
+                            <input
+                              type="number"
+                              value={currentWeek.nutrition?.proteinGrams || proteinTargetGrams}
+                              onChange={(e) => handleUpdateWeekNutrition("proteinGrams", Number(e.target.value))}
+                              className="w-full px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Workout Routine for this Week */}
+                      <div className="space-y-2.5">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 uppercase tracking-wider">
+                          <Dumbbell className="w-4 h-4 text-emerald-600" />
+                          <span>Workout Routine ({currentWeek.workouts?.days?.length || 0} Days)</span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {(currentWeek.workouts?.days || []).map((day, dIdx) => (
+                            <div key={day.id || dIdx} className="p-3 rounded-xl border border-slate-200 bg-white space-y-2 shadow-2xs">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 flex-1">
+                                  <span className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center justify-center shrink-0">
+                                    {day.day || `D${dIdx + 1}`}
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={day.title}
+                                    onChange={(e) => handleUpdateWorkoutDayTitle(dIdx, e.target.value)}
+                                    className="font-bold text-xs text-slate-900 border-b border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none w-full"
+                                  />
+                                </div>
+                                <span className="text-[10px] font-medium text-slate-400 shrink-0">
+                                  {day.exercises?.length || 0} Exercises · {day.durationMinutes || 45}m
+                                </span>
+                              </div>
+
+                              {day.exercises && day.exercises.length > 0 && (
+                                <div className="space-y-1 pt-1 border-t border-slate-100">
+                                  {day.exercises.map((ex, exIdx) => (
+                                    <div key={exIdx} className="flex items-center justify-between text-[11px] text-slate-600">
+                                      <span className="font-medium text-slate-800 truncate">• {ex.name}</span>
+                                      <span className="text-slate-400 shrink-0">{ex.sets} sets × {ex.reps}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Daily Indian Meals for this Week */}
+                      <div className="space-y-2.5">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 uppercase tracking-wider">
+                          <Utensils className="w-4 h-4 text-orange-600" />
+                          <span>Daily Indian Meal Schedule ({currentWeek.nutrition?.meals?.length || 0} Meals)</span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {(currentWeek.nutrition?.meals || []).map((meal, mIdx) => (
+                            <div key={meal.id || mIdx} className="p-3 rounded-xl border border-slate-200 bg-white space-y-2 shadow-2xs">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black uppercase">
+                                  {meal.slot}
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-500">
+                                  {meal.calories} kcal · {meal.proteinGrams}g Protein
+                                </span>
+                              </div>
+
+                              <div className="space-y-1">
+                                <input
+                                  type="text"
+                                  value={meal.name}
+                                  onChange={(e) => handleUpdateMealName(mIdx, e.target.value)}
+                                  placeholder="Meal title"
+                                  className="w-full text-xs font-bold text-slate-900 border-b border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none"
+                                />
+                                <input
+                                  type="text"
+                                  value={meal.portion}
+                                  onChange={(e) => handleUpdateMealPortion(mIdx, e.target.value)}
+                                  placeholder="Portion details"
+                                  className="w-full text-[11px] text-slate-500 border-b border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Save & Push Button */}
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={handleSendPlanSubmit}
+                          disabled={isPushing}
+                          className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                        >
+                          <Rocket className="w-4 h-4" />
+                          <span>
+                            {isPushing
+                              ? "Saving and Pushing to User..."
+                              : `Save & Push Week ${currentWeek.weekNumber} Plan Live`}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 

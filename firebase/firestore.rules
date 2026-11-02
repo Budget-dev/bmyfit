@@ -36,6 +36,8 @@ service cloud.firestore {
     //   - goal / goalDisplay: string (optional, max 100 chars)
     //   - needsPlanReview: bool (optional)
     //   - assessmentId: string (optional, max 128 chars)
+    //   - isPaid: bool (optional)
+    //   - paymentStatus: string (optional, max 50 chars)
     //   - joinedAt, lastActive: string / timestamp (optional)
     //   - biometrics, plan, medicalAssessment, order, subscription, taskLogs: map (optional)
     //   - createdAt, updatedAt: string / timestamp (optional)
@@ -83,22 +85,31 @@ service cloud.firestore {
     //   - submittedAt: string / timestamp
     //
     // Collection: orders/{orderId}
-    // Document ID: orderId (auto-generated ID e.g. from addDoc or manual UPI prefix)
+    // Document ID: orderId (auto-generated ID e.g. from addDoc, manual UPI prefix, or provider order ID)
     // Fields:
     //   - customerName: string (optional, max 100 chars)
     //   - customerPhone: string (optional, max 50 chars)
     //   - customerEmail: string (optional, max 100 chars)
     //   - amount: number (> 0)
-    //   - status: string ('pending' | 'submitted' | 'verified' | 'rejected' | 'paid' | 'failed' | 'refunded')
-    //   - paymentMethod: string (optional, max 50 chars, e.g. 'phonepe_manual')
+    //   - amountPaise: number (> 0)
+    //   - amountFormatted: string (optional, max 50 chars)
+    //   - currency: string (optional, max 10 chars)
+    //   - status: string ('pending' | 'submitted' | 'verified' | 'rejected' | 'paid' | 'failed' | 'refunded' | 'created')
+    //   - paymentMethod: string (optional, max 50 chars, e.g. 'phonepe_manual', 'razorpay')
     //   - paymentApp: string (optional, max 50 chars, e.g. 'PhonePe')
     //   - upiTransactionId: string (optional, max 100 chars, null or string UTR)
     //   - utr: string (optional, max 100 chars)
+    //   - razorpayOrderId: string (optional, max 100 chars)
+    //   - razorpayPaymentId: string (optional, max 100 chars)
+    //   - razorpaySignature: string (optional, max 256 chars)
+    //   - packageTitle: string (optional, max 200 chars)
     //   - createdAt: string / timestamp
     //   - submittedAt: string / timestamp
     //   - verifiedAt: string / timestamp
+    //   - paidAt: string / timestamp
     //   - verifiedBy: string (admin UID, max 128 chars)
-    //   - id, uid, userId, assessmentId, amountPaise, amountFormatted, currency, hasScreenshot: optional metadata
+    //   - id, orderId, uid, userId, assessmentId: string (optional, max 128 chars)
+    //   - hasScreenshot: bool (optional)
     //
     // Collection: paymentWebhooks/{eventId}
     // Document ID: eventId
@@ -198,6 +209,8 @@ service cloud.firestore {
              (!('goalDisplay' in data) || (data.goalDisplay is string && data.goalDisplay.size() <= 100)) &&
              (!('needsPlanReview' in data) || data.needsPlanReview is bool) &&
              (!('assessmentId' in data) || (data.assessmentId is string && data.assessmentId.size() <= 128)) &&
+             (!('isPaid' in data) || data.isPaid is bool) &&
+             (!('paymentStatus' in data) || (data.paymentStatus is string && data.paymentStatus.size() <= 50)) &&
              (!('id' in data) || (data.id is string && data.id.size() <= 128)) &&
              (!('uid' in data) || (data.uid is string && data.uid.size() <= 128)) &&
              (!('joinedAt' in data) || (data.joinedAt is string && data.joinedAt.size() <= 100) || data.joinedAt is timestamp) &&
@@ -254,12 +267,18 @@ service cloud.firestore {
              (!('paymentApp' in data) || (data.paymentApp is string && data.paymentApp.size() <= 50)) &&
              (!('upiTransactionId' in data) || data.upiTransactionId == null || (data.upiTransactionId is string && data.upiTransactionId.size() <= 100)) &&
              (!('utr' in data) || (data.utr is string && data.utr.size() <= 100)) &&
+             (!('razorpayOrderId' in data) || (data.razorpayOrderId is string && data.razorpayOrderId.size() <= 100)) &&
+             (!('razorpayPaymentId' in data) || (data.razorpayPaymentId is string && data.razorpayPaymentId.size() <= 100)) &&
+             (!('razorpaySignature' in data) || (data.razorpaySignature is string && data.razorpaySignature.size() <= 256)) &&
+             (!('packageTitle' in data) || (data.packageTitle is string && data.packageTitle.size() <= 200)) &&
              (!('createdAt' in data) || data.createdAt is timestamp || (data.createdAt is string && data.createdAt.size() <= 100)) &&
              (!('submittedAt' in data) || data.submittedAt is timestamp || (data.submittedAt is string && data.submittedAt.size() <= 100)) &&
              (!('verifiedAt' in data) || data.verifiedAt is timestamp || (data.verifiedAt is string && data.verifiedAt.size() <= 100)) &&
+             (!('paidAt' in data) || data.paidAt is timestamp || (data.paidAt is string && data.paidAt.size() <= 100)) &&
              (!('verifiedBy' in data) || data.verifiedBy == null || (data.verifiedBy is string && data.verifiedBy.size() <= 128)) &&
              (!('updatedAt' in data) || data.updatedAt is timestamp || (data.updatedAt is string && data.updatedAt.size() <= 100)) &&
              (!('id' in data) || (data.id is string && data.id.size() <= 128)) &&
+             (!('orderId' in data) || (data.orderId is string && data.orderId.size() <= 128)) &&
              (!('uid' in data) || (data.uid is string && data.uid.size() <= 128)) &&
              (!('userId' in data) || (data.userId is string && data.userId.size() <= 128)) &&
              (!('assessmentId' in data) || (data.assessmentId is string && data.assessmentId.size() <= 128)) &&
@@ -268,20 +287,39 @@ service cloud.firestore {
 
     function isValidOrderCreate(data) {
       return isValidOrder(data) &&
-             data.keys().hasOnly(['customerName', 'customerPhone', 'amount', 'status', 'paymentMethod', 'upiTransactionId', 'createdAt']) &&
-             data.status == 'pending' &&
-             data.amount is number &&
-             data.amount > 0;
+             data.keys().hasOnly([
+               'id', 'orderId', 'uid', 'userId', 'assessmentId',
+               'customerName', 'customerPhone', 'customerEmail',
+               'amount', 'amountPaise', 'amountFormatted', 'currency',
+               'status', 'paymentMethod', 'paymentApp',
+               'upiTransactionId', 'utr',
+               'razorpayOrderId', 'razorpayPaymentId', 'razorpaySignature',
+               'packageTitle', 'hasScreenshot',
+               'createdAt', 'submittedAt', 'paidAt', 'updatedAt'
+             ]) &&
+             (!('status' in data) || data.status in ['pending', 'paid', 'submitted']) &&
+             (('amount' in data && data.amount is number && data.amount > 0) ||
+              ('amountPaise' in data && data.amountPaise is number && data.amountPaise > 0));
     }
 
     function isValidOrderCustomerUpdate() {
       return isValidOrder(request.resource.data) &&
-             resource.data.status == 'pending' &&
-             request.resource.data.status == 'submitted' &&
-             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upiTransactionId', 'status', 'submittedAt']) &&
-             request.resource.data.upiTransactionId is string &&
-             request.resource.data.upiTransactionId.size() > 0 &&
-             request.resource.data.upiTransactionId.size() <= 100;
+             resource.data.status in ['pending', 'created'] &&
+             request.resource.data.status in ['submitted', 'paid'] &&
+             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+               'upiTransactionId', 'utr', 'status', 'submittedAt', 'paidAt',
+               'razorpayPaymentId', 'razorpaySignature', 'updatedAt'
+             ]) &&
+             (!('upiTransactionId' in request.resource.data) || (
+               request.resource.data.upiTransactionId is string &&
+               request.resource.data.upiTransactionId.size() > 0 &&
+               request.resource.data.upiTransactionId.size() <= 100
+             )) &&
+             (!('razorpayPaymentId' in request.resource.data) || (
+               request.resource.data.razorpayPaymentId is string &&
+               request.resource.data.razorpayPaymentId.size() > 0 &&
+               request.resource.data.razorpayPaymentId.size() <= 100
+             ));
     }
 
     // ===============================================================
@@ -309,7 +347,7 @@ service cloud.firestore {
           (!('id' in request.resource.data) || request.resource.data.id == userId) &&
           (!('uid' in request.resource.data) || request.resource.data.uid == userId) &&
           (!('role' in request.resource.data) || (request.resource.data.role != 'admin' && request.resource.data.role != 'coach' && request.resource.data.role in ['client', 'user'])) &&
-          (!('membershipCategory' in request.resource.data) || request.resource.data.membershipCategory == 'free')
+          (!('membershipCategory' in request.resource.data) || request.resource.data.membershipCategory in ['free', 'purchased'])
         )
       );
 
@@ -324,7 +362,7 @@ service cloud.firestore {
           (!('id' in resource.data) || !('id' in request.resource.data) || request.resource.data.id == resource.data.id) &&
           (!('uid' in resource.data) || !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid) &&
           (!('role' in request.resource.data) || (request.resource.data.role in ['client', 'user'] && request.resource.data.role != 'admin' && request.resource.data.role != 'coach') || ('role' in resource.data && request.resource.data.role == resource.data.role)) &&
-          (!('membershipCategory' in request.resource.data) || request.resource.data.membershipCategory == 'free' || ('membershipCategory' in resource.data && request.resource.data.membershipCategory == resource.data.membershipCategory))
+          (!('membershipCategory' in request.resource.data) || request.resource.data.membershipCategory in ['free', 'purchased'] || ('membershipCategory' in resource.data && request.resource.data.membershipCategory == resource.data.membershipCategory))
         )
       );
 
@@ -349,7 +387,7 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // 6. Health profile & medical consultations
+    // 6. Health dossier & medical consultations
     // Submitted during intake funnel by anonymous or signed-in leads; managed by coach admin
     match /medical_consultations/{consultationId} {
       allow read: if signedIn() || isAdmin() || true;
@@ -359,18 +397,16 @@ service cloud.firestore {
 
     // 7. Payment orders (UPI PhonePe Manual and automated checkout orders)
     match /orders/{orderId} {
-      // Only admins can read order documents or query the orders collection
-      allow read: if isAdmin();
+      // Admins have full read access; signed-in users can read their own order documents
+      allow read: if isAdmin() || (signedIn() && ('uid' in resource.data && resource.data.uid == request.auth.uid)) || (signedIn() && ('userId' in resource.data && resource.data.userId == request.auth.uid));
 
-      // Anyone (client customer, including unauthenticated) can START an order:
-      // Must start with status == 'pending', amount must be number and > 0,
-      // and allowed fields are strictly limited to ['customerName', 'customerPhone', 'amount', 'status', 'paymentMethod', 'upiTransactionId', 'createdAt']
-      allow create: if isValidOrderCreate(request.resource.data) || isAdmin();
+      // Clients can create orders with status in ['pending', 'paid', 'submitted'] and standard order fields.
+      // Admin retains full control.
+      allow create: if (isAdmin() && isValidOrder(request.resource.data)) || isValidOrderCreate(request.resource.data);
 
-      // Anyone who has the order ID can submit a transaction ID / UTR ONCE:
-      // Only while resource.data.status == 'pending', can only touch fields ['upiTransactionId', 'status', 'submittedAt'],
-      // and must set request.resource.data.status == 'submitted' (customers can NEVER set status to 'verified' or 'rejected').
-      // Only admins can update order status to 'verified' or 'rejected', or edit orders.
+      // Customer updates: customers can submit transaction details / UTR / payment ID,
+      // but cannot alter price, ownership, or mark order as verified/rejected.
+      // Admin retains full update control.
       allow update: if (isAdmin() && isValidOrder(request.resource.data)) || isValidOrderCustomerUpdate();
 
       // Only admins can delete orders

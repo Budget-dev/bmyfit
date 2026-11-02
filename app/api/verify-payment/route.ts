@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { registerPurchasedClient } from "@/features/admin/admin-data";
 
 export const runtime = "nodejs";
 
@@ -65,6 +66,28 @@ export async function POST(request: Request) {
         },
         { status: 400 }
       );
+    }
+
+    try {
+      const assessmentId = request.headers.get("x-assessment-id")?.trim() || `asm_${orderId}`;
+      const customerEmail = request.headers.get("x-customer-email")?.trim() || undefined;
+      const customerName = request.headers.get("x-customer-name")?.trim() || undefined;
+      const customerPhone = request.headers.get("x-customer-phone")?.trim() || undefined;
+
+      await registerPurchasedClient({
+        userId: orderId,
+        assessmentId,
+        razorpayOrderId: orderId,
+        razorpayPaymentId: paymentId,
+        amountPaise: 9900,
+        customerName: customerName || "Purchased Member",
+        customerEmail,
+        customerPhone,
+        goal: "fat-loss",
+        goalDisplay: "Fat Loss & Metabolic Reset",
+      });
+    } catch (e) {
+      console.warn("verify-payment registerPurchasedClient fallback notice:", e);
     }
 
     return NextResponse.json({

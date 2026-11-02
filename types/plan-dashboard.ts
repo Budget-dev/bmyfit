@@ -74,6 +74,15 @@ export interface PlanReleaseHistoryItem {
   notes?: string;
   weeksCount: number;
   summary?: string;
+  snapshot?: {
+    weeks?: WeekPlanData[];
+    video?: PlanVideo;
+    suggestedSupplements?: PlanSupplementRecommendation[];
+    calorieTarget?: number;
+    proteinTargetGrams?: number;
+    workoutDaysPerWeek?: number;
+    coachNotes?: string;
+  };
 }
 
 export interface DailyCheckInLog {

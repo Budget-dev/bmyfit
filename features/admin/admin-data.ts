@@ -71,7 +71,16 @@ export function sanitizeAdminUser(raw: Partial<AdminUserRecord>, id: string): Ad
       "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
     joinedAt: raw.joinedAt || new Date().toISOString(),
     lastActive: raw.lastActive || "Active Today",
-    membershipCategory: raw.membershipCategory || "free",
+    membershipCategory:
+      raw.membershipCategory === "membership"
+        ? "membership"
+        : (raw.membershipCategory === "purchased" ||
+            Boolean((raw as { isPaid?: boolean }).isPaid) ||
+            raw.order?.status === "paid" ||
+            Boolean(raw.order && (raw.order.amountPaise || 0) > 0) ||
+            raw.plan?.status === "pending_review")
+        ? "purchased"
+        : (raw.membershipCategory || "free"),
     membershipTitle:
       raw.membershipTitle ||
       (raw.membershipCategory === "purchased" ? "Purchased Client Plan" : "Free Registered Member"),
@@ -532,9 +541,19 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
 
   const stats: AdminStats = {
     totalUsers: users.length,
-    freeMembersCount: users.filter((u) => u.membershipCategory === "free").length,
+    freeMembersCount: users.filter(
+      (u) =>
+        u.membershipCategory === "free" &&
+        !Boolean(u.order && u.order.status === "paid") &&
+        !Boolean((u as { isPaid?: boolean }).isPaid)
+    ).length,
     activeMembershipsCount: users.filter((u) => u.membershipCategory === "membership").length,
-    purchasedPlansCount: users.filter((u) => u.membershipCategory === "purchased").length,
+    purchasedPlansCount: users.filter(
+      (u) =>
+        u.membershipCategory === "purchased" ||
+        Boolean(u.order && u.order.status === "paid") ||
+        Boolean((u as { isPaid?: boolean }).isPaid)
+    ).length,
     pendingReviewCount: users.filter((u) => (u.plan?.status === "pending_review") || u.needsPlanReview).length,
     approvedCount: users.filter((u) => u.plan?.status === "approved" || u.plan?.status === "active").length,
     totalRevenueINR: users.reduce((acc, u) => acc + (u.order ? Math.round(u.order.amountPaise / 100) : 0), 0),
@@ -814,6 +833,15 @@ export async function pushPlanToUserDashboard(
     notes: notes || currentPlan.coachNotes || "Plan customized & verified by Head Coach Naveen.",
     weeksCount: currentWeeksCount,
     summary: `Version ${version} published with ${currentWeeksCount} active week(s).`,
+    snapshot: {
+      weeks: currentPlan.weeks ? JSON.parse(JSON.stringify(currentPlan.weeks)) : [],
+      video: currentPlan.video ? { ...currentPlan.video } : undefined,
+      suggestedSupplements: currentPlan.suggestedSupplements ? [...currentPlan.suggestedSupplements] : [],
+      calorieTarget: currentPlan.calorieTarget,
+      proteinTargetGrams: currentPlan.proteinTargetGrams,
+      workoutDaysPerWeek: currentPlan.workoutDaysPerWeek,
+      coachNotes: currentPlan.coachNotes,
+    },
   };
 
   const pushedPlan: PlanDashboardData = {

@@ -68,7 +68,16 @@ export function sanitizeAdminUserRecord(raw: Partial<AdminUserRecord>, id: strin
       "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
     joinedAt: raw.joinedAt || new Date().toISOString(),
     lastActive: raw.lastActive || "Active Today",
-    membershipCategory: raw.membershipCategory || "free",
+    membershipCategory:
+      raw.membershipCategory === "membership"
+        ? "membership"
+        : (raw.membershipCategory === "purchased" ||
+            Boolean((raw as { isPaid?: boolean }).isPaid) ||
+            raw.order?.status === "paid" ||
+            Boolean(raw.order && (raw.order.amountPaise || 0) > 0) ||
+            raw.plan?.status === "pending_review")
+        ? "purchased"
+        : (raw.membershipCategory || "free"),
     membershipTitle:
       raw.membershipTitle ||
       (raw.membershipCategory === "purchased" ? "Purchased Client Plan" : "Free Registered Member"),
@@ -530,13 +539,31 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
     try {
       const userSnap = await getDocs(collection(db, "users"));
       userSnap.forEach((docSnap) => {
-        const data = docSnap.data() as Partial<AdminUserRecord>;
+        const data = docSnap.data() as Partial<AdminUserRecord> & { isPaid?: boolean; paymentStatus?: string };
         const existing = inMemoryUsers.get(docSnap.id);
+        const isPurchased =
+          data.membershipCategory === "purchased" ||
+          data.membershipCategory === "membership" ||
+          data.isPaid === true ||
+          data.paymentStatus === "paid" ||
+          data.order?.status === "paid" ||
+          Boolean(data.order && (data.order.amountPaise || 0) > 0) ||
+          data.plan?.status === "pending_review" ||
+          data.needsPlanReview === true;
+
+        const effectiveCategory = data.membershipCategory === "membership"
+          ? "membership"
+          : isPurchased
+          ? "purchased"
+          : (data.membershipCategory || existing?.membershipCategory || "free");
+
         const record = sanitizeAdminUserRecord(
           {
             ...existing,
             ...data,
             id: docSnap.id,
+            membershipCategory: effectiveCategory,
+            needsPlanReview: data.plan?.status === "approved" ? false : (isPurchased || Boolean(data.needsPlanReview)),
             plan: data.plan || existing?.plan,
           },
           docSnap.id
@@ -554,10 +581,15 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
         const planData = docSnap.data() as PlanDashboardData;
         inMemoryPlans.set(docSnap.id, { ...planData, id: docSnap.id });
         const existing = inMemoryUsers.get(docSnap.id);
+        const isPending = planData.status === "pending_review";
         if (existing) {
           existing.plan = { ...existing.plan, ...planData };
           if (planData.status === "approved" || planData.status === "active") {
             existing.needsPlanReview = false;
+          }
+          if (isPending) {
+            existing.membershipCategory = "purchased";
+            existing.needsPlanReview = true;
           }
           inMemoryUsers.set(docSnap.id, existing);
         } else if (planData.customerName) {
@@ -566,7 +598,8 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
               id: docSnap.id,
               name: planData.customerName,
               email: `${docSnap.id}@client.bmyfit.in`,
-              membershipCategory: "free",
+              membershipCategory: isPending ? "purchased" : "free",
+              needsPlanReview: isPending,
               plan: planData,
             },
             docSnap.id
@@ -688,23 +721,91 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
       ordersSnap.forEach((docSnap) => {
         const order = docSnap.data();
         const targetId = order.uid || order.userId;
-        if (targetId) {
-          const user = inMemoryUsers.get(targetId);
-          if (user) {
-            user.membershipCategory = "purchased";
-            user.needsPlanReview = user.plan?.status === "pending_review";
-            user.order = {
-              orderId: order.razorpayOrderId || docSnap.id,
-              razorpayPaymentId: order.razorpayPaymentId || "pay_verified",
-              amountPaise: order.amountPaise || 9900,
-              amountFormatted: `₹${Math.round((order.amountPaise || 9900) / 100)}`,
-              currency: "INR",
-              status: "paid",
-              packageTitle: "Custom Transformation Plan",
-              durationWeeks: 8,
-              purchasedAt: order.paidAt || new Date().toISOString(),
-            };
+        const isOrderPaid =
+          order.status === "paid" ||
+          order.status === "submitted" ||
+          order.status === "verified";
+        if (!isOrderPaid) return;
+
+        // Try finding existing user by ID, assessmentId, email, or phone
+        let user =
+          (targetId ? inMemoryUsers.get(targetId) : null) ||
+          (order.assessmentId ? inMemoryUsers.get(order.assessmentId) : null) ||
+          Array.from(inMemoryUsers.values()).find(
+            (u) =>
+              (order.customerEmail &&
+                u.email &&
+                u.email.toLowerCase() === String(order.customerEmail).toLowerCase()) ||
+              (order.customerPhone && u.phone && u.phone === order.customerPhone) ||
+              (order.assessmentId &&
+                (u.assessmentId === order.assessmentId ||
+                  u.id === order.assessmentId ||
+                  u.plan?.id === order.assessmentId))
+          );
+
+        const orderRecord = {
+          orderId: order.razorpayOrderId || order.orderId || docSnap.id,
+          razorpayPaymentId:
+            order.razorpayPaymentId ||
+            order.upiTransactionId ||
+            order.utr ||
+            "pay_verified",
+          amountPaise:
+            order.amountPaise ||
+            (order.amount ? Math.round(order.amount * 100) : 9900),
+          amountFormatted:
+            order.amountFormatted ||
+            `₹${Math.round(
+              (order.amountPaise ||
+                (order.amount ? order.amount * 100 : 9900)) /
+                100
+            )}`,
+          currency: order.currency || "INR",
+          status: "paid" as const,
+          packageTitle: order.packageTitle || "Custom 8-Week Transformation Plan",
+          durationWeeks: order.durationWeeks || 8,
+          purchasedAt:
+            order.paidAt ||
+            order.submittedAt ||
+            order.createdAt ||
+            new Date().toISOString(),
+        };
+
+        if (user) {
+          user.membershipCategory = "purchased";
+          user.membershipTitle = "Purchased Client Plan";
+          user.needsPlanReview = user.plan?.status === "approved" ? false : true;
+          user.order = orderRecord;
+          user.isPaid = true;
+          if (user.plan && user.plan.status !== "approved") {
+            user.plan.status = "pending_review";
           }
+        } else {
+          // Discover purchased client directly from paid order document so they are NEVER missing!
+          const primaryId = targetId || order.assessmentId || docSnap.id;
+          const newRec = sanitizeAdminUserRecord(
+            {
+              id: primaryId,
+              assessmentId: order.assessmentId,
+              name: order.customerName || "Purchased Client",
+              email: order.customerEmail || `${primaryId}@client.bmyfit.in`,
+              phone: order.customerPhone || "+91 98000 00000",
+              membershipCategory: "purchased",
+              membershipTitle: "Purchased Client Plan",
+              needsPlanReview: true,
+              isPaid: true,
+              order: orderRecord,
+              plan: generateDashboardPlan(order.assessmentId || primaryId, {
+                customerName: order.customerName || "Purchased Client",
+                status: "pending_review",
+                weeksCount: 8,
+                coachNotes:
+                  "NEW PURCHASE (₹99 Paid): Discovered from verified order record.",
+              }),
+            },
+            primaryId
+          );
+          inMemoryUsers.set(primaryId, newRec);
         }
       });
     } catch (e) {

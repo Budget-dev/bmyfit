@@ -19,7 +19,7 @@ import {
   MessageCircle,
 } from "@/components/ui/icons";
 import type { AdminUserRecord, AdminStats, MembershipCategory } from "@/types/admin";
-import type { PlanDashboardData, PlanReleaseHistoryItem } from "@/types/plan-dashboard";
+import type { PlanDashboardData, PlanReleaseHistoryItem, WeekPlanData } from "@/types/plan-dashboard";
 import {
   getStoredAdminUsers,
   sanitizeAdminUserRecord,
@@ -141,9 +141,19 @@ export function AdminDesktopConsole() {
 
       // Recompute stats defensively
       const totalUsers = mergedUsers.length;
-      const purchasedPlansCount = mergedUsers.filter((u) => u.membershipCategory === "purchased").length;
+      const purchasedPlansCount = mergedUsers.filter(
+        (u) =>
+          u.membershipCategory === "purchased" ||
+          Boolean(u.order && u.order.status === "paid") ||
+          Boolean((u as { isPaid?: boolean }).isPaid)
+      ).length;
       const activeMembershipsCount = mergedUsers.filter((u) => u.membershipCategory === "membership").length;
-      const freeMembersCount = mergedUsers.filter((u) => u.membershipCategory === "free").length;
+      const freeMembersCount = mergedUsers.filter(
+        (u) =>
+          u.membershipCategory === "free" &&
+          !Boolean(u.order && u.order.status === "paid") &&
+          !Boolean((u as { isPaid?: boolean }).isPaid)
+      ).length;
       const pendingReviewCount = mergedUsers.filter(
         (u) => (u.plan?.status === "pending_review") || u.needsPlanReview
       ).length;
@@ -218,6 +228,11 @@ export function AdminDesktopConsole() {
         (d || "").toLowerCase().includes(q)
       );
 
+    const isPurchased =
+      u.membershipCategory === "purchased" ||
+      Boolean(u.order && u.order.status === "paid") ||
+      Boolean((u as { isPaid?: boolean }).isPaid);
+
     const matchesCategory =
       categoryFilter === "all"
         ? true
@@ -225,6 +240,10 @@ export function AdminDesktopConsole() {
         ? (u.plan?.status === "pending_review") || u.needsPlanReview
         : categoryFilter === "medical"
         ? Boolean(u.medicalAssessment?.hasDisease || (u.medicalAssessment?.documents?.length || 0) > 0)
+        : categoryFilter === "purchased"
+        ? isPurchased
+        : categoryFilter === "free"
+        ? u.membershipCategory === "free" && !isPurchased
         : u.membershipCategory === categoryFilter;
 
     const matchesGoal = goalFilter === "all" ? true : u.goal === goalFilter;
@@ -313,10 +332,12 @@ export function AdminDesktopConsole() {
     notes: string,
     video?: PlanVideo,
     supplements?: PlanSupplementRecommendation[],
-    targets?: { calorieTarget?: number; proteinTargetGrams?: number; workoutDaysPerWeek?: number }
+    targets?: { calorieTarget?: number; proteinTargetGrams?: number; workoutDaysPerWeek?: number },
+    customWeeks?: WeekPlanData[]
   ) => {
     const planId = targetUser.plan?.id || targetUser.id;
-    const currentWeeksCount = targetUser.plan?.weeksCount || targetUser.plan?.weeks?.length || 1;
+    const effectiveWeeks = customWeeks || targetUser.plan?.weeks || [];
+    const currentWeeksCount = effectiveWeeks.length || targetUser.plan?.weeksCount || 1;
     const previousHistory = targetUser.plan?.planHistory || [];
     const newVersion = previousHistory.length + 1;
     const nowIso = new Date().toISOString();
@@ -328,6 +349,15 @@ export function AdminDesktopConsole() {
       notes: notes || targetUser.plan?.coachNotes || "Plan verified by Head Coach Naveen.",
       weeksCount: currentWeeksCount,
       summary: `Version ${newVersion} dispatched with ${currentWeeksCount} active week(s).`,
+      snapshot: {
+        weeks: targetUser.plan?.weeks ? JSON.parse(JSON.stringify(targetUser.plan.weeks)) : [],
+        video: targetUser.plan?.video ? { ...targetUser.plan.video } : undefined,
+        suggestedSupplements: targetUser.plan?.suggestedSupplements ? [...targetUser.plan.suggestedSupplements] : [],
+        calorieTarget: targetUser.plan?.calorieTarget,
+        proteinTargetGrams: targetUser.plan?.proteinTargetGrams,
+        workoutDaysPerWeek: targetUser.plan?.workoutDaysPerWeek,
+        coachNotes: targetUser.plan?.coachNotes,
+      },
     };
 
     const updatedPlan: PlanDashboardData = {
@@ -343,7 +373,7 @@ export function AdminDesktopConsole() {
       proteinTargetGrams: targets?.proteinTargetGrams ?? targetUser.plan?.proteinTargetGrams ?? 120,
       workoutDaysPerWeek: targets?.workoutDaysPerWeek ?? targetUser.plan?.workoutDaysPerWeek ?? 4,
       weeksCount: currentWeeksCount,
-      weeks: targetUser.plan?.weeks || [],
+      weeks: effectiveWeeks,
       planHistory: [...previousHistory, newHistoryItem],
       dailyLogs: targetUser.plan?.dailyLogs || targetUser.dailyLogs || {},
     };
@@ -1126,7 +1156,7 @@ export function AdminDesktopConsole() {
 
                               {/* Membership Category */}
                               <td className="py-4 px-4">
-                                {u.membershipCategory === "purchased" ? (
+                                {u.membershipCategory === "purchased" || Boolean(u.order && u.order.status === "paid") || Boolean((u as { isPaid?: boolean }).isPaid) ? (
                                   <div>
                                     <span
                                       className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black ${

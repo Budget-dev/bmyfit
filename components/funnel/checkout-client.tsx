@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { SiteHeader } from "@/components/layout/site-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { getStoredProfile } from "@/features/auth/auth-service";
+import { getStoredProfile, saveStoredProfile } from "@/features/auth/auth-service";
+import { db, doc, setDoc } from "@/lib/firebase/client";
 import { useRazorpay } from "@/hooks/use-razorpay";
 import { APP_CONFIG } from "@/lib/config";
 import type { VerifyPaymentRequest } from "@/types/payment";
@@ -102,7 +103,7 @@ function getSessionBiometrics(): AdminUserRecord["biometrics"] {
 export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutClientProps) {
   const router = useRouter();
   const assessmentId = propAssessmentId || id || "local";
-  const { getIdToken } = useAuth();
+  const { user, userProfile, getIdToken } = useAuth();
   const { openCheckout } = useRazorpay();
 
   const [funnelStep, setFunnelStep] = useState<"payment" | "medical_questionnaire" | "medical_submitted">("payment");
@@ -166,6 +167,10 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
   }, []);
 
   const handlePaymentSuccessPostProcess = (paymentId?: string, orderId?: string) => {
+    const effectivePaymentId = paymentId || `pay_${Date.now()}`;
+    const effectiveOrderId = orderId || `ord_${Date.now()}`;
+    const primaryUserId = user?.uid || userProfile?.uid || (assessmentId !== "local" ? assessmentId : `client_${Date.now()}`);
+
     sessionStorage.setItem("bmyfit_local_paid", "true");
     if (typeof window !== "undefined") {
       try {
@@ -173,6 +178,9 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         localStorage.setItem("bmyfit_active_assessment_id", assessmentId);
         localStorage.setItem("bmyfit_active_plan_id", assessmentId);
         localStorage.setItem(`bmyfit_paid_${assessmentId}`, "true");
+        if (primaryUserId) {
+          localStorage.setItem(`bmyfit_paid_${primaryUserId}`, "true");
+        }
       } catch { }
     }
     try {
@@ -180,55 +188,118 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       if (raw) {
         const parsed = JSON.parse(raw);
         parsed.isPaid = true;
+        parsed.membershipCategory = "purchased";
+        if (primaryUserId) parsed.uid = primaryUserId;
         sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(parsed));
+        localStorage.setItem("bmyfit_local_assessment", JSON.stringify(parsed));
       }
     } catch { }
 
     const realBiometrics = getSessionBiometrics();
-
     const now = new Date().toISOString();
+
+    const orderData = {
+      orderId: effectiveOrderId,
+      razorpayOrderId: effectiveOrderId,
+      razorpayPaymentId: effectivePaymentId,
+      amountPaise: 9900,
+      amountFormatted: "₹99",
+      currency: "INR" as const,
+      status: "paid" as const,
+      packageTitle: "Custom 8-Week Transformation Plan (₹99 Assessment)",
+      durationWeeks: 8,
+      purchasedAt: now,
+      customerName: customerDetails.name || userProfile?.name || "Purchased Member",
+      customerEmail: customerDetails.email || userProfile?.email || "",
+      customerPhone: customerDetails.phone || userProfile?.phone || "",
+      uid: primaryUserId,
+      userId: primaryUserId,
+      assessmentId,
+    };
+
+    const dashboardPlan = generateDashboardPlan(assessmentId, {
+      customerName: customerDetails.name || userProfile?.name || "Purchased Member",
+      weeksCount: 8,
+      monthsCount: 2,
+      status: "pending_review",
+      coachNotes: "NEW ₹99 PURCHASE: Payment verified. Plan created in pending review status. Awaiting coach review & dispatch.",
+    });
+
     const initialRecord: AdminUserRecord = {
-      id: assessmentId,
-      name: customerDetails.name,
-      email: customerDetails.email,
-      phone: customerDetails.phone,
+      id: primaryUserId,
+      assessmentId,
+      name: customerDetails.name || userProfile?.name || "Purchased Member",
+      email: customerDetails.email || userProfile?.email || `${primaryUserId}@client.bmyfit.in`,
+      phone: customerDetails.phone || userProfile?.phone || "+91 98000 00000",
       city: "",
-      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
+      avatar: userProfile?.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
       joinedAt: now,
       lastActive: "Active Now",
       membershipCategory: "purchased",
-      membershipTitle: "Custom Personalized Plan",
+      membershipTitle: "Purchased Client Plan",
       goal: "fat-loss",
       goalDisplay: "Fat Loss & Metabolic Reset",
       needsPlanReview: true,
+      isPaid: true,
       biometrics: realBiometrics,
-      order: {
-        orderId: orderId || `ord_${Date.now()}`,
-        razorpayPaymentId: paymentId || `pay_${Date.now()}`,
-        amountPaise: 9900,
-        amountFormatted: "₹99",
-        currency: "INR",
-        status: "paid",
-        packageTitle: "Custom Plan (₹99 Assessment)",
-        durationWeeks: 8,
-        purchasedAt: now,
-      },
-      plan: generateDashboardPlan(assessmentId, {
-        customerName: customerDetails.name,
-        weeksCount: 8,
-        monthsCount: 2,
-        status: "pending_review",
-        coachNotes: "NEW ₹99 PURCHASE: Client submitted payment. Awaiting health profile & medical inputs.",
-      }),
+      order: orderData,
+      plan: dashboardPlan,
     };
+
     upsertStoredAdminUser(initialRecord);
-    if (initialRecord.plan) {
-      saveStoredPlan(initialRecord.plan);
+    saveStoredPlan(dashboardPlan);
+
+    // Update in-memory auth profile
+    try {
+      const current = getStoredProfile();
+      if (current) {
+        saveStoredProfile({
+          ...current,
+          membershipCategory: "purchased",
+          isPaid: true,
+        });
+      }
+    } catch { }
+
+    // Direct Firestore synchronization
+    try {
+      if (typeof window !== "undefined") {
+        const userPayload = {
+          id: primaryUserId,
+          uid: primaryUserId,
+          name: initialRecord.name,
+          email: initialRecord.email,
+          phone: initialRecord.phone,
+          membershipCategory: "purchased",
+          membershipTitle: "Purchased Client Plan",
+          needsPlanReview: true,
+          isPaid: true,
+          order: orderData,
+          plan: dashboardPlan,
+          updatedAt: now,
+        };
+        void setDoc(doc(db, "users", primaryUserId), userPayload, { merge: true }).catch(() => {});
+        if (assessmentId && assessmentId !== primaryUserId) {
+          void setDoc(doc(db, "users", assessmentId), userPayload, { merge: true }).catch(() => {});
+        }
+        void setDoc(doc(db, "orders", effectiveOrderId), {
+          ...orderData,
+          id: effectiveOrderId,
+          createdAt: now,
+        }, { merge: true }).catch(() => {});
+        void setDoc(doc(db, "plans", assessmentId), dashboardPlan, { merge: true }).catch(() => {});
+        if (primaryUserId !== assessmentId) {
+          void setDoc(doc(db, "plans", primaryUserId), dashboardPlan, { merge: true }).catch(() => {});
+        }
+      }
+    } catch (fsErr) {
+      console.warn("Direct Firestore persist notice:", fsErr);
     }
+
     recordFootprint("razorpay_payment_success", {
       assessmentId,
-      paymentId,
-      orderId,
+      paymentId: effectivePaymentId,
+      orderId: effectiveOrderId,
       customerName: customerDetails.name,
       customerEmail: customerDetails.email,
       customerPhone: customerDetails.phone,
@@ -340,20 +411,24 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
 
       // 2. Sync to Firebase user record
       const now = new Date().toISOString();
+      const primaryUserId = user?.uid || userProfile?.uid || (assessmentId !== "local" ? assessmentId : `client_${Date.now()}`);
+
       const updatedRecord: AdminUserRecord = {
-        id: assessmentId,
-        name: customerDetails.name,
-        email: customerDetails.email,
-        phone: customerDetails.phone,
+        id: primaryUserId,
+        assessmentId,
+        name: customerDetails.name || userProfile?.name || "Purchased Member",
+        email: customerDetails.email || userProfile?.email || `${primaryUserId}@client.bmyfit.in`,
+        phone: customerDetails.phone || userProfile?.phone || "+91 98000 00000",
         city: "",
-        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
+        avatar: userProfile?.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
         joinedAt: now,
         lastActive: "Active Now",
         membershipCategory: "purchased",
-        membershipTitle: "Custom Transformation Plan",
+        membershipTitle: "Purchased Client Plan",
         goal: "fat-loss",
         goalDisplay: "Fat Loss & Metabolic Reset",
         needsPlanReview: true,
+        isPaid: true,
         medicalAssessment: medicalData,
         biometrics: {
           ...getSessionBiometrics(),
@@ -366,12 +441,12 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
           amountFormatted: "₹99",
           currency: "INR",
           status: "paid",
-          packageTitle: "Custom Plan (₹99 Assessment)",
+          packageTitle: "Custom 8-Week Transformation Plan (₹99 Assessment)",
           durationWeeks: 8,
           purchasedAt: now,
         },
         plan: generateDashboardPlan(assessmentId, {
-          customerName: customerDetails.name,
+          customerName: customerDetails.name || userProfile?.name || "Purchased Member",
           weeksCount: 8,
           monthsCount: 2,
           status: "pending_review",
@@ -388,6 +463,35 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       upsertStoredAdminUser(updatedRecord);
       if (updatedRecord.plan) {
         saveStoredPlan(updatedRecord.plan);
+      }
+
+      // Direct Firestore synchronization
+      try {
+        if (typeof window !== "undefined") {
+          const userPayload = {
+            ...updatedRecord,
+            id: primaryUserId,
+            uid: primaryUserId,
+            membershipCategory: "purchased",
+            membershipTitle: "Purchased Client Plan",
+            needsPlanReview: true,
+            isPaid: true,
+            medicalAssessment: medicalData,
+            updatedAt: now,
+          };
+          void setDoc(doc(db, "users", primaryUserId), userPayload, { merge: true }).catch(() => {});
+          if (assessmentId && assessmentId !== primaryUserId) {
+            void setDoc(doc(db, "users", assessmentId), userPayload, { merge: true }).catch(() => {});
+          }
+          if (updatedRecord.plan) {
+            void setDoc(doc(db, "plans", assessmentId), updatedRecord.plan, { merge: true }).catch(() => {});
+            if (primaryUserId !== assessmentId) {
+              void setDoc(doc(db, "plans", primaryUserId), updatedRecord.plan, { merge: true }).catch(() => {});
+            }
+          }
+        }
+      } catch (fsErr) {
+        console.warn("Direct Firestore medical sync notice:", fsErr);
       }
 
       // 3. Post to backend API

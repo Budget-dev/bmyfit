@@ -47,6 +47,22 @@ export function saveStoredProfile(profile: UserProfile): void {
     try {
       const userRef = doc(db, "users", profile.uid);
       const isCoach = profile.email?.toLowerCase() === "bmyfitnesscoach@gmail.com";
+      const isPaidLocal =
+        typeof window !== "undefined" &&
+        (localStorage.getItem("bmyfit_local_paid") === "true" ||
+          sessionStorage.getItem("bmyfit_local_paid") === "true" ||
+          (profile.uid && localStorage.getItem(`bmyfit_paid_${profile.uid}`) === "true"));
+      const isPaidUser =
+        profile.membershipCategory === "purchased" ||
+        profile.membershipCategory === "membership" ||
+        profile.isPaid ||
+        isPaidLocal;
+      const determinedCategory = isCoach
+        ? "membership"
+        : isPaidUser
+        ? "purchased"
+        : (profile.membershipCategory || "free");
+
       const payload: Record<string, unknown> = {
         id: profile.uid,
         uid: profile.uid,
@@ -56,7 +72,8 @@ export function saveStoredProfile(profile: UserProfile): void {
         age: typeof profile.age === "number" && !isNaN(profile.age) ? profile.age : 26,
         provider: profile.provider || "password",
         role: isCoach ? "admin" : (profile.role || "user"),
-        membershipCategory: profile.membershipCategory || (isCoach ? "membership" : "free"),
+        membershipCategory: determinedCategory,
+        isPaid: Boolean(isCoach || isPaidUser),
         updatedAt: new Date().toISOString(),
       };
       if (profile.avatarUrl) {
@@ -205,8 +222,14 @@ export async function signInWithGoogle(): Promise<UserProfile> {
   // Retrieve any existing remote profile from Firestore to keep stored age, phone, etc.
   const remoteProfile = await fetchFirebaseProfile(fbUser.uid);
   const isCoach = (fbUser.email || "").toLowerCase() === "bmyfitnesscoach@gmail.com";
-  const membershipCategory = remoteProfile?.membershipCategory || (isCoach ? "membership" : "free");
-  const isPaid = membershipCategory === "purchased" || membershipCategory === "membership" || isCoach;
+  const isPaidLocal =
+    typeof window !== "undefined" &&
+    (localStorage.getItem("bmyfit_local_paid") === "true" ||
+      sessionStorage.getItem("bmyfit_local_paid") === "true" ||
+      localStorage.getItem(`bmyfit_paid_${fbUser.uid}`) === "true");
+  const membershipCategory = remoteProfile?.membershipCategory ||
+    (isCoach ? "membership" : isPaidLocal ? "purchased" : "free");
+  const isPaid = membershipCategory === "purchased" || membershipCategory === "membership" || isCoach || isPaidLocal;
 
   const profile: UserProfile = {
     uid: fbUser.uid,
@@ -241,8 +264,14 @@ export async function loginWithEmail(data: SigninData): Promise<UserProfile> {
   // Retrieve user document from Firestore to restore user's registered name, phone, and age
   const remoteProfile = await fetchFirebaseProfile(fbUser.uid);
   const isCoach = email.trim().toLowerCase() === "bmyfitnesscoach@gmail.com";
-  const membershipCategory = remoteProfile?.membershipCategory || (isCoach ? "membership" : "free");
-  const isPaid = membershipCategory === "purchased" || membershipCategory === "membership" || isCoach;
+  const isPaidLocal =
+    typeof window !== "undefined" &&
+    (localStorage.getItem("bmyfit_local_paid") === "true" ||
+      sessionStorage.getItem("bmyfit_local_paid") === "true" ||
+      localStorage.getItem(`bmyfit_paid_${fbUser.uid}`) === "true");
+  const membershipCategory = remoteProfile?.membershipCategory ||
+    (isCoach ? "membership" : isPaidLocal ? "purchased" : "free");
+  const isPaid = membershipCategory === "purchased" || membershipCategory === "membership" || isCoach || isPaidLocal;
 
   const profile: UserProfile = {
     uid: fbUser.uid,
@@ -279,6 +308,16 @@ export async function signupWithEmail(data: SignupData): Promise<UserProfile> {
   await updateProfile(fbUser, { displayName: name.trim() });
 
   const isCoach = email.trim().toLowerCase() === "bmyfitnesscoach@gmail.com";
+  const isPaidLocal =
+    typeof window !== "undefined" &&
+    (localStorage.getItem("bmyfit_local_paid") === "true" ||
+      sessionStorage.getItem("bmyfit_local_paid") === "true");
+  const membershipCategory = isCoach
+    ? "membership"
+    : isPaidLocal
+    ? "purchased"
+    : "free";
+
   const profile: UserProfile = {
     uid: fbUser.uid,
     name: name.trim(),
@@ -286,8 +325,8 @@ export async function signupWithEmail(data: SignupData): Promise<UserProfile> {
     phone: phone.trim(),
     age: Number(age),
     role: isCoach ? "admin" : "user",
-    membershipCategory: isCoach ? "membership" : "free",
-    isPaid: isCoach,
+    membershipCategory,
+    isPaid: isCoach || isPaidLocal,
     provider: "password",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

@@ -71,6 +71,28 @@ export async function POST(
           },
           { merge: true }
         );
+
+        // Also merge directly into plans collection
+        await adminDb.collection("plans").doc(id).set(
+          {
+            dailyLogs: {
+              [dateKey]: dailyLog,
+            },
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        // Also merge into users collection
+        await adminDb.collection("users").doc(id).set(
+          {
+            dailyLogs: {
+              [dateKey]: dailyLog,
+            },
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
       } catch (err) {
         console.warn("Firestore daily_checkin save notice:", err);
       }

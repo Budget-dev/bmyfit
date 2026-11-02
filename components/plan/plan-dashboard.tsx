@@ -109,6 +109,17 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
   // Load live daily check-ins
   useEffect(() => {
     let active = true;
+    if (typeof window !== "undefined") {
+      try {
+        const rawLocal = localStorage.getItem(`bmyfit_dailylog_${plan.id}_${todayDate}`);
+        if (rawLocal) {
+          const parsed = JSON.parse(rawLocal);
+          if (parsed && parsed.date === todayDate) {
+            setDailyLogs((prev) => ({ ...prev, [todayDate]: parsed }));
+          }
+        }
+      } catch {}
+    }
     void fetch(`/api/plan/${encodeURIComponent(plan.id)}/daily-log`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -120,7 +131,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
     return () => {
       active = false;
     };
-  }, [plan.id]);
+  }, [plan.id, todayDate]);
 
   const handleSubmitDailyCheckin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -147,6 +158,11 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
       const data = await res.json();
       if (res.ok && data?.dailyLog) {
         setDailyLogs((prev) => ({ ...prev, [todayDate]: data.dailyLog }));
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem(`bmyfit_dailylog_${plan.id}_${todayDate}`, JSON.stringify(data.dailyLog));
+          } catch {}
+        }
         setCheckinSubmittedSuccess(true);
         setIsEditingTodayLog(false);
         setTimeout(() => setCheckinSubmittedSuccess(false), 5000);
@@ -522,6 +538,65 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
           </section>
         )}
 
+        {/* ================= DAILY TRACKING QUICK ACTION BANNER ================= */}
+        <section className="animate-in fade-in">
+          <div className={`p-4 sm:p-5 rounded-3xl border transition shadow-sm flex items-center justify-between flex-wrap gap-3 ${
+            todayLog
+              ? "bg-emerald-50/90 border-emerald-300 text-emerald-950"
+              : "bg-gradient-to-r from-emerald-950 via-[#033b22] to-teal-950 text-white border-emerald-600/50 shadow-md"
+          }`}>
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                todayLog
+                  ? "bg-emerald-200 text-emerald-900"
+                  : "bg-emerald-500/20 text-emerald-400 border border-emerald-400/40"
+              }`}>
+                {todayLog ? <CheckCircle2 className="w-6 h-6 text-emerald-700" /> : <Flame className="w-6 h-6 text-emerald-400 animate-pulse" />}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                    todayLog ? "bg-emerald-200 text-emerald-900 border border-emerald-300" : "bg-emerald-400 text-slate-950 font-black"
+                  }`}>
+                    {todayLog ? "TODAY LOGGED ✓" : "DAILY HABIT TRACKER"}
+                  </span>
+                  <span className={`text-xs font-semibold ${todayLog ? "text-emerald-700" : "text-emerald-300"}`}>
+                    {new Date().toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" })}
+                  </span>
+                </div>
+                <h3 className="font-black text-sm sm:text-base truncate mt-0.5">
+                  {todayLog
+                    ? `Great consistency, ${plan.customerName.split(" ")[0]}! Today's routine is submitted.`
+                    : "Did you follow your workout & diet plan today?"}
+                </h3>
+                <p className={`text-xs ${todayLog ? "text-emerald-800" : "text-emerald-200/90"}`}>
+                  {todayLog
+                    ? `Workout: ${todayLog.workoutCompleted ? "Completed ✓" : "Rest Day"} · Diet: ${todayLog.dietAdherence} · ${todayLog.waterLitres ?? 3.0}L Water`
+                    : "Head Coach Naveen monitors daily adherence. Tap to log your meals & workout!"}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("daily-tracker");
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth" });
+                  if (todayLog) setIsEditingTodayLog(true);
+                }
+              }}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                todayLog
+                  ? "bg-white text-emerald-900 hover:bg-emerald-100 border border-emerald-300 font-bold"
+                  : "bg-[#00e676] hover:bg-[#00c853] text-black font-black active:scale-[0.98]"
+              }`}
+            >
+              <span>{todayLog ? "Update Today's Log ✎" : "Track Today's Progress →"}</span>
+            </button>
+          </div>
+        </section>
+
         {/* ================= ACTION BUTTONS ROW ================= */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Button 1: Download Full Plan (PDF) */}
@@ -587,7 +662,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
         </section>
 
         {/* ================= TODAY'S DAILY PLAN TRACKER ================= */}
-        <section className="animate-in fade-in">
+        <section id="daily-tracker" className="animate-in fade-in scroll-mt-24">
           {todayLog && !isEditingTodayLog ? (
             <div className="bg-gradient-to-br from-[#022c19] via-[#043d23] to-[#011f12] text-white rounded-3xl p-5 sm:p-7 shadow-lg border border-emerald-500/30 space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-3">

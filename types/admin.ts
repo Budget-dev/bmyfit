@@ -38,6 +38,7 @@ export interface UserBiometrics {
 
 export interface UserPurchaseOrder {
   orderId: string;
+  razorpayOrderId?: string;
   razorpayPaymentId?: string;
   utr?: string;
   paymentMethod?: "phonepe" | "razorpay" | "upi_manual";
@@ -113,6 +114,8 @@ export interface AdminUserRecord {
   plan: PlanDashboardData;
   medicalAssessment?: MedicalAssessment;
   needsPlanReview?: boolean;
+  isPaid?: boolean;
+  paymentStatus?: string;
   taskLogs?: TaskLogState;
   dailyLogs?: Record<string, DailyCheckInLog>;
 }
