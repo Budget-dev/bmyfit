@@ -84,8 +84,8 @@ export function AuthCard({
       const profile = await signInWithGoogle();
       const firstName = profile.name.split(" ")[0] || "Athlete";
 
-      // On account creation or when in signup mode, ALWAYS redirect to home page
-      const target = mode === "signup" ? "/" : (redirectParam && redirectParam !== "/plan" ? redirectParam : "/");
+      // Respect redirectParam if present (e.g. back to /result to view analysis)
+      const target = redirectParam && redirectParam !== "/plan" ? redirectParam : "/";
 
       setSuccessMessage(
         mode === "signup"
@@ -154,13 +154,13 @@ export function AuthCard({
           age: ageNum,
         });
 
-        // ALWAYS redirect to home page on account creation per strict requirement
-        setSuccessMessage(`Account created! Welcome, ${profile.name.split(" ")[0]}! Redirecting to home...`);
+        const target = redirectParam && redirectParam !== "/plan" ? redirectParam : "/";
+        setSuccessMessage(`Account created! Welcome, ${profile.name.split(" ")[0]}! Redirecting...`);
         if (onSuccess) {
           onSuccess();
         } else {
           setTimeout(() => {
-            router.push("/");
+            router.push(target);
           }, 800);
         }
       } catch (err: unknown) {
@@ -279,11 +279,10 @@ export function AuthCard({
             setErrorMessage(null);
             setSuccessMessage(null);
           }}
-          className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-            mode === "signup"
+          className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${mode === "signup"
               ? "bg-white text-gray-950 shadow-xs"
               : "text-gray-500 hover:text-gray-900"
-          }`}
+            }`}
         >
           Create Account
         </button>
@@ -294,11 +293,10 @@ export function AuthCard({
             setErrorMessage(null);
             setSuccessMessage(null);
           }}
-          className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-            mode === "signin"
+          className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${mode === "signin"
               ? "bg-white text-gray-950 shadow-xs"
               : "text-gray-500 hover:text-gray-900"
-          }`}
+            }`}
         >
           Sign In
         </button>

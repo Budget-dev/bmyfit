@@ -28,7 +28,7 @@ export function getStoredProfile(): UserProfile | null {
         inMemoryProfile = JSON.parse(raw);
         return inMemoryProfile;
       }
-    } catch {}
+    } catch { }
   }
   return null;
 }
@@ -39,7 +39,7 @@ export function saveStoredProfile(profile: UserProfile): void {
   if (typeof window !== "undefined") {
     try {
       sessionStorage.setItem(AUTH_PROFILE_KEY, JSON.stringify(profile));
-    } catch {}
+    } catch { }
   }
 
   // Persist directly to Firebase Firestore
@@ -65,8 +65,14 @@ export function saveStoredProfile(profile: UserProfile): void {
 
       // Check for locally calculated assessment biometrics and link to user
       try {
-        const rawAss = sessionStorage.getItem(LOCAL_ASSESSMENT_KEY);
+        const rawAss =
+          sessionStorage.getItem(LOCAL_ASSESSMENT_KEY) ||
+          localStorage.getItem(LOCAL_ASSESSMENT_KEY);
         if (rawAss) {
+          try {
+            sessionStorage.setItem(LOCAL_ASSESSMENT_KEY, rawAss);
+            localStorage.setItem(LOCAL_ASSESSMENT_KEY, rawAss);
+          } catch { }
           const ass = JSON.parse(rawAss);
           if (ass.weightKg) {
             payload.biometrics = {
@@ -125,7 +131,7 @@ export function saveStoredProfile(profile: UserProfile): void {
       const details = rawDetails ? JSON.parse(rawDetails) : {};
       details.age = profile.age || details.age || 28;
       sessionStorage.setItem(DETAILS_STORAGE_KEY, JSON.stringify(details));
-    } catch {}
+    } catch { }
 
     try {
       const rawAss = sessionStorage.getItem(LOCAL_ASSESSMENT_KEY);
@@ -134,7 +140,7 @@ export function saveStoredProfile(profile: UserProfile): void {
       ass.email = profile.email;
       ass.phone = profile.phone;
       sessionStorage.setItem(LOCAL_ASSESSMENT_KEY, JSON.stringify(ass));
-    } catch {}
+    } catch { }
   }
 }
 
@@ -144,7 +150,7 @@ export function clearStoredProfile(): void {
     try {
       sessionStorage.removeItem(AUTH_PROFILE_KEY);
       sessionStorage.removeItem("bmyfit_admin_authorized");
-    } catch {}
+    } catch { }
   }
 }
 
@@ -159,7 +165,7 @@ export async function fetchFirebaseProfile(uid: string): Promise<UserProfile | n
       inMemoryProfile = data;
       try {
         sessionStorage.setItem(AUTH_PROFILE_KEY, JSON.stringify(data));
-      } catch {}
+      } catch { }
       return data;
     }
   } catch (err) {
