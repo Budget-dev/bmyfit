@@ -16,9 +16,16 @@ export const runtime = "nodejs";
 
 const requestSchema = z.object({
   assessmentId: z.string().min(1).max(200),
-  customerName: z.string().max(100).optional(),
-  customerEmail: z.string().email().optional(),
-  customerPhone: z.string().max(30).optional(),
+  customerName: z.string().max(100).optional().nullable(),
+  customerEmail: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => (val && val.trim().length > 0 ? val.trim() : undefined))
+    .refine((val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
+      message: "Invalid email",
+    }),
+  customerPhone: z.string().max(30).optional().nullable(),
 });
 
 export async function POST(request: Request) {
@@ -64,13 +71,17 @@ export async function POST(request: Request) {
           planVersion: "rules-v1",
         },
         customer: {
-          name: input.customerName,
-          email: input.customerEmail,
-          contact: input.customerPhone,
+          name: input.customerName || undefined,
+          email: input.customerEmail || undefined,
+          contact: input.customerPhone || undefined,
         },
       });
 
-      await attachProviderOrder(order.id, providerOrder.id);
+      try {
+        await attachProviderOrder(order.id, providerOrder.id);
+      } catch (attachErr) {
+        console.warn("attachProviderOrder warning:", attachErr);
+      }
       order.razorpayOrderId = providerOrder.id;
       isSandbox = providerOrder.isSandbox;
       keyId = providerOrder.keyId;

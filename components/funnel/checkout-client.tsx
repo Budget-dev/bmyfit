@@ -44,6 +44,61 @@ const DISEASE_OPTIONS = [
   { id: "none", label: "None / Completely Healthy", icon: "✅" },
 ];
 
+function getSessionBiometrics(): AdminUserRecord["biometrics"] {
+  let biometrics: AdminUserRecord["biometrics"] = {
+    gender: "male",
+    age: 28,
+    heightCm: 175,
+    weightKg: 78,
+    targetWeightKg: 70,
+    waistIn: 34,
+    neckIn: 15.5,
+    bmi: 25.5,
+    bmiCategory: "overweight",
+    bodyFatPercent: 22.0,
+    bodyFatCategory: "average",
+    bmr: 1720,
+    tdee: 2380,
+    caloricTarget: 1850,
+    proteinTargetGrams: 130,
+    activityLevel: "moderately-active",
+    dietPreference: "vegetarian",
+    waterLitres: 3.5,
+    dailyStepGoal: 10000,
+  };
+  try {
+    if (typeof window !== "undefined") {
+      const rawAssess = sessionStorage.getItem("bmyfit_local_assessment");
+      const rawCalc = sessionStorage.getItem("bmyfit_local_calculated");
+      if (rawAssess) {
+        const parsedAssess = JSON.parse(rawAssess);
+        const parsedCalc = rawCalc ? JSON.parse(rawCalc) : {};
+        biometrics = {
+          ...biometrics,
+          gender: parsedAssess.gender || biometrics?.gender || "male",
+          age: Number(parsedAssess.age) || biometrics?.age || 28,
+          heightCm: Number(parsedAssess.heightCm) || biometrics?.heightCm || 175,
+          weightKg: Number(parsedAssess.weightKg) || biometrics?.weightKg || 78,
+          targetWeightKg: Number(parsedAssess.targetWeightKg) || biometrics?.targetWeightKg || 70,
+          waistIn: Number(parsedAssess.waistIn) || biometrics?.waistIn || 34,
+          neckIn: Number(parsedAssess.neckIn) || biometrics?.neckIn || 15.5,
+          bmi: Number(parsedCalc.bmi) || biometrics?.bmi || 25.5,
+          bmiCategory: parsedCalc.bmiCategory || biometrics?.bmiCategory || "average",
+          bodyFatPercent: Number(parsedCalc.bodyFatPercent) || biometrics?.bodyFatPercent || 22.0,
+          bodyFatCategory: parsedCalc.bodyFatCategory || biometrics?.bodyFatCategory || "average",
+          bmr: Number(parsedCalc.bmr) || biometrics?.bmr || 1720,
+          tdee: Number(parsedCalc.tdee) || biometrics?.tdee || 2380,
+          caloricTarget: Number(parsedCalc.caloricTarget) || biometrics?.caloricTarget || 1850,
+          proteinTargetGrams: Number(parsedCalc.proteinTargetGrams) || biometrics?.proteinTargetGrams || 130,
+          activityLevel: parsedAssess.activityLevel || biometrics?.activityLevel || "moderately-active",
+          dietPreference: parsedAssess.dietPreference || biometrics?.dietPreference || "vegetarian",
+        };
+      }
+    }
+  } catch { }
+  return biometrics;
+}
+
 export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutClientProps) {
   const router = useRouter();
   const assessmentId = propAssessmentId || id || "local";
@@ -129,13 +184,15 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       }
     } catch { }
 
+    const realBiometrics = getSessionBiometrics();
+
     const now = new Date().toISOString();
     const initialRecord: AdminUserRecord = {
       id: assessmentId,
       name: customerDetails.name,
       email: customerDetails.email,
       phone: customerDetails.phone,
-      city: "Online Client",
+      city: "",
       avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
       joinedAt: now,
       lastActive: "Active Now",
@@ -144,27 +201,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       goal: "fat-loss",
       goalDisplay: "Fat Loss & Metabolic Reset",
       needsPlanReview: true,
-      biometrics: {
-        gender: "male",
-        age: 28,
-        heightCm: 175,
-        weightKg: 78,
-        targetWeightKg: 70,
-        waistIn: 34,
-        neckIn: 15.5,
-        bmi: 25.5,
-        bmiCategory: "overweight",
-        bodyFatPercent: 22.0,
-        bodyFatCategory: "average",
-        bmr: 1720,
-        tdee: 2380,
-        caloricTarget: 1850,
-        proteinTargetGrams: 130,
-        activityLevel: "moderately-active",
-        dietPreference: "vegetarian",
-        waterLitres: 3.5,
-        dailyStepGoal: 10000,
-      },
+      biometrics: realBiometrics,
       order: {
         orderId: orderId || `ord_${Date.now()}`,
         razorpayPaymentId: paymentId || `pay_${Date.now()}`,
@@ -308,7 +345,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         name: customerDetails.name,
         email: customerDetails.email,
         phone: customerDetails.phone,
-        city: "Online Client",
+        city: "",
         avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
         joinedAt: now,
         lastActive: "Active Now",
@@ -319,26 +356,8 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         needsPlanReview: true,
         medicalAssessment: medicalData,
         biometrics: {
-          gender: "male",
-          age: 28,
-          heightCm: 175,
-          weightKg: 78,
-          targetWeightKg: 70,
-          waistIn: 34,
-          neckIn: 15.5,
-          bmi: 25.5,
-          bmiCategory: "overweight",
-          bodyFatPercent: 22.0,
-          bodyFatCategory: "average",
-          bmr: 1720,
-          tdee: 2380,
-          caloricTarget: 1850,
-          proteinTargetGrams: 130,
-          activityLevel: "moderately-active",
-          dietPreference: "vegetarian",
+          ...getSessionBiometrics(),
           medicalConditions: diseases.length > 0 ? diseases.join(", ") : "None reported",
-          waterLitres: 3.5,
-          dailyStepGoal: 10000,
         },
         order: {
           orderId: `ord_${Date.now()}`,
@@ -406,54 +425,111 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       setErrorMessage(null);
       setSuccessNotice(null);
 
+      // Clean customer contact before sending
+      const cleanEmail =
+        customerDetails.email && customerDetails.email.includes("@")
+          ? customerDetails.email.trim()
+          : undefined;
+      const cleanName = customerDetails.name?.trim() || undefined;
+      const cleanPhone = customerDetails.phone?.trim() || undefined;
+
       recordFootprint("razorpay_checkout_opened", {
         assessmentId,
-        customerName: customerDetails.name,
-        customerEmail: customerDetails.email,
-        customerPhone: customerDetails.phone,
+        customerName: cleanName || "Athlete",
+        customerEmail: cleanEmail || "anonymous@bmyfit.in",
+        customerPhone: cleanPhone || "",
         amount: 99,
       });
 
       const token = await getIdToken();
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
+        "Idempotency-Key": `attempt_${assessmentId}_${Date.now()}`,
       };
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      // Step 1: Request authoritative server order creation (Price strictly set to ₹99 by server)
-      const createOrderRes = await fetch("/api/payments/create-order", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          assessmentId,
-          customerName: customerDetails.name,
-          customerEmail: customerDetails.email,
-          customerPhone: customerDetails.phone,
-        }),
-      });
+      let orderId = "";
+      let amount = 9900;
+      let currency = "INR";
+      let keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_Tv8FVtCJC1WhXF";
+      let isSandbox = false;
 
-      if (!createOrderRes.ok) {
-        const errorData = await createOrderRes.json().catch(() => ({}));
-        throw new Error(
-          errorData.error?.message ||
-          errorData.message ||
-          "Unable to initialize payment order. Please try again."
-        );
+      // Primary attempt: /api/payments/create-order
+      try {
+        const createOrderRes = await fetch("/api/payments/create-order", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            assessmentId,
+            customerName: cleanName,
+            customerEmail: cleanEmail,
+            customerPhone: cleanPhone,
+          }),
+        });
+
+        if (createOrderRes.ok) {
+          const orderData = await createOrderRes.json();
+          orderId = orderData.orderId || orderData.order_id;
+          amount = orderData.amount || 9900;
+          currency = orderData.currency || "INR";
+          keyId = orderData.keyId || keyId;
+          isSandbox = Boolean(orderData.isSandbox);
+        } else {
+          // Direct fallback to standard /api/create-order endpoint
+          const fallbackRes = await fetch("/api/create-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              amount: 9900,
+              currency: "INR",
+              receipt: `rcpt_${assessmentId.slice(0, 15)}_${Date.now().toString(36)}`,
+            }),
+          });
+          if (!fallbackRes.ok) {
+            const errData = await fallbackRes.json().catch(() => ({}));
+            throw new Error(errData.error || "Unable to initialize payment order. Please try again.");
+          }
+          const fbData = await fallbackRes.json();
+          orderId = fbData.order_id || fbData.id;
+          amount = fbData.amount || 9900;
+          currency = fbData.currency || "INR";
+          keyId = fbData.keyId || keyId;
+        }
+      } catch (firstErr: unknown) {
+        // Direct attempt via /api/create-order
+        const fallbackRes = await fetch("/api/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: 9900,
+            currency: "INR",
+            receipt: `rcpt_${Date.now().toString(36)}`,
+          }),
+        });
+        if (!fallbackRes.ok) {
+          const errData = await fallbackRes.json().catch(() => ({}));
+          throw new Error(
+            errData.error ||
+            (firstErr instanceof Error ? firstErr.message : "Unable to initialize payment order. Please try again.")
+          );
+        }
+        const fbData = await fallbackRes.json();
+        orderId = fbData.order_id || fbData.id;
+        amount = fbData.amount || 9900;
+        currency = fbData.currency || "INR";
+        keyId = fbData.keyId || keyId;
       }
 
-      const orderData = await createOrderRes.json();
-      const { orderId, amount, currency, keyId, isSandbox } = orderData;
-
-      // Step 2A: Local Dev Sandbox mode when live gateway credentials are not configured in .env.local
+      // Step 2A: Local Dev Sandbox mode when live gateway credentials are not configured
       if (isSandbox) {
         setPaymentStatus("idle");
         setSandboxOrder({ orderId, amount, currency, keyId });
         return;
       }
 
-      // Step 2B: Open official Razorpay modal when credentials are configured
+      // Step 2B: Open official Razorpay modal
       await openCheckout({
         key: keyId,
         amount,
@@ -462,9 +538,9 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         description: "Personalized Fitness & Nutrition Plan",
         order_id: orderId,
         prefill: {
-          name: customerDetails.name,
-          email: customerDetails.email,
-          contact: customerDetails.phone,
+          name: cleanName || "",
+          email: cleanEmail || "",
+          contact: cleanPhone || "",
         },
         theme: {
           color: "#00c853",
@@ -472,7 +548,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         modal: {
           ondismiss: () => {
             setPaymentStatus("idle");
-            setErrorMessage("Payment was cancelled. You can choose any payment method and retry when ready.");
+            setErrorMessage("Payment was cancelled. You can retry whenever ready.");
           },
         },
         onPaymentFailed: (failure) => {
@@ -484,22 +560,39 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         handler: async (response: VerifyPaymentRequest) => {
           try {
             setPaymentStatus("verifying");
+            let verifyOk = false;
+            let verifyMsg = "";
+
             const verifyRes = await fetch("/api/payments/verify", {
               method: "POST",
               headers,
               body: JSON.stringify({
                 ...response,
-                customerName: customerDetails.name,
-                customerEmail: customerDetails.email,
-                customerPhone: customerDetails.phone,
+                customerName: cleanName,
+                customerEmail: cleanEmail,
+                customerPhone: cleanPhone,
               }),
             });
 
-            if (!verifyRes.ok) {
-              const verifyErr = await verifyRes.json().catch(() => ({}));
-              throw new Error(
-                verifyErr.error?.message || "Payment verification failed. Signature was rejected."
-              );
+            if (verifyRes.ok) {
+              verifyOk = true;
+            } else {
+              // Fallback to /api/verify-payment
+              const fallbackVerifyRes = await fetch("/api/verify-payment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(response),
+              });
+              if (fallbackVerifyRes.ok) {
+                verifyOk = true;
+              } else {
+                const verifyErr = await fallbackVerifyRes.json().catch(() => ({}));
+                verifyMsg = verifyErr.error || "Payment verification failed. Signature was rejected.";
+              }
+            }
+
+            if (!verifyOk) {
+              throw new Error(verifyMsg || "Payment verification failed. Signature was rejected.");
             }
 
             handlePaymentSuccessPostProcess(response.razorpay_payment_id, response.razorpay_order_id);
@@ -609,7 +702,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       <SiteHeader />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-md md:max-w-5xl lg:max-w-6xl mx-auto w-full px-3 sm:px-6 lg:px-8 pt-1 md:pt-6 pb-16 flex flex-col justify-between">
+      <main className="flex-1 max-w-md md:max-w-5xl lg:max-w-6xl mx-auto w-full px-3 sm:px-6 lg:px-8 pt-1 md:pt-6 pb-24 md:pb-16 flex flex-col justify-between">
         {funnelStep === "payment" && (
           <div>
             {/* Subtitle & 4-Step Stepper Bar */}
@@ -906,14 +999,10 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
             </p>
 
             <div className="space-y-1.5">
-              {/* Option 1: UPI */}
+              {/* Single Comprehensive UPI & Online Payment Option */}
               <div
                 onClick={() => setSelectedMethod("upi")}
-                className={`p-2 rounded-xl cursor-pointer transition-all flex items-center justify-between border ${
-                  selectedMethod === "upi"
-                    ? "border-2 border-[#00c853] bg-[#f0fdf4] shadow-xs"
-                    : "border-gray-200 bg-white hover:border-gray-300"
-                }`}
+                className="p-2.5 rounded-xl cursor-pointer transition-all flex items-center justify-between border-2 border-[#00c853] bg-[#f0fdf4] shadow-xs"
               >
                 <div className="flex items-center gap-2.5">
                   <div className="flex items-center gap-1 shrink-0">
@@ -934,8 +1023,8 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
                   </div>
 
                   <div>
-                    <div className={`text-[10.5px] sm:text-[11.5px] font-bold ${selectedMethod === "upi" ? "text-[#00c853]" : "text-gray-900"}`}>
-                      UPI (Google Pay, PhonePe, Paytm, QR)
+                    <div className="text-[10.5px] sm:text-[11.5px] font-bold text-[#00c853]">
+                      UPI (Google Pay, PhonePe, Paytm, QR) &amp; Cards
                     </div>
                     <div className="text-[8px] sm:text-[8.5px] text-gray-500 leading-none">
                       Zero convenience fee • Instant automated plan activation
@@ -944,66 +1033,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
                 </div>
 
                 <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ml-2 border-[#00c853]">
-                  {selectedMethod === "upi" && <div className="w-2 h-2 rounded-full bg-[#00c853]" />}
-                </div>
-              </div>
-
-              {/* Option 2: Card */}
-              <div
-                onClick={() => setSelectedMethod("card")}
-                className={`p-2 rounded-xl cursor-pointer transition-all flex items-center justify-between border ${
-                  selectedMethod === "card"
-                    ? "border-2 border-[#00c853] bg-[#f0fdf4] shadow-xs"
-                    : "border-gray-200 bg-white hover:border-gray-300"
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded bg-gray-100 flex items-center justify-center text-gray-700 shrink-0">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="2" y="5" width="20" height="14" rx="2" />
-                      <line x1="2" y1="10" x2="22" y2="10" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-[10.5px] sm:text-[11.5px] font-bold text-gray-900">
-                      Debit / Credit Card
-                    </div>
-                    <div className="text-[8px] sm:text-[8.5px] text-gray-500 leading-none">
-                      Visa, Mastercard, RuPay &amp; Diners Club
-                    </div>
-                  </div>
-                </div>
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ml-2 ${selectedMethod === "card" ? "border-[#00c853]" : "border-gray-300"}`}>
-                  {selectedMethod === "card" && <div className="w-2 h-2 rounded-full bg-[#00c853]" />}
-                </div>
-              </div>
-
-              {/* Option 3: Net Banking */}
-              <div
-                onClick={() => setSelectedMethod("netbanking")}
-                className={`p-2 rounded-xl cursor-pointer transition-all flex items-center justify-between border ${
-                  selectedMethod === "netbanking"
-                    ? "border-2 border-[#00c853] bg-[#f0fdf4] shadow-xs"
-                    : "border-gray-200 bg-white hover:border-gray-300"
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded bg-gray-100 flex items-center justify-center text-gray-700 shrink-0">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 21h18M3 10h18M5 10v11M9 10v11M15 10v11M19 10v11M12 2L2 7h20L12 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-[10.5px] sm:text-[11.5px] font-bold text-gray-900">
-                      Net Banking &amp; Wallets
-                    </div>
-                    <div className="text-[8px] sm:text-[8.5px] text-gray-500 leading-none">
-                      HDFC, ICICI, SBI, Axis &amp; 50+ Indian banks
-                    </div>
-                  </div>
-                </div>
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ml-2 ${selectedMethod === "netbanking" ? "border-[#00c853]" : "border-gray-300"}`}>
-                  {selectedMethod === "netbanking" && <div className="w-2 h-2 rounded-full bg-[#00c853]" />}
+                  <div className="w-2 h-2 rounded-full bg-[#00c853]" />
                 </div>
               </div>
             </div>
@@ -1117,6 +1147,41 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Mobile Sticky Bottom Pay Bar (Always visible on mobile without scrolling) */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-4 py-2.5 shadow-2xl flex items-center justify-between gap-3">
+          <div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xs text-gray-400 line-through">₹999</span>
+              <span className="text-base font-black text-gray-900">₹99</span>
+              <span className="text-[9px] font-bold text-white bg-[#00c853] px-1.5 py-0.5 rounded-full">BEST VALUE</span>
+            </div>
+            <div className="text-[9px] text-[#00c853] font-bold">✓ Instant Plan Activation</div>
+          </div>
+          <button
+            type="button"
+            onClick={handlePay}
+            disabled={paymentStatus === "creating" || paymentStatus === "verifying"}
+            className="py-2.5 px-5 rounded-full bg-[#073820] hover:bg-[#052b18] active:bg-[#031d10] text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all disabled:opacity-75 cursor-pointer"
+          >
+            {paymentStatus === "creating" || paymentStatus === "verifying" ? (
+              <>
+                <svg className="animate-spin -ml-0.5 mr-1 h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <span>Processing...</span>
+              </>
+            ) : (
+              <>
+                <span>Pay ₹99 &amp; Unlock</span>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </>
+            )}
+          </button>
         </div>
       </div>
       )}

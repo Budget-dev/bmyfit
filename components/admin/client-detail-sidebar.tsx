@@ -360,7 +360,7 @@ export function ClientDetailSidebar({
                   )}
                 </div>
                 <p className="text-xs text-slate-500 truncate mt-0.5">
-                  {user.email} · {user.phone} · {user.city}
+                  {[user.email, user.phone, user.city].filter(Boolean).join(" · ")}
                 </p>
               </div>
             </div>

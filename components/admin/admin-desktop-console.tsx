@@ -1091,7 +1091,7 @@ export function AdminDesktopConsole() {
                                       )}
                                     </div>
                                     <span className="block text-[11px] text-gray-500">
-                                      {u.email} · {u.city || "Online Client"}
+                                      {u.email}{u.city ? ` · ${u.city}` : ""}
                                     </span>
                                     {/* Medical Conditions & Attached Reports Badges */}
                                     {u.medicalAssessment && (

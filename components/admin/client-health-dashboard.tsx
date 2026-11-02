@@ -446,7 +446,7 @@ export function ClientHealthDashboard({
                               )}
                             </div>
                             <div className="text-[11px] text-gray-500">{user.email}</div>
-                            <div className="text-[10px] text-gray-400">{user.city || "Online Client"}</div>
+                            {user.city ? <div className="text-[10px] text-gray-400">{user.city}</div> : null}
                           </div>
                         </div>
                       </td>
@@ -628,7 +628,7 @@ export function ClientHealthDashboard({
                         )}
                       </h3>
                       <p className="text-[11px] text-gray-500">{user.goalDisplay || "Transformation"}</p>
-                      <p className="text-[10px] text-gray-400">{user.city || "Online Client"}</p>
+                      {user.city ? <p className="text-[10px] text-gray-400">{user.city}</p> : null}
                     </div>
                   </div>
 

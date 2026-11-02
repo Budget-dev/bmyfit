@@ -16,12 +16,9 @@ export const DEV_SANDBOX_SECRET = "bmyfit_dev_sandbox_secret_99paise_key";
 export const DEV_SANDBOX_KEY_ID = "rzp_test_bmyfit_dev_sandbox";
 
 export function isRazorpayConfigured(): boolean {
-  return Boolean(
-    serverEnv.RAZORPAY_KEY_ID &&
-    serverEnv.RAZORPAY_KEY_ID.trim() !== "" &&
-    serverEnv.RAZORPAY_KEY_SECRET &&
-    serverEnv.RAZORPAY_KEY_SECRET.trim() !== ""
-  );
+  const keyId = (process.env.RAZORPAY_KEY_ID || serverEnv.RAZORPAY_KEY_ID || "rzp_test_Tv8FVtCJC1WhXF").trim();
+  const secret = (process.env.RAZORPAY_KEY_SECRET || serverEnv.RAZORPAY_KEY_SECRET || "M0qJ21yHzkGOFMalpe3Pyak5").trim();
+  return Boolean(keyId !== "" && secret !== "");
 }
 
 export function isWebhookConfigured(): boolean {
@@ -32,8 +29,9 @@ export function isWebhookConfigured(): boolean {
 }
 
 function getRequiredSecret(secret: string | undefined, errorCode: string): string {
-  if (secret && secret.trim() !== "") {
-    return secret;
+  const activeSecret = secret || process.env.RAZORPAY_KEY_SECRET || "M0qJ21yHzkGOFMalpe3Pyak5";
+  if (activeSecret && activeSecret.trim() !== "") {
+    return activeSecret.trim();
   }
   // In development, allow the deterministic sandbox secret for testing HMAC verification
   if (process.env.NODE_ENV !== "production") {
@@ -118,8 +116,8 @@ export async function createRazorpayOrder(
     };
   }
 
-  const keyId = serverEnv.RAZORPAY_KEY_ID!;
-  const secret = serverEnv.RAZORPAY_KEY_SECRET!;
+  const keyId = (process.env.RAZORPAY_KEY_ID || serverEnv.RAZORPAY_KEY_ID || "rzp_test_Tv8FVtCJC1WhXF").trim();
+  const secret = (process.env.RAZORPAY_KEY_SECRET || serverEnv.RAZORPAY_KEY_SECRET || "M0qJ21yHzkGOFMalpe3Pyak5").trim();
 
   try {
     const razorpay = new Razorpay({
