@@ -4,6 +4,7 @@ import type {
   UserBiometrics,
   UserSubscription,
   MedicalAssessment,
+  UserPurchaseOrder,
 } from "@/types/admin";
 import type { PlanDashboardData, TaskLogState, PlanReleaseHistoryItem, DailyCheckInLog } from "@/types/plan-dashboard";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
@@ -103,63 +104,32 @@ function ensureMemoryStore() {
 export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; stats: AdminStats }> {
   ensureMemoryStore();
 
-  // 0. Merge real free score assessments completed via funnel
+  // 0. Attach assessment biometrics to authenticated registered users
   if (typeof globalThis !== "undefined" && globalThis.__bmyfit_assessments_store__) {
     for (const [asmId, asm] of globalThis.__bmyfit_assessments_store__.entries()) {
-      const id = asm.uid && asm.uid !== "anonymous-user" && !String(asm.uid).startsWith("guest_") ? asm.uid : asmId;
-      if (!memoryStore.has(id)) {
-        const leadName = (asm as { name?: string }).name || `Free Score Lead (${asmId.slice(0, 6)})`;
-        const leadEmail = (asm as { email?: string }).email || `${id}@lead.bmyfit.in`;
-        const leadPhone = (asm as { phone?: string }).phone || "+91 98000 00000";
-        const bmr = Math.round(10 * asm.weightKg + 6.25 * asm.heightCm - 5 * asm.age + (asm.gender === "male" ? 5 : -161));
-        const tdee = Math.round(bmr * 1.35);
-        memoryStore.set(
-          id,
-          sanitizeAdminUser(
-            {
-              id,
-              assessmentId: asmId,
-              name: leadName,
-              email: leadEmail,
-              phone: leadPhone,
-              city: "Online Intake",
-              membershipCategory: "free",
-              membershipTitle: "Free Assessment Lead",
-              goal: asm.goal,
-              goalDisplay: asm.goal ? String(asm.goal).replace("-", " ") : "Fat Loss",
-              biometrics: {
-                gender: asm.gender,
-                age: asm.age,
-                heightCm: asm.heightCm,
-                weightKg: asm.weightKg,
-                targetWeightKg: Math.round(asm.weightKg * 0.9),
-                waistIn: asm.waistIn,
-                neckIn: asm.neckIn,
-                hipIn: asm.hipIn,
-                bmi: asm.bmi || 24.5,
-                bmiCategory: asm.bmiCategory || "normal",
-                bodyFatPercent: asm.bodyFatPercent ?? 22.0,
-                bodyFatCategory: (asm.bodyFatCategory as UserBiometrics["bodyFatCategory"]) || "average",
-                bmr,
-                tdee,
-                caloricTarget: tdee - 400,
-                proteinTargetGrams: Math.round(asm.weightKg * 1.6),
-                activityLevel: asm.activityLevel,
-                dietPreference: asm.dietPreference,
-                waterLitres: 3.5,
-                dailyStepGoal: 10000,
-              },
-            },
-            id
-          )
-        );
+      const targetId = asm.uid && asm.uid !== "anonymous-user" && !String(asm.uid).startsWith("guest_") ? asm.uid : null;
+      if (targetId && memoryStore.has(targetId)) {
+        const user = memoryStore.get(targetId)!;
+        user.assessmentId = asmId;
+        if (asm.goal) {
+          user.goal = asm.goal;
+          user.goalDisplay = String(asm.goal).replace("-", " ");
+        }
+        if (asm.weightKg) {
+          user.biometrics.weightKg = asm.weightKg;
+          user.biometrics.heightCm = asm.heightCm || user.biometrics.heightCm;
+          user.biometrics.bmi = asm.bmi || user.biometrics.bmi;
+          user.biometrics.bodyFatPercent = asm.bodyFatPercent ?? user.biometrics.bodyFatPercent;
+        }
       }
     }
   }
 
+  // Ensure test accounts are never retained
+  memoryStore.delete("nqOlc3cJFVIzJB3oGRVyu4g9r4L2");
+
   // 0.1 Discover registered Firebase Auth clients (Exact UIDs from Firebase Auth console)
   const venkateshUid = "vovsLoxTftM6lNs7hstEKDD31iK2";
-  const testAthleteUid = "nqOlc3cJFVIzJB3oGRVyu4g9r4L2";
 
   if (!memoryStore.has(venkateshUid)) {
     memoryStore.set(
@@ -179,27 +149,6 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
           lastActive: "Active Today",
         },
         venkateshUid
-      )
-    );
-  }
-  if (!memoryStore.has(testAthleteUid)) {
-    memoryStore.set(
-      testAthleteUid,
-      sanitizeAdminUser(
-        {
-          id: testAthleteUid,
-          name: "Test Athlete",
-          email: "test_1793282473121@test.com",
-          phone: "",
-          city: "",
-          membershipCategory: "free",
-          membershipTitle: "Free Assessment Lead",
-          goal: "fat-loss",
-          goalDisplay: "Fat Loss",
-          joinedAt: "2026-10-29T14:00:00.000Z",
-          lastActive: "Active Today",
-        },
-        testAthleteUid
       )
     );
   }
@@ -323,16 +272,15 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
       console.warn("Firestore users collection fetch notice:", err);
     }
 
-    // 1.5 Fetch live assessments from Firestore "assessments" collection (Free Score leads)
+    // 1.5 Fetch live assessments from Firestore "assessments" collection (attach biometrics to registered users)
     try {
       const asmSnap = await adminDb.collection("assessments").get();
       if (!asmSnap.empty) {
         for (const doc of asmSnap.docs) {
           const asm = doc.data();
-          const targetUid = asm.uid && asm.uid !== "anonymous-user" && !String(asm.uid).startsWith("guest_") ? asm.uid : doc.id;
+          const targetUid = asm.uid && asm.uid !== "anonymous-user" && !String(asm.uid).startsWith("guest_") ? asm.uid : null;
+          if (!targetUid) continue; // Skip anonymous assessments from unauthenticated visitors
           const existing = memoryStore.get(targetUid) || memoryStore.get(doc.id);
-          const leadName = asm.name || `Free Score Lead (${doc.id.slice(0, 6)})`;
-          const leadEmail = asm.email || (existing ? existing.email : `${doc.id}@lead.bmyfit.in`);
 
           if (existing) {
             existing.assessmentId = doc.id;
@@ -368,49 +316,6 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
                 dailyStepGoal: 10000,
               };
             }
-          } else {
-            memoryStore.set(
-              doc.id,
-              sanitizeAdminUser(
-                {
-                  id: doc.id,
-                  assessmentId: doc.id,
-                  name: leadName,
-                  email: leadEmail,
-                  phone: asm.phone || "+91 98000 00000",
-                  city: "Online Funnel",
-                  membershipCategory: "free",
-                  membershipTitle: "Free Assessment Lead",
-                  goal: asm.goal || "fat-loss",
-                  goalDisplay: asm.goal ? String(asm.goal).replace("-", " ") : "Fat Loss",
-                  joinedAt: asm.createdAt || new Date().toISOString(),
-                  lastActive: "Recent Assessment",
-                  biometrics: {
-                    gender: asm.gender || "male",
-                    age: asm.age || 26,
-                    heightCm: asm.heightCm || 175,
-                    weightKg: asm.weightKg || 70,
-                    targetWeightKg: asm.targetWeightKg || 68,
-                    waistIn: asm.waistIn || 32,
-                    neckIn: asm.neckIn || 15,
-                    hipIn: asm.hipIn,
-                    bmi: asm.bmi || 24.2,
-                    bmiCategory: asm.bmiCategory || "normal",
-                    bodyFatPercent: asm.bodyFatPercent || 18.4,
-                    bodyFatCategory: asm.bodyFatCategory || "average",
-                    bmr: asm.bmr || 1600,
-                    tdee: asm.tdee || 2200,
-                    caloricTarget: 1800,
-                    proteinTargetGrams: 120,
-                    activityLevel: asm.activityLevel || "moderately-active",
-                    dietPreference: asm.dietPreference || "vegetarian",
-                    waterLitres: 3.5,
-                    dailyStepGoal: 10000,
-                  },
-                },
-                doc.id
-              )
-            );
           }
         }
       }
@@ -531,10 +436,118 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
   } catch (err) {
     console.warn("Firestore daily_checkins fetch notice:", err);
   }
+
+  // 4c. Fetch live orders from Firestore "orders" collection to ensure paying customers automatically push to paid
+  try {
+    const ordersSnap = await adminDb.collection("orders").get();
+    if (!ordersSnap.empty) {
+      for (const oDoc of ordersSnap.docs) {
+        const oData = oDoc.data();
+        const isOrderPaid =
+          oData.status === "paid" ||
+          oData.status === "verified" ||
+          oData.status === "submitted" ||
+          Boolean(oData.razorpayPaymentId);
+        if (!isOrderPaid) continue;
+
+        const targetUid = (oData.uid || oData.userId || oData.assessmentId) as string;
+        let user =
+          (targetUid ? memoryStore.get(targetUid) : null) ||
+          (oData.assessmentId ? memoryStore.get(oData.assessmentId as string) : null) ||
+          Array.from(memoryStore.values()).find(
+            (u) =>
+              (oData.customerEmail &&
+                u.email &&
+                u.email.toLowerCase() === String(oData.customerEmail).toLowerCase()) ||
+              (oData.customerPhone && u.phone && u.phone === oData.customerPhone)
+          );
+
+        const orderRecord: UserPurchaseOrder = {
+          orderId: (oData.razorpayOrderId || oData.orderId || oDoc.id) as string,
+          razorpayPaymentId: (oData.razorpayPaymentId || "pay_verified") as string,
+          amountPaise:
+            Number(oData.amountPaise) ||
+            (oData.amount ? Math.round(Number(oData.amount) * 100) : 9900),
+          amountFormatted:
+            (oData.amountFormatted as string) ||
+            `₹${Math.round((Number(oData.amountPaise) || 9900) / 100)}`,
+          currency: "INR",
+          status: "paid",
+          packageTitle:
+            (oData.packageTitle || "Custom 8-Week Transformation Plan") as string,
+          durationWeeks: Number(oData.durationWeeks) || 8,
+          purchasedAt: (oData.paidAt || oData.createdAt || new Date().toISOString()) as string,
+        };
+
+        if (user) {
+          user.membershipCategory = "purchased";
+          user.membershipTitle = "Purchased Client Plan";
+          user.isPaid = true;
+          user.order = orderRecord;
+          if (user.plan && user.plan.status !== "approved") {
+            user.plan.status = "pending_review";
+            user.needsPlanReview = true;
+          }
+        } else {
+          // A customer who completed payment must always be visible in Admin Console
+          const primaryId = targetUid || oDoc.id;
+          const newPaidUser = sanitizeAdminUser(
+            {
+              id: primaryId,
+              assessmentId: (oData.assessmentId as string) || undefined,
+              name: (oData.customerName as string) || "Purchased Member",
+              email: (oData.customerEmail as string) || `${primaryId}@client.bmyfit.in`,
+              phone: (oData.customerPhone as string) || "",
+              city: "Online Intake",
+              membershipCategory: "purchased",
+              membershipTitle: "Purchased Client Plan",
+              isPaid: true,
+              needsPlanReview: true,
+              order: orderRecord,
+              plan: generateDashboardPlan(primaryId, {
+                customerName: (oData.customerName as string) || "Purchased Member",
+                status: "pending_review",
+                weeksCount: 8,
+                coachNotes: "NEW PURCHASE (₹99 Paid): Payment verified via Razorpay.",
+              }),
+            },
+            primaryId
+          );
+          memoryStore.set(primaryId, newPaidUser);
+        }
+      }
+    }
+  } catch (ordErr) {
+    console.warn("Firestore orders collection fetch notice:", ordErr);
+  }
   }
 
   const rawUsers = Array.from(memoryStore.entries())
-    .filter(([id]) => !id.startsWith("user_membership_") && !id.startsWith("user_purchase_") && !id.startsWith("mock_"))
+    .filter(([id, u]) => {
+      if (id.startsWith("user_membership_") || id.startsWith("user_purchase_") || id.startsWith("mock_")) {
+        return false;
+      }
+      // Strictly exclude test emails and test athlete accounts
+      const email = u.email?.toLowerCase() || "";
+      if (
+        email.includes("@test.com") ||
+        email.startsWith("test_") ||
+        id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
+        u.name?.toLowerCase().includes("test athlete")
+      ) {
+        return false;
+      }
+      // Strictly exclude anonymous funnel leads who just checked analysis without logging in, signing up, or paying
+      const isAnonymousLead =
+        (email.includes("@lead.bmyfit.in") || u.name?.startsWith("Free Score Lead")) &&
+        u.membershipCategory === "free" &&
+        !u.order &&
+        !(u as { isPaid?: boolean }).isPaid;
+      if (isAnonymousLead) {
+        return false;
+      }
+      return true;
+    })
     .map(([id, u]) => sanitizeAdminUser(u, id));
   rawUsers.forEach((u) => memoryStore.set(u.id, u));
   const users = rawUsers;
@@ -1048,6 +1061,7 @@ export async function registerPurchasedClient(
     existing.membershipCategory = "purchased";
     existing.membershipTitle = subscription.packageTitle;
     existing.needsPlanReview = true;
+    existing.isPaid = true;
     existing.subscription = subscription;
     const effectiveOrderId = params.razorpayOrderId || params.utr || `ord_${Date.now()}`;
     existing.order = {
@@ -1101,8 +1115,25 @@ export async function registerPurchasedClient(
             membershipTitle: subscription.packageTitle,
             subscription,
             plan: existing.plan,
+            order: existing.order,
+            isPaid: true,
             needsPlanReview: true,
             updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+        await adminDb.collection("orders").doc(effectiveOrderId).set(
+          {
+            ...existing.order,
+            id: effectiveOrderId,
+            orderId: effectiveOrderId,
+            uid: existing.id,
+            userId: existing.id,
+            customerName: existing.name,
+            customerEmail: existing.email,
+            customerPhone: existing.phone,
+            createdAt: now,
+            status: "paid",
           },
           { merge: true }
         );
@@ -1162,6 +1193,7 @@ export async function registerPurchasedClient(
     goal: params.goal || "fat-loss",
     goalDisplay: params.goalDisplay || "Custom Tailored Plan",
     needsPlanReview: true,
+    isPaid: true,
     medicalAssessment: params.medicalAssessment,
     subscription,
     biometrics: {
@@ -1227,9 +1259,27 @@ export async function registerPurchasedClient(
           membershipCategory: "purchased",
           membershipTitle: subscription.packageTitle,
           subscription,
+          order: newRecord.order,
+          isPaid: true,
           plan,
           needsPlanReview: true,
           updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      await adminDb.collection("orders").doc(effectiveOrderId).set(
+        {
+          ...newRecord.order,
+          id: effectiveOrderId,
+          orderId: effectiveOrderId,
+          uid: id,
+          userId: id,
+          customerName: newRecord.name,
+          customerEmail: newRecord.email,
+          customerPhone: newRecord.phone,
+          createdAt: now,
+          status: "paid",
         },
         { merge: true }
       );
@@ -1257,6 +1307,92 @@ export async function registerPurchasedClient(
   }
 
   return newRecord;
+}
+
+export async function promoteAdminUserToPaid(userId: string): Promise<AdminUserRecord> {
+  ensureMemoryStore();
+  let user = await findAdminUserByIdOrPlanId(userId);
+  if (!user) {
+    throw new Error(`User with ID ${userId} was not found`);
+  }
+
+  const now = new Date().toISOString();
+  const orderId = `ord_promoted_${Date.now()}`;
+  const paidOrder: UserPurchaseOrder = {
+    orderId,
+    razorpayPaymentId: `promo_${Date.now()}`,
+    amountPaise: 9900,
+    amountFormatted: "₹99",
+    currency: "INR",
+    status: "paid",
+    packageTitle: "Custom 8-Week Transformation Plan (Admin Promoted)",
+    durationWeeks: user.plan?.weeksCount || 8,
+    purchasedAt: now,
+  };
+
+  user.membershipCategory = "purchased";
+  user.membershipTitle = "Purchased Client Plan";
+  user.isPaid = true;
+  user.order = paidOrder;
+  if (!user.plan) {
+    user.plan = generateDashboardPlan(user.id, {
+      customerName: user.name,
+      status: "pending_review",
+      weeksCount: 8,
+      coachNotes: "PROMOTED TO PAID (₹99): Upgraded by Coach. Customize and push client plan.",
+    });
+  }
+  if (user.plan.status !== "approved") {
+    user.plan.status = "pending_review";
+    user.needsPlanReview = true;
+  }
+
+  memoryStore.set(user.id, user);
+
+  if (hasAdminCredentials) {
+    try {
+      await adminDb.collection("users").doc(user.id).set(
+        {
+          membershipCategory: "purchased",
+          membershipTitle: "Purchased Client Plan",
+          isPaid: true,
+          needsPlanReview: user.needsPlanReview,
+          order: paidOrder,
+          plan: user.plan,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      await adminDb.collection("orders").doc(orderId).set(
+        {
+          ...paidOrder,
+          id: orderId,
+          uid: user.id,
+          userId: user.id,
+          customerName: user.name,
+          customerEmail: user.email,
+          customerPhone: user.phone,
+          createdAt: now,
+          status: "paid",
+        },
+        { merge: true }
+      );
+      if (user.plan?.id) {
+        await adminDb.collection("plans").doc(user.plan.id).set(
+          {
+            ...user.plan,
+            status: user.plan.status,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+    } catch (err) {
+      console.warn("Firestore sync promoteAdminUserToPaid error:", err);
+    }
+  }
+
+  return user;
 }
 
 export async function registerOrUpdateAuthUser(params: {

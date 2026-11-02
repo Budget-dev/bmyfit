@@ -223,15 +223,116 @@ if (isClient()) {
 export function getStoredAdminUsers(): AdminUserRecord[] {
   return Array.from(inMemoryUsers.values())
     .filter(
-      (u) =>
-        !u.id.startsWith("user_membership_") &&
-        !u.id.startsWith("user_purchase_") &&
-        !u.id.startsWith("user_purchased_") &&
-        !u.id.startsWith("mock_") &&
-        u.id !== "coach_naveen" &&
-        u.email?.toLowerCase() !== "bmyfitnesscoach@gmail.com"
+      (u) => {
+        if (
+          u.id.startsWith("user_membership_") ||
+          u.id.startsWith("user_purchase_") ||
+          u.id.startsWith("user_purchased_") ||
+          u.id.startsWith("mock_") ||
+          u.id === "coach_naveen" ||
+          u.id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
+          u.email?.toLowerCase() === "bmyfitnesscoach@gmail.com"
+        ) {
+          return false;
+        }
+
+        // Strictly exclude test emails and test athlete accounts
+        const email = u.email?.toLowerCase() || "";
+        if (
+          email.includes("@test.com") ||
+          email.startsWith("test_") ||
+          u.name?.toLowerCase().includes("test athlete")
+        ) {
+          return false;
+        }
+
+        // Strictly exclude anonymous funnel leads who only checked analysis without registering or paying
+        const isAnonymousLead =
+          (email.includes("@lead.bmyfit.in") || u.name?.startsWith("Free Score Lead")) &&
+          u.membershipCategory === "free" &&
+          !u.order &&
+          !u.isPaid;
+        if (isAnonymousLead) {
+          return false;
+        }
+
+        return true;
+      }
     )
     .map((u) => sanitizeAdminUserRecord(u, u.id));
+}
+
+/**
+ * Promote a free user/lead to Paid Customer in client memory & Firestore
+ */
+export function promoteStoredUserToPaid(userId: string): AdminUserRecord | null {
+  const user = inMemoryUsers.get(userId);
+  if (!user) return null;
+
+  const now = new Date().toISOString();
+  const orderId = `ord_manual_${Date.now()}`;
+  const paidOrder = {
+    orderId,
+    razorpayPaymentId: `promo_${Date.now()}`,
+    amountPaise: 9900,
+    amountFormatted: "₹99",
+    currency: "INR" as const,
+    status: "paid" as const,
+    packageTitle: "Custom 8-Week Transformation Plan (Admin Promoted)",
+    durationWeeks: user.plan?.weeksCount || 8,
+    purchasedAt: now,
+  };
+
+  user.membershipCategory = "purchased";
+  user.membershipTitle = "Purchased Client Plan";
+  user.isPaid = true;
+  user.order = paidOrder;
+  if (!user.plan) {
+    user.plan = generateDashboardPlan(user.id, {
+      customerName: user.name,
+      status: "pending_review",
+      weeksCount: 8,
+      coachNotes: "PROMOTED TO PAID (₹99): Promoted by Coach. Customize and push client plan.",
+    });
+  }
+  if (user.plan.status !== "approved") {
+    user.plan.status = "pending_review";
+    user.needsPlanReview = true;
+  }
+
+  upsertStoredAdminUser(user);
+
+  if (isClient()) {
+    try {
+      void setDoc(
+        doc(db, "orders", orderId),
+        {
+          ...paidOrder,
+          id: orderId,
+          uid: user.id,
+          userId: user.id,
+          customerName: user.name,
+          customerEmail: user.email,
+          customerPhone: user.phone,
+          createdAt: now,
+        },
+        { merge: true }
+      ).catch(() => {});
+      if (user.plan?.id) {
+        void setDoc(
+          doc(db, "plans", user.plan.id),
+          {
+            ...user.plan,
+            status: user.plan.status,
+            updatedAt: now,
+          },
+          { merge: true }
+        ).catch(() => {});
+      }
+    } catch {}
+  }
+
+  return user;
 }
 
 /**
@@ -437,59 +538,11 @@ export function updateStoredPlanStatus(
 export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
   if (!isClient()) return getStoredAdminUsers();
 
-  // 0. Discover local browser session leads immediately
-  try {
-    const rawLocal = sessionStorage.getItem("bmyfit_local_assessment");
-    if (rawLocal) {
-      const local = JSON.parse(rawLocal);
-      if (local && local.id) {
-        const localId = local.uid && local.uid !== "anonymous-user" && !String(local.uid).startsWith("guest_") ? local.uid : local.id;
-        if (!inMemoryUsers.has(localId)) {
-          const newRec = sanitizeAdminUserRecord(
-            {
-              id: localId,
-              assessmentId: local.id,
-              name: local.name || `Free Score Lead (${String(local.id).slice(0, 6)})`,
-              email: local.email || `${localId}@lead.bmyfit.in`,
-              phone: local.phone || "+91 98000 00000",
-              goal: local.goal || "fat-loss",
-              goalDisplay: local.goal ? String(local.goal).replace("-", " ") : "Fat Loss",
-              membershipCategory: "free",
-              membershipTitle: "Free Assessment Lead",
-              biometrics: {
-                gender: local.gender || "female",
-                age: local.age || 28,
-                heightCm: local.heightCm || 162,
-                weightKg: local.weightKg || 84,
-                targetWeightKg: local.targetWeightKg || 70,
-                waistIn: local.waistIn || 36,
-                neckIn: local.neckIn || 14,
-                hipIn: local.hipIn || 42,
-                bmi: local.bmi || 32,
-                bmiCategory: local.bmiCategory || "obese",
-                bodyFatPercent: local.bodyFatPercent || 38,
-                bodyFatCategory: local.bodyFatCategory || "obese",
-                bmr: 1550,
-                tdee: 2100,
-                caloricTarget: 1700,
-                proteinTargetGrams: 110,
-                activityLevel: local.activityLevel || "sedentary",
-                dietPreference: local.dietPreference || "vegetarian",
-                waterLitres: 3.5,
-                dailyStepGoal: 10000,
-              },
-            },
-            localId
-          );
-          inMemoryUsers.set(localId, newRec);
-        }
-      }
-    }
-  } catch { }
+  // Clear out test athlete if previously stored
+  inMemoryUsers.delete("nqOlc3cJFVIzJB3oGRVyu4g9r4L2");
 
   // 0.1 Discover registered client accounts (Exact UIDs from Firebase Auth console)
   const venkateshUid = "vovsLoxTftM6lNs7hstEKDD31iK2";
-  const testAthleteUid = "nqOlc3cJFVIzJB3oGRVyu4g9r4L2";
 
   if (!inMemoryUsers.has(venkateshUid)) {
     inMemoryUsers.set(
@@ -509,27 +562,6 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
           lastActive: "Active Today",
         },
         venkateshUid
-      )
-    );
-  }
-  if (!inMemoryUsers.has(testAthleteUid)) {
-    inMemoryUsers.set(
-      testAthleteUid,
-      sanitizeAdminUserRecord(
-        {
-          id: testAthleteUid,
-          name: "Test Athlete",
-          email: "test_1793282473121@test.com",
-          phone: "+91 98000 00000",
-          city: "Online Client",
-          membershipCategory: "free",
-          membershipTitle: "Free Assessment Lead",
-          goal: "fat-loss",
-          goalDisplay: "Fat Loss",
-          joinedAt: "2026-10-29T14:00:00.000Z",
-          lastActive: "Active Today",
-        },
-        testAthleteUid
       )
     );
   }
@@ -611,52 +643,15 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
       console.warn("Direct Firestore plans collection sync notice:", e);
     }
 
-    // 3. Fetch assessments collection
+    // 3. Fetch assessments collection (attach biometrics only to registered users)
     try {
       const asmSnap = await getDocs(collection(db, "assessments"));
       asmSnap.forEach((docSnap) => {
         const asm = docSnap.data();
-        const id = (asm.uid && asm.uid !== "anonymous-user" && !String(asm.uid).startsWith("guest_")) ? asm.uid : docSnap.id;
+        const id = (asm.uid && asm.uid !== "anonymous-user" && !String(asm.uid).startsWith("guest_")) ? asm.uid : null;
+        if (!id) return; // Do NOT create synthetic users for anonymous visitors checking free scores
         const existing = inMemoryUsers.get(id) || inMemoryUsers.get(docSnap.id);
-        const leadName = asm.name || `Free Score Lead (${docSnap.id.slice(0, 6)})`;
-        if (!existing) {
-          const newRec = sanitizeAdminUserRecord(
-            {
-              id,
-              name: leadName,
-              email: asm.email || `${id}@lead.bmyfit.in`,
-              phone: asm.phone || "+91 98000 00000",
-              goal: asm.goal || "fat-loss",
-              goalDisplay: asm.goal ? `${String(asm.goal).replace("-", " ")}` : "Fat Loss",
-              membershipCategory: "free",
-              membershipTitle: "Free Assessment Lead",
-              biometrics: {
-                gender: asm.gender || "male",
-                age: asm.age || 28,
-                heightCm: asm.heightCm || 175,
-                weightKg: asm.weightKg || 78,
-                targetWeightKg: asm.targetWeightKg || 70,
-                waistIn: asm.waistIn || 34,
-                neckIn: asm.neckIn || 15.5,
-                hipIn: asm.hipIn,
-                bmi: asm.bmi || 25,
-                bmiCategory: asm.bmiCategory || "normal",
-                bodyFatPercent: asm.bodyFatPercent || 20,
-                bodyFatCategory: asm.bodyFatCategory || "average",
-                bmr: 1700,
-                tdee: 2350,
-                caloricTarget: 1800,
-                proteinTargetGrams: 120,
-                activityLevel: asm.activityLevel || "moderately-active",
-                dietPreference: asm.dietPreference || "vegetarian",
-                waterLitres: 3.5,
-                dailyStepGoal: 10000,
-              },
-            },
-            id
-          );
-          inMemoryUsers.set(id, newRec);
-        } else {
+        if (existing) {
           if (asm.weightKg && existing.biometrics) {
             existing.biometrics.weightKg = asm.weightKg;
             existing.biometrics.heightCm = asm.heightCm || existing.biometrics.heightCm;
@@ -728,7 +723,7 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
         if (!isOrderPaid) return;
 
         // Try finding existing user by ID, assessmentId, email, or phone
-        let user =
+        const user =
           (targetId ? inMemoryUsers.get(targetId) : null) ||
           (order.assessmentId ? inMemoryUsers.get(order.assessmentId) : null) ||
           Array.from(inMemoryUsers.values()).find(

@@ -70,12 +70,25 @@ export async function POST(request: Request) {
 
     try {
       const assessmentId = request.headers.get("x-assessment-id")?.trim() || `asm_${orderId}`;
-      const customerEmail = request.headers.get("x-customer-email")?.trim() || undefined;
-      const customerName = request.headers.get("x-customer-name")?.trim() || undefined;
-      const customerPhone = request.headers.get("x-customer-phone")?.trim() || undefined;
+      const customerEmail =
+        (body as { customerEmail?: string }).customerEmail ||
+        request.headers.get("x-customer-email")?.trim() ||
+        undefined;
+      const customerName =
+        (body as { customerName?: string }).customerName ||
+        request.headers.get("x-customer-name")?.trim() ||
+        undefined;
+      const customerPhone =
+        (body as { customerPhone?: string }).customerPhone ||
+        request.headers.get("x-customer-phone")?.trim() ||
+        undefined;
+      const customerUserId =
+        request.headers.get("x-user-id")?.trim() ||
+        request.headers.get("x-session-id")?.trim() ||
+        orderId;
 
       await registerPurchasedClient({
-        userId: orderId,
+        userId: customerUserId,
         assessmentId,
         razorpayOrderId: orderId,
         razorpayPaymentId: paymentId,

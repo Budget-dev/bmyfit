@@ -15,15 +15,12 @@ import {
   Plus,
   Trash2,
   ShieldCheck,
-  Check,
   Send,
   CheckCheck,
   Sparkles,
   Dumbbell,
   Utensils,
   RefreshCw,
-  ChevronDown,
-  ChevronUp,
 } from "@/components/ui/icons";
 import { ShoppingBag } from "@/components/ui/supplement-icons";
 import type { AdminUserRecord } from "@/types/admin";
@@ -31,8 +28,6 @@ import type {
   PlanVideo,
   PlanSupplementRecommendation,
   WeekPlanData,
-  MealSlotItem,
-  WorkoutDayItem,
   PlanReleaseHistoryItem,
 } from "@/types/plan-dashboard";
 import type { ChatMessage } from "@/types/chat";
@@ -52,6 +47,7 @@ interface ClientDetailSidebarProps {
     targets?: { calorieTarget?: number; proteinTargetGrams?: number; workoutDaysPerWeek?: number },
     customWeeks?: WeekPlanData[]
   ) => Promise<void>;
+  onPromoteToPaid?: (user: AdminUserRecord) => Promise<void>;
   onOpenStudio: (user: AdminUserRecord) => void;
   onOpenChat: (user: AdminUserRecord) => void;
   onSendAlert: (user: AdminUserRecord) => void;
@@ -63,6 +59,7 @@ export function ClientDetailSidebar({
   isOpen,
   onClose,
   onPushPlan,
+  onPromoteToPaid,
   onOpenStudio,
   onOpenChat,
   onSendAlert,
@@ -131,7 +128,6 @@ export function ClientDetailSidebar({
 
   // Suggested supplements state
   const [selectedSupplements, setSelectedSupplements] = useState<PlanSupplementRecommendation[]>([]);
-  const [supplementSearch, setSupplementSearch] = useState<string>("");
   const [showAddCustomProduct, setShowAddCustomProduct] = useState<boolean>(false);
   const [customProdName, setCustomProdName] = useState<string>("");
   const [customProdPrice, setCustomProdPrice] = useState<string>("");
@@ -151,7 +147,6 @@ export function ClientDetailSidebar({
   // Week-by-week customization state
   const [weeks, setWeeks] = useState<WeekPlanData[]>([]);
   const [selectedWeekNum, setSelectedWeekNum] = useState<number>(1);
-  const [editingProduct, setEditingProduct] = useState<PlanSupplementRecommendation | null>(null);
 
   // Loading & success
   const [isPushing, setIsPushing] = useState<boolean>(false);
@@ -489,6 +484,17 @@ export function ClientDetailSidebar({
             </div>
 
             <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+              {user.membershipCategory === "free" && !user.isPaid && onPromoteToPaid && (
+                <button
+                  type="button"
+                  onClick={() => void onPromoteToPaid(user)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 text-slate-950 flex items-center gap-1.5 shadow-xs transition cursor-pointer shrink-0 active:scale-95"
+                  title="Promote this free user to a Paid Customer (₹99)"
+                >
+                  <span>⚡ Promote to Paid</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => onOpenStudio(user)}
@@ -633,6 +639,30 @@ export function ClientDetailSidebar({
             {/* ---------------- TAB 1: SEND PLAN & VIDEO ---------------- */}
             {activeTab === "dispatch" && (
               <div className="space-y-6">
+
+                {/* Free Member Promotion Action Banner */}
+                {user.membershipCategory === "free" && !user.isPaid && (
+                  <div className="bg-amber-50/90 rounded-2xl p-4 border border-amber-200/90 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">👤</span>
+                        <span className="font-bold text-amber-950">Free Member Account</span>
+                      </div>
+                      <p className="text-[11px] text-amber-800 mt-1">
+                        This client hasn&apos;t completed a payment order yet. You can promote them directly to a Paid Customer to unlock their personalized 8-week plan and coaching dashboard.
+                      </p>
+                    </div>
+                    {onPromoteToPaid && (
+                      <button
+                        type="button"
+                        onClick={() => void onPromoteToPaid(user)}
+                        className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-xs transition shrink-0 cursor-pointer active:scale-95 flex items-center gap-1.5"
+                      >
+                        <span>⚡ Promote to Paid Customer (₹99)</span>
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Section 0: Payment & UTR Verification Record */}
                 {user.order && (

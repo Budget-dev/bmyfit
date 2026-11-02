@@ -26,6 +26,7 @@ import {
   syncFirestoreUsersDirectly,
   saveStoredPlan,
   upsertStoredAdminUser,
+  promoteStoredUserToPaid,
 } from "@/lib/storage/mock-storage";
 import { formatPlanDuration, calculateDetailedAdherence } from "@/features/plan/dashboard-data";
 import { adminFetch } from "@/lib/admin-api-client";
@@ -136,7 +137,28 @@ export function AdminDesktopConsole() {
         }
       });
 
-      const mergedUsers = Array.from(userMap.values());
+      const mergedUsers = Array.from(userMap.values()).filter((u) => {
+        const email = u.email?.toLowerCase() || "";
+        // Strictly exclude test emails and test athlete account
+        if (
+          email.includes("@test.com") ||
+          email.startsWith("test_") ||
+          u.id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
+          u.name?.toLowerCase().includes("test athlete")
+        ) {
+          return false;
+        }
+        // Strictly exclude anonymous funnel leads who only checked analysis without registering or paying
+        const isAnonymousLead =
+          (email.includes("@lead.bmyfit.in") || u.name?.startsWith("Free Score Lead")) &&
+          u.membershipCategory === "free" &&
+          !u.order &&
+          !(u as { isPaid?: boolean }).isPaid;
+        if (isAnonymousLead) {
+          return false;
+        }
+        return true;
+      });
       setUsers(mergedUsers);
 
       // Recompute stats defensively
@@ -325,6 +347,47 @@ export function AdminDesktopConsole() {
     }
     setGlobalAlert(`Plan for ${updatedUser.name} pushed live to client dashboard!`);
     setTimeout(() => setGlobalAlert(null), 4000);
+  };
+
+  const handlePromoteUserToPaid = async (targetUser: AdminUserRecord) => {
+    const confirmPromote = window.confirm(
+      `Promote ${targetUser.name} to a Paid Customer?\n\nThis will mark them as ₹99 Paid, attach a verified order, and queue their customized plan for coach review.`
+    );
+    if (!confirmPromote) return;
+
+    try {
+      let updatedUser: AdminUserRecord | null = null;
+      try {
+        const res = await adminFetch(`/api/admin/users/${encodeURIComponent(targetUser.id)}/promote`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user) updatedUser = data.user;
+        }
+      } catch (err) {
+        console.warn("Server promote endpoint notice, falling back to local storage:", err);
+      }
+
+      if (!updatedUser) {
+        updatedUser = promoteStoredUserToPaid(targetUser.id);
+      }
+
+      if (updatedUser) {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === updatedUser!.id ? updatedUser! : u))
+        );
+        if (selectedUser?.id === updatedUser.id) {
+          setSelectedUser(updatedUser);
+        }
+        setGlobalAlert(`⚡ ${updatedUser.name} has been successfully promoted to Paid Customer (₹99 Paid)!`);
+        setTimeout(() => setGlobalAlert(null), 4000);
+      }
+    } catch (err) {
+      console.error("Promote user error:", err);
+      alert("Failed to promote user to paid. Please try again.");
+    }
   };
 
   const handlePushPlanFromSidebar = async (
@@ -1268,6 +1331,17 @@ export function AdminDesktopConsole() {
                               {/* Actions */}
                               <td className="py-4 px-5 text-right" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-center justify-end gap-2 flex-nowrap">
+                                  {u.membershipCategory === "free" && !u.isPaid && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handlePromoteUserToPaid(u)}
+                                      className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-xs transition inline-flex items-center gap-1 shrink-0 active:scale-95 cursor-pointer"
+                                      title="Promote this free user to Paid Customer (₹99)"
+                                    >
+                                      <span>⚡ Promote to Paid</span>
+                                    </button>
+                                  )}
+
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -1569,6 +1643,7 @@ export function AdminDesktopConsole() {
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         onPushPlan={handlePushPlanFromSidebar}
+        onPromoteToPaid={handlePromoteUserToPaid}
         onOpenStudio={(u) => {
           setSelectedUser(u);
           setIsSidebarOpen(false);

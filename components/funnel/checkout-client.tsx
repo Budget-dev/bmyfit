@@ -107,7 +107,7 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
   const { openCheckout } = useRazorpay();
 
   const [funnelStep, setFunnelStep] = useState<"payment" | "medical_questionnaire" | "medical_submitted">("payment");
-  const [selectedMethod, setSelectedMethod] = useState<"upi" | "card" | "netbanking">("upi");
+  const [, setSelectedMethod] = useState<"upi" | "card" | "netbanking">("upi");
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "creating" | "verifying" | "failed">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
