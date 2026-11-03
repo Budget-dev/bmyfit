@@ -47,7 +47,7 @@ interface ClientDetailSidebarProps {
     targets?: { calorieTarget?: number; proteinTargetGrams?: number; workoutDaysPerWeek?: number },
     customWeeks?: WeekPlanData[]
   ) => Promise<void>;
-  onPromoteToPaid?: (user: AdminUserRecord) => Promise<void>;
+  onPromoteToPaid?: (user: AdminUserRecord) => void | Promise<void>;
   onOpenStudio: (user: AdminUserRecord) => void;
   onOpenChat: (user: AdminUserRecord) => void;
   onSendAlert: (user: AdminUserRecord) => void;

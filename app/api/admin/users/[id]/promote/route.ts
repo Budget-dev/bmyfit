@@ -13,7 +13,17 @@ export async function POST(
     const { id } = await params;
     if (!id) throw new AppError("INVALID_REQUEST", "User ID is required", 400);
 
-    const updatedUser = await promoteAdminUserToPaid(id);
+    let body: {
+      paymentMethod?: "cash" | "upi" | "upi_manual" | "razorpay";
+      transactionId?: string;
+      notes?: string;
+      amountPaise?: number;
+    } = {};
+    try {
+      body = await request.json();
+    } catch {}
+
+    const updatedUser = await promoteAdminUserToPaid(id, body);
     return Response.json({ success: true, user: updatedUser });
   } catch (error) {
     return toErrorResponse(error);

@@ -41,7 +41,7 @@ export interface UserPurchaseOrder {
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   utr?: string;
-  paymentMethod?: "phonepe" | "razorpay" | "upi_manual";
+  paymentMethod?: "phonepe" | "razorpay" | "upi_manual" | "cash";
   paymentScreenshot?: string;
   amountPaise: number;
   amountFormatted: string;

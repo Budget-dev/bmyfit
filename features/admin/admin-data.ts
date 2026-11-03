@@ -1399,7 +1399,17 @@ export async function registerPurchasedClient(
   return newRecord;
 }
 
-export async function promoteAdminUserToPaid(userId: string): Promise<AdminUserRecord> {
+export interface PromoteToPaidOptions {
+  paymentMethod?: "cash" | "upi" | "upi_manual" | "razorpay";
+  transactionId?: string;
+  notes?: string;
+  amountPaise?: number;
+}
+
+export async function promoteAdminUserToPaid(
+  userId: string,
+  options?: PromoteToPaidOptions
+): Promise<AdminUserRecord> {
   ensureMemoryStore();
   let user = await findAdminUserByIdOrPlanId(userId);
   if (!user) {
@@ -1407,15 +1417,27 @@ export async function promoteAdminUserToPaid(userId: string): Promise<AdminUserR
   }
 
   const now = new Date().toISOString();
-  const orderId = `ord_promoted_${Date.now()}`;
+  const orderId = `ord_manual_${Date.now()}`;
+  const isCash = options?.paymentMethod === "cash";
+  const cleanTxnId = options?.transactionId?.trim();
+  const methodLabel = isCash
+    ? "Cash Received by Hand"
+    : cleanTxnId
+    ? `UPI (Txn: ${cleanTxnId})`
+    : "Manual Entry";
+  const amountPaise = options?.amountPaise || 9900;
+  const amountFormatted = `₹${Math.round(amountPaise / 100)}`;
+
   const paidOrder: UserPurchaseOrder = {
     orderId,
-    razorpayPaymentId: `promo_${Date.now()}`,
-    amountPaise: 9900,
-    amountFormatted: "₹99",
+    razorpayPaymentId: isCash ? `cash_${Date.now()}` : (cleanTxnId || `promo_${Date.now()}`),
+    utr: !isCash && cleanTxnId ? cleanTxnId : undefined,
+    paymentMethod: isCash ? "cash" : "upi_manual",
+    amountPaise,
+    amountFormatted,
     currency: "INR",
     status: "paid",
-    packageTitle: "Custom 8-Week Transformation Plan (Admin Promoted)",
+    packageTitle: `Custom 8-Week Transformation Plan (${methodLabel})`,
     durationWeeks: user.plan?.weeksCount || 8,
     purchasedAt: now,
   };
@@ -1424,13 +1446,17 @@ export async function promoteAdminUserToPaid(userId: string): Promise<AdminUserR
   user.membershipTitle = "Purchased Client Plan";
   user.isPaid = true;
   user.order = paidOrder;
+  const notesText = options?.notes?.trim() ? ` Notes: ${options.notes.trim()}` : "";
+  const coachNote = `PROMOTED TO PAID (${amountFormatted} via ${methodLabel}): Upgraded manually by Coach Naveen.${notesText}`;
   if (!user.plan) {
     user.plan = generateDashboardPlan(user.id, {
       customerName: user.name,
       status: "pending_review",
       weeksCount: 8,
-      coachNotes: "PROMOTED TO PAID (₹99): Upgraded by Coach. Customize and push client plan.",
+      coachNotes: coachNote,
     });
+  } else {
+    user.plan.coachNotes = coachNote;
   }
   if (user.plan.status !== "approved") {
     user.plan.status = "pending_review";
@@ -1455,15 +1481,27 @@ export async function promoteAdminUserToPaid(userId: string): Promise<AdminUserR
       );
       await adminDb.collection("orders").doc(orderId).set(
         {
-          ...paidOrder,
           id: orderId,
+          orderId,
           uid: user.id,
           userId: user.id,
+          assessmentId: user.assessmentId || user.plan?.id || user.id,
           customerName: user.name,
           customerEmail: user.email,
           customerPhone: user.phone,
-          createdAt: now,
+          amount: Math.round(amountPaise / 100),
+          amountPaise,
+          amountFormatted,
+          currency: "INR",
           status: "paid",
+          paymentMethod: isCash ? "cash" : "upi_manual",
+          utr: !isCash && cleanTxnId ? cleanTxnId : undefined,
+          upiTransactionId: !isCash && cleanTxnId ? cleanTxnId : undefined,
+          razorpayPaymentId: isCash ? `cash_${Date.now()}` : (cleanTxnId || `promo_${Date.now()}`),
+          packageTitle: paidOrder.packageTitle,
+          createdAt: now,
+          paidAt: now,
+          updatedAt: now,
         },
         { merge: true }
       );

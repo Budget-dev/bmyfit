@@ -287,20 +287,40 @@ export function getStoredAdminUsers(): AdminUserRecord[] {
 /**
  * Promote a free user/lead to Paid Customer in client memory & Firestore
  */
-export function promoteStoredUserToPaid(userId: string): AdminUserRecord | null {
+export function promoteStoredUserToPaid(
+  userId: string,
+  options?: {
+    paymentMethod?: "cash" | "upi" | "upi_manual" | "razorpay";
+    transactionId?: string;
+    notes?: string;
+    amountPaise?: number;
+  }
+): AdminUserRecord | null {
   const user = inMemoryUsers.get(userId);
   if (!user) return null;
 
   const now = new Date().toISOString();
   const orderId = `ord_manual_${Date.now()}`;
+  const isCash = options?.paymentMethod === "cash";
+  const cleanTxnId = options?.transactionId?.trim();
+  const methodLabel = isCash
+    ? "Cash Received by Hand"
+    : cleanTxnId
+    ? `UPI (Txn: ${cleanTxnId})`
+    : "Manual Entry";
+  const amountPaise = options?.amountPaise || 9900;
+  const amountFormatted = `₹${Math.round(amountPaise / 100)}`;
+
   const paidOrder = {
     orderId,
-    razorpayPaymentId: `promo_${Date.now()}`,
-    amountPaise: 9900,
-    amountFormatted: "₹99",
+    razorpayPaymentId: isCash ? `cash_${Date.now()}` : (cleanTxnId || `promo_${Date.now()}`),
+    utr: !isCash && cleanTxnId ? cleanTxnId : undefined,
+    paymentMethod: (isCash ? "cash" : "upi_manual") as "phonepe" | "razorpay" | "upi_manual" | "cash",
+    amountPaise,
+    amountFormatted,
     currency: "INR" as const,
     status: "paid" as const,
-    packageTitle: "Custom 8-Week Transformation Plan (Admin Promoted)",
+    packageTitle: `Custom 8-Week Transformation Plan (${methodLabel})`,
     durationWeeks: user.plan?.weeksCount || 8,
     purchasedAt: now,
   };
@@ -309,13 +329,17 @@ export function promoteStoredUserToPaid(userId: string): AdminUserRecord | null 
   user.membershipTitle = "Purchased Client Plan";
   user.isPaid = true;
   user.order = paidOrder;
+  const notesText = options?.notes?.trim() ? ` Notes: ${options.notes.trim()}` : "";
+  const coachNote = `PROMOTED TO PAID (${amountFormatted} via ${methodLabel}): Upgraded manually by Coach Naveen.${notesText}`;
   if (!user.plan) {
     user.plan = generateDashboardPlan(user.id, {
       customerName: user.name,
       status: "pending_review",
       weeksCount: 8,
-      coachNotes: "PROMOTED TO PAID (₹99): Promoted by Coach. Customize and push client plan.",
+      coachNotes: coachNote,
     });
+  } else {
+    user.plan.coachNotes = coachNote;
   }
   if (user.plan.status !== "approved") {
     user.plan.status = "pending_review";
@@ -333,17 +357,19 @@ export function promoteStoredUserToPaid(userId: string): AdminUserRecord | null 
           orderId,
           uid: user.id,
           userId: user.id,
+          assessmentId: user.assessmentId || user.plan?.id || user.id,
           customerName: user.name,
           customerEmail: user.email,
           customerPhone: user.phone,
-          amount: 99,
-          amountPaise: 9900,
-          amountFormatted: "₹99",
+          amount: Math.round(amountPaise / 100),
+          amountPaise,
+          amountFormatted,
           currency: "INR",
           status: "paid",
-          paymentMethod: "razorpay",
-          razorpayOrderId: orderId,
-          razorpayPaymentId: paidOrder.razorpayPaymentId,
+          paymentMethod: isCash ? "cash" : "upi_manual",
+          utr: !isCash && cleanTxnId ? cleanTxnId : undefined,
+          upiTransactionId: !isCash && cleanTxnId ? cleanTxnId : undefined,
+          razorpayPaymentId: isCash ? `cash_${Date.now()}` : (cleanTxnId || `promo_${Date.now()}`),
           packageTitle: paidOrder.packageTitle,
           createdAt: now,
           paidAt: now,

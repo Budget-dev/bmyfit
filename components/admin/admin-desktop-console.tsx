@@ -38,6 +38,7 @@ import { AdminChatView } from "./admin-chat-view";
 import { ClientHealthDashboard } from "./client-health-dashboard";
 import { SubscriptionsDashboard } from "./subscriptions-dashboard";
 import { AlertDispatchModal } from "./alert-dispatch-modal";
+import { ManualPromoteModal, type ManualPromoteOptions } from "./manual-promote-modal";
 import { ClientDetailSidebar } from "./client-detail-sidebar";
 import type { PlanVideo, PlanSupplementRecommendation } from "@/types/plan-dashboard";
 
@@ -67,6 +68,10 @@ export function AdminDesktopConsole() {
   const [alertUser, setAlertUser] = useState<AdminUserRecord | null>(null);
   const [globalAlert, setGlobalAlert] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  // Manual Promotion to Paid Modal State
+  const [promoteUser, setPromoteUser] = useState<AdminUserRecord | null>(null);
+  const [isPromoting, setIsPromoting] = useState<boolean>(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -395,18 +400,30 @@ export function AdminDesktopConsole() {
     setTimeout(() => setGlobalAlert(null), 4000);
   };
 
-  const handlePromoteUserToPaid = async (targetUser: AdminUserRecord) => {
-    const confirmPromote = window.confirm(
-      `Promote ${targetUser.name} to a Paid Customer?\n\nThis will mark them as ₹99 Paid, attach a verified order, and queue their customized plan for coach review.`
-    );
-    if (!confirmPromote) return;
+  const handlePromoteUserToPaid = (targetUser: AdminUserRecord) => {
+    setPromoteUser(targetUser);
+  };
+
+  const handleConfirmPromotion = async (options: ManualPromoteOptions) => {
+    if (!promoteUser) return;
 
     try {
+      setIsPromoting(true);
+      const isCash = options.paymentMethod === "cash";
+      const cleanTxnId = options.transactionId;
+      const payload = {
+        paymentMethod: options.paymentMethod,
+        transactionId: cleanTxnId,
+        notes: options.notes,
+        amountPaise: options.amountPaise || 9900,
+      };
+
       let updatedUser: AdminUserRecord | null = null;
       try {
-        const res = await adminFetch(`/api/admin/users/${encodeURIComponent(targetUser.id)}/promote`, {
+        const res = await adminFetch(`/api/admin/users/${encodeURIComponent(promoteUser.id)}/promote`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
         });
         if (res.ok) {
           const data = await res.json();
@@ -417,7 +434,7 @@ export function AdminDesktopConsole() {
       }
 
       if (!updatedUser) {
-        updatedUser = promoteStoredUserToPaid(targetUser.id);
+        updatedUser = promoteStoredUserToPaid(promoteUser.id, payload);
       }
 
       if (updatedUser) {
@@ -450,15 +467,22 @@ export function AdminDesktopConsole() {
           );
           return next;
         });
+
         if (selectedUser?.id === updatedUser.id) {
           setSelectedUser(updatedUser);
         }
-        setGlobalAlert(`⚡ ${updatedUser.name} has been successfully promoted to Paid Customer (₹99 Paid)!`);
+
+        const methodLabel = isCash ? "Cash Received by Hand" : `UPI (Txn: ${cleanTxnId})`;
+        setGlobalAlert(`⚡ ${updatedUser.name} successfully promoted to Paid Customer (${methodLabel})!`);
         setTimeout(() => setGlobalAlert(null), 4000);
       }
+
+      setPromoteUser(null);
     } catch (err) {
       console.error("Promote user error:", err);
       alert("Failed to promote user to paid. Please try again.");
+    } finally {
+      setIsPromoting(false);
     }
   };
 
@@ -1699,6 +1723,16 @@ export function AdminDesktopConsole() {
         }}
         initialTab={sidebarInitialTab}
       />
+
+      {/* Manual Promotion to Paid Modal */}
+      {promoteUser && (
+        <ManualPromoteModal
+          user={promoteUser}
+          onClose={() => setPromoteUser(null)}
+          onConfirm={handleConfirmPromotion}
+          isPromoting={isPromoting}
+        />
+      )}
 
       {/* Alert Dispatch Modal */}
       {alertUser && (
