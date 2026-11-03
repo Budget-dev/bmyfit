@@ -67,24 +67,8 @@ export function useAuth() {
           }
           setLoading(false);
         } else {
-          // If no stored profile and no user, optionally sign in anonymously for public API access
-          const existingProfile = getStoredProfile();
-          if (!existingProfile) {
-            try {
-              const credential = await signInAnonymously(auth);
-              if (isMounted) {
-                setUser(credential.user);
-                setLoading(false);
-              }
-            } catch (err) {
-              if (isMounted) {
-                setError(err instanceof Error ? err : new Error(String(err)));
-                setLoading(false);
-              }
-            }
-          } else {
-            setLoading(false);
-          }
+          setUser(null);
+          setLoading(false);
         }
       },
       (authError) => {

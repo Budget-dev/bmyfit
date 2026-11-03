@@ -63,27 +63,41 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
   const [guideModalOpen, setGuideModalOpen] = useState(false);
   const [activeGuideTab, setActiveGuideTab] = useState<"waist" | "neck">("waist");
 
-  // Hydrate from session storage
+  // Hydrate from storage (both localStorage & sessionStorage)
   useEffect(() => {
     const savedDetails = loadDraftDetails();
     if (savedDetails) {
       if (savedDetails.gender) setGender(savedDetails.gender);
-      if (savedDetails.age) setAge(savedDetails.age);
-      if (savedDetails.heightCm) setHeight(savedDetails.heightCm);
-      if (savedDetails.weightKg) setWeight(savedDetails.weightKg);
+      if (savedDetails.rawAge !== undefined && savedDetails.rawAge !== "") setAge(savedDetails.rawAge);
+      else if (savedDetails.age) setAge(savedDetails.age);
 
-      if (savedDetails.waistIn) {
-        // Default to cm in Step 2 matching screenshot (80 cm)
-        const cmVal = Math.round(savedDetails.waistIn * 2.54);
-        setWaist(cmVal);
-      }
-      if (savedDetails.neckIn) {
-        const cmVal = Math.round(savedDetails.neckIn * 2.54);
-        setNeck(cmVal);
-      }
-      if (savedDetails.hipIn) {
-        const cmVal = Math.round(savedDetails.hipIn * 2.54);
-        setHip(cmVal);
+      if (savedDetails.rawHeight !== undefined && savedDetails.rawHeight !== "") setHeight(savedDetails.rawHeight);
+      else if (savedDetails.heightCm) setHeight(savedDetails.heightCm);
+
+      if (savedDetails.rawWeight !== undefined && savedDetails.rawWeight !== "") setWeight(savedDetails.rawWeight);
+      else if (savedDetails.weightKg) setWeight(savedDetails.weightKg);
+
+      if (savedDetails.heightUnit) setHeightUnit(savedDetails.heightUnit);
+      if (savedDetails.weightUnit) setWeightUnit(savedDetails.weightUnit);
+
+      if (savedDetails.rawWaist !== undefined && savedDetails.rawWaist !== "") setWaist(savedDetails.rawWaist);
+      else if (savedDetails.waistCm) setWaist(savedDetails.waistCm);
+      else if (savedDetails.waistIn) setWaist(Math.round(savedDetails.waistIn * 2.54));
+
+      if (savedDetails.rawNeck !== undefined && savedDetails.rawNeck !== "") setNeck(savedDetails.rawNeck);
+      else if (savedDetails.neckCm) setNeck(savedDetails.neckCm);
+      else if (savedDetails.neckIn) setNeck(Math.round(savedDetails.neckIn * 2.54));
+
+      if (savedDetails.rawHip !== undefined && savedDetails.rawHip !== "") setHip(savedDetails.rawHip);
+      else if (savedDetails.hipCm) setHip(savedDetails.hipCm);
+      else if (savedDetails.hipIn) setHip(Math.round(savedDetails.hipIn * 2.54));
+
+      if (savedDetails.waistUnit) setWaistUnit(savedDetails.waistUnit);
+      if (savedDetails.neckUnit) setNeckUnit(savedDetails.neckUnit);
+      if (savedDetails.hipUnit) setHipUnit(savedDetails.hipUnit);
+
+      if (!initialStep && !stepParam && savedDetails.step === 2) {
+        setStep(2);
       }
     }
 
@@ -99,7 +113,70 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
     }
 
     router.prefetch("/calculating");
-  }, [router]);
+  }, [router, initialStep, stepParam]);
+
+  // Auto-persist inputs on every change so browser refresh NEVER loses entered data
+  useEffect(() => {
+    const numAge = Number(age) || undefined;
+    let numHeight = Number(height) || undefined;
+    if (numHeight && heightUnit === "ft") {
+      numHeight = Math.round(numHeight * 30.48);
+    }
+    let numWeight = Number(weight) || undefined;
+    if (numWeight && weightUnit === "lbs") {
+      numWeight = Math.round(numWeight * 0.453592);
+    }
+    const numWaist = Number(waist) || undefined;
+    const numNeck = Number(neck) || undefined;
+    const numHip = Number(hip) || undefined;
+
+    const waistCm = numWaist ? (waistUnit === "cm" ? numWaist : Math.round(numWaist * 2.54 * 10) / 10) : undefined;
+    const neckCm = numNeck ? (neckUnit === "cm" ? numNeck : Math.round(numNeck * 2.54 * 10) / 10) : undefined;
+    const hipCm = numHip ? (hipUnit === "cm" ? numHip : Math.round(numHip * 2.54 * 10) / 10) : undefined;
+
+    const waistIn = numWaist ? (waistUnit === "in" ? numWaist : Math.round((numWaist / 2.54) * 10) / 10) : undefined;
+    const neckIn = numNeck ? (neckUnit === "in" ? numNeck : Math.round((numNeck / 2.54) * 10) / 10) : undefined;
+    const hipIn = numHip ? (hipUnit === "in" ? numHip : Math.round((numHip / 2.54) * 10) / 10) : undefined;
+
+    saveDraftDetails({
+      step,
+      gender,
+      age: numAge,
+      heightCm: numHeight,
+      weightKg: numWeight,
+      waistIn,
+      neckIn,
+      hipIn,
+      waistCm,
+      neckCm,
+      hipCm,
+      heightUnit,
+      weightUnit,
+      waistUnit,
+      neckUnit,
+      hipUnit,
+      rawAge: age,
+      rawHeight: height,
+      rawWeight: weight,
+      rawWaist: waist,
+      rawNeck: neck,
+      rawHip: hip,
+    });
+  }, [
+    step,
+    gender,
+    age,
+    height,
+    weight,
+    heightUnit,
+    weightUnit,
+    waist,
+    neck,
+    hip,
+    waistUnit,
+    neckUnit,
+    hipUnit,
+  ]);
 
   // Unit conversion helpers
   const handleWaistUnitChange = (newUnit: "cm" | "in") => {

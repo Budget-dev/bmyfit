@@ -174,15 +174,23 @@ export function AdminDesktopConsole() {
       });
 
       const mergedUsers = Array.from(userMap.values()).filter((u) => {
-        const email = u.email?.toLowerCase() || "";
-        // Strictly exclude Coach Naveen, test emails, and test athlete account
+        const email = u.email?.toLowerCase().trim() || "";
+        const id = u.id || "";
+        const name = u.name?.toLowerCase().trim() || "";
+
+        // Strictly exclude Coach Naveen, mock entries, test emails, and test athlete account
         if (
           email === "bmyfitnesscoach@gmail.com" ||
-          u.id === "coach_naveen" ||
+          id === "coach_naveen" ||
+          id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
+          id.startsWith("mock_") ||
+          id.startsWith("user_membership_") ||
+          id.startsWith("user_purchase_") ||
+          id.startsWith("user_purchased_") ||
           email.includes("@test.com") ||
           email.startsWith("test_") ||
-          u.id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
-          u.name?.toLowerCase().includes("test athlete")
+          email.includes("test_1793282473121") ||
+          name.includes("test athlete")
         ) {
           return false;
         }
@@ -191,19 +199,26 @@ export function AdminDesktopConsole() {
           u.membershipCategory === "purchased" ||
           u.membershipCategory === "membership" ||
           Boolean(u.order && u.order.status === "paid") ||
+          Boolean(u.order && (u.order.amountPaise || 0) > 0) ||
           Boolean((u as { isPaid?: boolean }).isPaid);
 
-        // If not a paid customer, must be a real registered user (never an anonymous plan or guest lead)
+        // For non-paid users: ONLY real authenticated/signed-up accounts are shown in Admin Console
+        // Strictly exclude anonymous funnel leads, generated assessment IDs, guest IDs, and fake generated emails
         if (!isPaid) {
           if (
-            email.includes("@lead.bmyfit.in") ||
-            email.includes("@client.bmyfit.in") ||
-            (email.includes("@example.com") && u.id.startsWith("plan_")) ||
-            u.name?.startsWith("Free Score Lead") ||
-            u.id.startsWith("plan_") ||
-            u.id.startsWith("asm_") ||
-            u.id.startsWith("guest_") ||
-            u.id.startsWith("anon_")
+            !email ||
+            email.length < 5 ||
+            !email.includes("@") ||
+            !email.includes(".") ||
+            email.endsWith("@lead.bmyfit.in") ||
+            email.endsWith("@client.bmyfit.in") ||
+            (email.endsWith("@example.com") && (id.startsWith("plan_") || id.startsWith("asm_") || id.startsWith("guest_"))) ||
+            name.startsWith("free score lead") ||
+            id.startsWith("plan_") ||
+            id.startsWith("asm_") ||
+            id.startsWith("guest_") ||
+            id.startsWith("anon_") ||
+            id.startsWith("chat_")
           ) {
             return false;
           }
@@ -1037,6 +1052,7 @@ export function AdminDesktopConsole() {
                 onSendAlert={(u) => {
                   setAlertUser(u);
                 }}
+                onPromoteToPaid={handlePromoteUserToPaid}
                 onRefresh={handleRefreshData}
                 isSyncing={isSyncing}
               />

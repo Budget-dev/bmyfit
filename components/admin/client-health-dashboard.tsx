@@ -16,6 +16,7 @@ import {
   ArrowRight,
   BellRing,
   Sparkles,
+  Zap,
 } from "@/components/ui/icons";
 import type { AdminUserRecord } from "@/types/admin";
 import { calculateDetailedAdherence } from "@/features/plan/dashboard-data";
@@ -26,6 +27,7 @@ interface ClientHealthDashboardProps {
   onOpenStudio: (user: AdminUserRecord) => void;
   onOpenBiometrics: (user: AdminUserRecord) => void;
   onSendAlert: (user: AdminUserRecord) => void;
+  onPromoteToPaid?: (user: AdminUserRecord) => void;
   onRefresh?: () => void;
   isSyncing?: boolean;
 }
@@ -63,6 +65,7 @@ export function ClientHealthDashboard({
   onOpenStudio,
   onOpenBiometrics,
   onSendAlert,
+  onPromoteToPaid,
   onRefresh,
   isSyncing = false,
 }: ClientHealthDashboardProps) {
@@ -574,6 +577,19 @@ export function ClientHealthDashboard({
                             <span>Plan</span>
                           </button>
 
+                          {/* ⚡ Promote to Paid (for Free Leads) */}
+                          {user.membershipCategory === "free" && !user.isPaid && onPromoteToPaid && (
+                            <button
+                              type="button"
+                              onClick={() => onPromoteToPaid(user)}
+                              title="Promote this free user to Paid Customer (₹99)"
+                              className="px-2.5 py-1 rounded-lg text-[11px] font-black text-amber-950 bg-amber-400 hover:bg-amber-500 border border-amber-500/50 shadow-xs transition inline-flex items-center gap-1 cursor-pointer shrink-0 active:scale-95"
+                            >
+                              <Zap className="w-3 h-3 text-amber-900 fill-amber-900" />
+                              <span>Promote</span>
+                            </button>
+                          )}
+
                           {/* Push Alert */}
                           <button
                             type="button"
@@ -705,6 +721,18 @@ export function ClientHealthDashboard({
                     <Edit3 className="w-3.5 h-3.5" />
                     <span>Edit Plan</span>
                   </button>
+
+                  {user.membershipCategory === "free" && !user.isPaid && onPromoteToPaid && (
+                    <button
+                      type="button"
+                      onClick={() => onPromoteToPaid(user)}
+                      title="Promote to Paid Customer (₹99)"
+                      className="py-1.5 px-2.5 rounded-xl text-xs font-black bg-amber-400 hover:bg-amber-500 text-amber-950 border border-amber-500/50 shadow-2xs transition flex items-center justify-center gap-1 cursor-pointer shrink-0 active:scale-95"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-amber-900 fill-amber-900" />
+                      <span>Promote</span>
+                    </button>
+                  )}
 
                   <button
                     type="button"

@@ -23,7 +23,7 @@ export function getStoredProfile(): UserProfile | null {
   if (inMemoryProfile) return inMemoryProfile;
   if (typeof window !== "undefined") {
     try {
-      const raw = sessionStorage.getItem(AUTH_PROFILE_KEY);
+      const raw = sessionStorage.getItem(AUTH_PROFILE_KEY) || localStorage.getItem(AUTH_PROFILE_KEY);
       if (raw) {
         inMemoryProfile = JSON.parse(raw);
         return inMemoryProfile;
@@ -38,7 +38,9 @@ export function saveStoredProfile(profile: UserProfile): void {
 
   if (typeof window !== "undefined") {
     try {
-      sessionStorage.setItem(AUTH_PROFILE_KEY, JSON.stringify(profile));
+      const json = JSON.stringify(profile);
+      sessionStorage.setItem(AUTH_PROFILE_KEY, json);
+      localStorage.setItem(AUTH_PROFILE_KEY, json);
     } catch { }
   }
 
@@ -166,6 +168,7 @@ export function clearStoredProfile(): void {
   if (typeof window !== "undefined") {
     try {
       sessionStorage.removeItem(AUTH_PROFILE_KEY);
+      localStorage.removeItem(AUTH_PROFILE_KEY);
       sessionStorage.removeItem("bmyfit_admin_authorized");
     } catch { }
   }
@@ -181,7 +184,9 @@ export async function fetchFirebaseProfile(uid: string): Promise<UserProfile | n
       const data = snap.data() as UserProfile;
       inMemoryProfile = data;
       try {
-        sessionStorage.setItem(AUTH_PROFILE_KEY, JSON.stringify(data));
+        const json = JSON.stringify(data);
+        sessionStorage.setItem(AUTH_PROFILE_KEY, json);
+        localStorage.setItem(AUTH_PROFILE_KEY, json);
       } catch { }
       return data;
     }

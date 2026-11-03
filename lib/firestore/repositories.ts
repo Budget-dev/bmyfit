@@ -117,7 +117,7 @@ export async function getAssessmentById(assessmentId: string): Promise<Assessmen
   const fromMemory = memoryAssessments.get(assessmentId);
   if (fromMemory) return fromMemory;
 
-  // Safe fallback default assessment
+  // Safe fallback default assessment (uid: "guest_user")
   return {
     id: assessmentId,
     uid: "guest_user",

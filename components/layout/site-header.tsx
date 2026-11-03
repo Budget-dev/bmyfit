@@ -98,18 +98,18 @@ export function SiteHeader() {
                   {userProfile.avatarUrl ? (
                     <Image
                       src={userProfile.avatarUrl}
-                      alt={userProfile.name}
+                      alt={userProfile.name || "User profile"}
                       width={24}
                       height={24}
                       className="w-6 h-6 rounded-full object-cover"
                     />
                   ) : (
                     <div className="w-6 h-6 rounded-full bg-[#00e676] text-black font-black text-[10px] flex items-center justify-center">
-                      {userProfile.name.charAt(0).toUpperCase()}
+                      {(userProfile.name || "U").charAt(0).toUpperCase()}
                     </div>
                   )}
                   <span className="text-xs font-bold text-gray-900 hidden sm:inline max-w-[100px] truncate">
-                    {userProfile.name.split(" ")[0]}
+                    {(userProfile.name || "Member").split(" ")[0]}
                   </span>
                   <span className="text-gray-400 text-[10px]">▼</span>
                 </button>
@@ -118,8 +118,8 @@ export function SiteHeader() {
                 {isProfileOpen && (
                   <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-gray-100 shadow-xl z-50 p-3.5 animate-in fade-in zoom-in-95 duration-150 text-left">
                     <div className="pb-2 border-b border-gray-100">
-                      <p className="text-xs font-black text-gray-950 truncate">{userProfile.name}</p>
-                      <p className="text-[11px] text-gray-500 truncate">{userProfile.email}</p>
+                      <p className="text-xs font-black text-gray-950 truncate">{userProfile.name || "BMYFIT Athlete"}</p>
+                      <p className="text-[11px] text-gray-500 truncate">{userProfile.email || ""}</p>
                       <div className="flex items-center gap-1.5 mt-1.5 text-[10px] text-gray-600">
                         {userProfile.phone && (
                           <span className="bg-gray-100 px-1.5 py-0.5 rounded font-medium">
@@ -296,7 +296,7 @@ export function SiteHeader() {
                   <div className="pb-2.5 mb-2 border-b border-gray-100">
                     {isAuthenticated && userProfile ? (
                       <div>
-                        <p className="text-xs font-black text-gray-900">{userProfile.name}</p>
+                        <p className="text-xs font-black text-gray-900">{userProfile.name || "BMYFIT Athlete"}</p>
                         <p className="text-[10px] text-gray-500 truncate">{userProfile.email}</p>
                         <div className="flex items-center gap-2 mt-2">
                           <Link

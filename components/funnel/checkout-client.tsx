@@ -71,8 +71,12 @@ function getSessionBiometrics(): AdminUserRecord["biometrics"] {
   };
   try {
     if (typeof window !== "undefined") {
-      const rawAssess = sessionStorage.getItem("bmyfit_local_assessment");
-      const rawCalc = sessionStorage.getItem("bmyfit_local_calculated");
+      const rawAssess =
+        sessionStorage.getItem("bmyfit_local_assessment") ||
+        localStorage.getItem("bmyfit_local_assessment");
+      const rawCalc =
+        sessionStorage.getItem("bmyfit_local_calculated") ||
+        localStorage.getItem("bmyfit_local_calculated");
       if (rawAssess) {
         const parsedAssess = JSON.parse(rawAssess);
         const parsedCalc = rawCalc ? JSON.parse(rawCalc) : {};
@@ -161,7 +165,9 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
         }));
       }
 
-      const raw = sessionStorage.getItem("bmyfit_local_assessment");
+      const raw =
+        sessionStorage.getItem("bmyfit_local_assessment") ||
+        localStorage.getItem("bmyfit_local_assessment");
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed.name) {
@@ -196,7 +202,9 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
       } catch { }
     }
     try {
-      const raw = sessionStorage.getItem("bmyfit_local_assessment");
+      const raw =
+        sessionStorage.getItem("bmyfit_local_assessment") ||
+        localStorage.getItem("bmyfit_local_assessment");
       if (raw) {
         const parsed = JSON.parse(raw);
         parsed.isPaid = true;

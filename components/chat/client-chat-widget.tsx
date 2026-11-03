@@ -69,20 +69,26 @@ export function ClientChatWidget({
     };
   }, [setIsOpen]);
 
-  // Subscribe to real-time messages
+  // Subscribe to real-time messages only when chat is active
   useEffect(() => {
-    const unsubscribe = subscribeToChatMessages(userId, (newMessages) => {
-      setMessages(newMessages);
+    if (!isOpen && !initiallyOpen) return;
 
-      // Check if there are unread coach messages
-      const unreadCoach = newMessages.some((m) => m.senderRole === "coach" && !m.read);
-      setHasUnreadFromCoach(unreadCoach);
-    });
+    try {
+      const unsubscribe = subscribeToChatMessages(userId, (newMessages) => {
+        setMessages(newMessages);
 
-    return () => {
-      unsubscribe();
-    };
-  }, [userId]);
+        // Check if there are unread coach messages
+        const unreadCoach = newMessages.some((m) => m.senderRole === "coach" && !m.read);
+        setHasUnreadFromCoach(unreadCoach);
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    } catch (err) {
+      console.warn("Client chat subscription notice:", err);
+    }
+  }, [userId, isOpen, initiallyOpen]);
 
   // Mark messages read when user opens chat
   useEffect(() => {

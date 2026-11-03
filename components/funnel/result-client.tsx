@@ -25,6 +25,12 @@ import {
 } from "@/components/ui/font-awesome-icons";
 import type { Assessment } from "@/types/fitness";
 import { calculateBodyFat } from "@/features/calculator";
+import { calculateAssessment } from "@/lib/assessment/plan";
+import {
+  loadLocalAssessment,
+  saveLocalAssessment,
+  getFullDraftInput,
+} from "@/features/assessment/session-store";
 import { recordFootprint } from "@/lib/telemetry/footprints";
 
 export interface ResultClientProps {
@@ -76,31 +82,39 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
     }
   }, [isLoggedIn, user?.uid, assessment]);
 
-  // Load assessment from local session immediately, then sync with server
+  // Load assessment from local storage immediately, then sync with server
   useEffect(() => {
     if (initialAssessment) {
       setAssessment(initialAssessment);
       setLoading(false);
+      saveLocalAssessment(initialAssessment as unknown as Record<string, unknown>);
       return;
     }
 
-    // 1. Immediately hydrate from storage so the user NEVER sees an empty result or error
+    // 1. Immediately hydrate from storage so the user NEVER loses results on refresh
     try {
-      const raw =
-        sessionStorage.getItem("bmyfit_local_assessment") ||
-        localStorage.getItem("bmyfit_local_assessment");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === "object") {
-          setAssessment(parsed);
+      const stored = loadLocalAssessment(id);
+      if (stored && typeof stored === "object" && (stored.weightKg || stored.bmi)) {
+        setAssessment(stored as unknown as Assessment);
+        setLoading(false);
+      } else {
+        // Fallback: recompute from user's entered draft measurements if available
+        const draftInput = getFullDraftInput();
+        if (draftInput && draftInput.weightKg) {
+          const calc = calculateAssessment(draftInput);
+          const computed: Assessment = {
+            id: id || "local",
+            uid: user?.uid || "guest",
+            ...draftInput,
+            ...calc,
+            createdAt: new Date().toISOString(),
+          };
+          setAssessment(computed);
           setLoading(false);
-          try {
-            sessionStorage.setItem("bmyfit_local_assessment", raw);
-            localStorage.setItem("bmyfit_local_assessment", raw);
-          } catch { }
+          saveLocalAssessment(computed as unknown as Record<string, unknown>);
         }
       }
-    } catch { }
+    } catch {}
 
     if (!id || id === "local") {
       setLoading(false);
@@ -117,11 +131,9 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
         const res = await fetch(`/api/assessments/${id}`, { headers });
         if (res.ok) {
           const data = await res.json();
-          if (isMounted && data.assessment) {
+          if (isMounted && data.assessment && (data.assessment.weightKg || data.assessment.bmi)) {
             setAssessment(data.assessment);
-            try {
-              sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(data.assessment));
-            } catch { }
+            saveLocalAssessment(data.assessment);
           }
         }
       } catch (e) {
@@ -136,7 +148,7 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
     return () => {
       isMounted = false;
     };
-  }, [id, initialAssessment, getIdToken]);
+  }, [id, initialAssessment, getIdToken, user?.uid]);
 
   useEffect(() => {
     if (assessment) {

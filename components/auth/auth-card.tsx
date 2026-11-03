@@ -82,14 +82,29 @@ export function AuthCard({
       setSuccessMessage(null);
 
       const profile = await signInWithGoogle();
-      const firstName = profile.name.split(" ")[0] || "Athlete";
+      const firstName = (profile.name || "Athlete").split(" ")[0] || "Athlete";
 
-      // Respect redirectParam if present (e.g. back to /result to view analysis)
-      const target = redirectParam && redirectParam !== "/plan" ? redirectParam : "/";
+      // Resolve destination: respect redirectParam, or route to result/plan if assessment/paid exists
+      const target = (() => {
+        if (redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")) {
+          return redirectParam;
+        }
+        if (typeof window !== "undefined") {
+          const isPaid =
+            localStorage.getItem("bmyfit_local_paid") === "true" ||
+            sessionStorage.getItem("bmyfit_local_paid") === "true";
+          if (isPaid) return "/plan";
+          const hasAss =
+            localStorage.getItem("bmyfit_local_assessment") ||
+            sessionStorage.getItem("bmyfit_local_assessment");
+          if (hasAss) return "/result";
+        }
+        return "/";
+      })();
 
       setSuccessMessage(
         mode === "signup"
-          ? `Account created! Welcome, ${firstName}! Redirecting to home...`
+          ? `Account created! Welcome, ${firstName}! Redirecting...`
           : `Welcome back, ${firstName}! Redirecting...`
       );
 
@@ -154,8 +169,24 @@ export function AuthCard({
           age: ageNum,
         });
 
-        const target = redirectParam && redirectParam !== "/plan" ? redirectParam : "/";
-        setSuccessMessage(`Account created! Welcome, ${profile.name.split(" ")[0]}! Redirecting...`);
+        const target = (() => {
+          if (redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")) {
+            return redirectParam;
+          }
+          if (typeof window !== "undefined") {
+            const isPaid =
+              localStorage.getItem("bmyfit_local_paid") === "true" ||
+              sessionStorage.getItem("bmyfit_local_paid") === "true";
+            if (isPaid) return "/plan";
+            const hasAss =
+              localStorage.getItem("bmyfit_local_assessment") ||
+              sessionStorage.getItem("bmyfit_local_assessment");
+            if (hasAss) return "/result";
+          }
+          return "/";
+        })();
+        const safeName = (profile.name || "Athlete").split(" ")[0] || "Athlete";
+        setSuccessMessage(`Account created! Welcome, ${safeName}! Redirecting...`);
         if (onSuccess) {
           onSuccess();
         } else {
@@ -199,8 +230,24 @@ export function AuthCard({
           password,
         });
 
-        const signInTarget = redirectParam && redirectParam !== "/plan" ? redirectParam : "/";
-        setSuccessMessage(`Welcome back, ${profile.name.split(" ")[0]}! Redirecting...`);
+        const signInTarget = (() => {
+          if (redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")) {
+            return redirectParam;
+          }
+          if (typeof window !== "undefined") {
+            const isPaid =
+              localStorage.getItem("bmyfit_local_paid") === "true" ||
+              sessionStorage.getItem("bmyfit_local_paid") === "true";
+            if (isPaid) return "/plan";
+            const hasAss =
+              localStorage.getItem("bmyfit_local_assessment") ||
+              sessionStorage.getItem("bmyfit_local_assessment");
+            if (hasAss) return "/result";
+          }
+          return "/";
+        })();
+        const safeName = (profile.name || "Athlete").split(" ")[0] || "Athlete";
+        setSuccessMessage(`Welcome back, ${safeName}! Redirecting...`);
         if (onSuccess) {
           onSuccess();
         } else {

@@ -9,6 +9,7 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunnelState } from "@/hooks/use-funnel-state";
 import { calculateAssessment } from "@/lib/assessment/plan";
+import { saveLocalAssessment, saveLocalCalculated } from "@/features/assessment/session-store";
 import { db, doc, setDoc } from "@/lib/firebase/client";
 
 const STEPS = [
@@ -111,8 +112,8 @@ export function CalculatingClient() {
           ...calculated,
           createdAt: new Date().toISOString(),
         };
-        sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(localAssessment));
-        sessionStorage.setItem("bmyfit_local_calculated", JSON.stringify(calculated));
+        saveLocalAssessment(localAssessment);
+        saveLocalCalculated(calculated);
       }
 
       // Background persist to Firestore and API
@@ -151,7 +152,7 @@ export function CalculatingClient() {
                   ...calculated,
                   createdAt: new Date().toISOString(),
                 };
-                sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(updated));
+                saveLocalAssessment(updated);
               }
             }
           }

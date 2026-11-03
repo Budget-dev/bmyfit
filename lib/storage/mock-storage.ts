@@ -237,22 +237,13 @@ export function getStoredAdminUsers(): AdminUserRecord[] {
         }
 
         // Strictly exclude test emails and test athlete accounts
-        const email = u.email?.toLowerCase() || "";
+        const email = u.email?.toLowerCase().trim() || "";
         if (
           email.includes("@test.com") ||
           email.startsWith("test_") ||
+          email.includes("test_1793282473121") ||
           u.name?.toLowerCase().includes("test athlete")
         ) {
-          return false;
-        }
-
-        // Strictly exclude anonymous funnel leads who only checked analysis without registering or paying
-        const isAnonymousLead =
-          (email.includes("@lead.bmyfit.in") || u.name?.startsWith("Free Score Lead")) &&
-          u.membershipCategory === "free" &&
-          !u.order &&
-          !u.isPaid;
-        if (isAnonymousLead) {
           return false;
         }
 
@@ -260,19 +251,26 @@ export function getStoredAdminUsers(): AdminUserRecord[] {
           u.membershipCategory === "purchased" ||
           u.membershipCategory === "membership" ||
           Boolean((u as { isPaid?: boolean }).isPaid) ||
-          Boolean(u.order && u.order.status === "paid");
+          Boolean(u.order && u.order.status === "paid") ||
+          Boolean(u.order && (u.order.amountPaise || 0) > 0);
 
-        // Strictly exclude anonymous funnel leads and unauthenticated calculation sessions
+        // For non-paid users: ONLY real authenticated/signed-up accounts are shown in Admin Console
+        // Strictly exclude anonymous funnel leads, generated assessment IDs, and fake generated emails
         if (!isPaidUser) {
           if (
-            email.includes("@lead.bmyfit.in") ||
-            email.includes("@client.bmyfit.in") ||
-            (email.includes("@example.com") && u.id.startsWith("plan_")) ||
+            !email ||
+            email.length < 5 ||
+            !email.includes("@") ||
+            !email.includes(".") ||
+            email.endsWith("@lead.bmyfit.in") ||
+            email.endsWith("@client.bmyfit.in") ||
+            (email.endsWith("@example.com") && (u.id.startsWith("plan_") || u.id.startsWith("asm_") || u.id.startsWith("guest_"))) ||
             u.name?.startsWith("Free Score Lead") ||
             u.id.startsWith("plan_") ||
             u.id.startsWith("asm_") ||
             u.id.startsWith("guest_") ||
-            u.id.startsWith("anon_")
+            u.id.startsWith("anon_") ||
+            u.id.startsWith("chat_")
           ) {
             return false;
           }
@@ -746,16 +744,22 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
             data.plan?.status === "pending_review" ||
             data.needsPlanReview === true;
 
+          // For non-purchased users: ONLY real authenticated/signed-up users
           if (!isPurchased) {
             if (
-              email.includes("@lead.bmyfit.in") ||
-              email.includes("@client.bmyfit.in") ||
-              (email.includes("@example.com") && docSnap.id.startsWith("plan_")) ||
+              !email ||
+              email.length < 5 ||
+              !email.includes("@") ||
+              !email.includes(".") ||
+              email.endsWith("@lead.bmyfit.in") ||
+              email.endsWith("@client.bmyfit.in") ||
+              (email.endsWith("@example.com") && (docSnap.id.startsWith("plan_") || docSnap.id.startsWith("asm_") || docSnap.id.startsWith("guest_"))) ||
               data.name?.startsWith("Free Score Lead") ||
               docSnap.id.startsWith("plan_") ||
               docSnap.id.startsWith("asm_") ||
               docSnap.id.startsWith("guest_") ||
-              docSnap.id.startsWith("anon_")
+              docSnap.id.startsWith("anon_") ||
+              docSnap.id.startsWith("chat_")
             ) {
               return;
             }
@@ -812,19 +816,6 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
               existing.needsPlanReview = true;
             }
             inMemoryUsers.set(docSnap.id, existing);
-          } else if (planData.customerName) {
-            const newRec = sanitizeAdminUserRecord(
-              {
-                id: docSnap.id,
-                name: planData.customerName,
-                email: `${docSnap.id}@client.bmyfit.in`,
-                membershipCategory: isPending ? "purchased" : "free",
-                needsPlanReview: isPending,
-                plan: planData,
-              },
-              docSnap.id
-            );
-            inMemoryUsers.set(docSnap.id, newRec);
           }
         });
       } catch (e) {
@@ -878,20 +869,6 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
             if (chat.planGoal) existing.goal = chat.planGoal;
             if (chat.membershipCategory) existing.membershipCategory = chat.membershipCategory;
             inMemoryUsers.set(id, existing);
-          } else if (chat.userName || chat.userEmail) {
-            const newRec = sanitizeAdminUserRecord(
-              {
-                id,
-                name: chat.userName,
-                email: chat.userEmail || `${id}@client.bmyfit.in`,
-                phone: chat.userPhone || "+91 98000 00000",
-                membershipCategory: chat.membershipCategory || "free",
-                goal: chat.planGoal || "fat-loss",
-                avatar: chat.avatarUrl,
-              },
-              id
-            );
-            inMemoryUsers.set(id, newRec);
           }
         });
       } catch (e) {

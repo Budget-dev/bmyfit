@@ -131,7 +131,7 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
   // 0.1 Discover registered Firebase Auth clients (Exact UIDs from Firebase Auth console)
   const knownAuthUsers = [
     {
-      id: "vovsLoxTftM6lNs7hstEKDD31iK2",
+      id: "v0vsUoxTrkMGbNs7hstEXODyD2f2",
       name: "Venkatesh Choppa",
       email: "venkateshchop14@gmail.com",
       phone: "+91 98490 12345",
@@ -258,12 +258,13 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
       if (!usersSnap.empty) {
         for (const doc of usersSnap.docs) {
           const userData = doc.data();
-          const email = (userData.email || "").toLowerCase();
+          const email = (userData.email || "").toLowerCase().trim();
           if (
             email === "bmyfitnesscoach@gmail.com" ||
             doc.id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
             email.includes("@test.com") ||
             email.startsWith("test_") ||
+            email.includes("test_1793282473121") ||
             userData.name?.toLowerCase().includes("test athlete")
           ) {
             continue;
@@ -273,17 +274,24 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
             userData.membershipCategory === "purchased" ||
             userData.membershipCategory === "membership" ||
             Boolean(userData.isPaid) ||
-            Boolean(userData.order && userData.order.status === "paid");
+            Boolean(userData.order && userData.order.status === "paid") ||
+            Boolean(userData.order && (userData.order.amountPaise || 0) > 0);
 
           if (!isPaid) {
             if (
-              email.includes("@lead.bmyfit.in") ||
-              email.includes("@client.bmyfit.in") ||
+              !email ||
+              email.length < 5 ||
+              !email.includes("@") ||
+              !email.includes(".") ||
+              email.endsWith("@lead.bmyfit.in") ||
+              email.endsWith("@client.bmyfit.in") ||
+              (email.endsWith("@example.com") && (doc.id.startsWith("plan_") || doc.id.startsWith("asm_") || doc.id.startsWith("guest_"))) ||
               userData.name?.startsWith("Free Score Lead") ||
               doc.id.startsWith("plan_") ||
               doc.id.startsWith("asm_") ||
               doc.id.startsWith("guest_") ||
-              doc.id.startsWith("anon_")
+              doc.id.startsWith("anon_") ||
+              doc.id.startsWith("chat_")
             ) {
               continue;
             }
@@ -604,11 +612,12 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
         return false;
       }
       // Strictly exclude Coach Naveen, test emails, and test athlete accounts
-      const email = u.email?.toLowerCase() || "";
+      const email = u.email?.toLowerCase().trim() || "";
       if (
         email === "bmyfitnesscoach@gmail.com" ||
         email.includes("@test.com") ||
         email.startsWith("test_") ||
+        email.includes("test_1793282473121") ||
         id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
         u.name?.toLowerCase().includes("test athlete")
       ) {
@@ -619,19 +628,25 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
         u.membershipCategory === "purchased" ||
         u.membershipCategory === "membership" ||
         Boolean(u.order && u.order.status === "paid") ||
+        Boolean(u.order && (u.order.amountPaise || 0) > 0) ||
         Boolean((u as { isPaid?: boolean }).isPaid);
 
-      // Strictly exclude anonymous funnel leads and unauthenticated calculation sessions
+      // For non-paid users: ONLY real authenticated/signed-up accounts are shown in Admin Console
       if (!isPaid) {
         if (
-          email.includes("@lead.bmyfit.in") ||
-          email.includes("@client.bmyfit.in") ||
-          (email.includes("@example.com") && id.startsWith("plan_")) ||
+          !email ||
+          email.length < 5 ||
+          !email.includes("@") ||
+          !email.includes(".") ||
+          email.endsWith("@lead.bmyfit.in") ||
+          email.endsWith("@client.bmyfit.in") ||
+          (email.endsWith("@example.com") && (id.startsWith("plan_") || id.startsWith("asm_") || id.startsWith("guest_"))) ||
           u.name?.startsWith("Free Score Lead") ||
           id.startsWith("plan_") ||
           id.startsWith("asm_") ||
           id.startsWith("guest_") ||
-          id.startsWith("anon_")
+          id.startsWith("anon_") ||
+          id.startsWith("chat_")
         ) {
           return false;
         }

@@ -55,11 +55,15 @@ export function PlanClient({ id }: { id: string }) {
             sessionStorage.getItem(`bmyfit_paid_${id}`) === "true" ||
             Boolean(userProfile?.uid && localStorage.getItem(`bmyfit_paid_${userProfile.uid}`) === "true") ||
             Boolean(userProfile?.uid && sessionStorage.getItem(`bmyfit_paid_${userProfile.uid}`) === "true");
-          const rawLocal = sessionStorage.getItem("bmyfit_local_assessment");
+          const rawLocal =
+            sessionStorage.getItem("bmyfit_local_assessment") ||
+            localStorage.getItem("bmyfit_local_assessment");
           if (rawLocal) {
             localAssessment = JSON.parse(rawLocal);
           }
-          const rawCalc = sessionStorage.getItem("bmyfit_local_calculated");
+          const rawCalc =
+            sessionStorage.getItem("bmyfit_local_calculated") ||
+            localStorage.getItem("bmyfit_local_calculated");
           if (rawCalc) {
             const parsedCalc = JSON.parse(rawCalc);
             if (parsedCalc.bmi) calculatedBmi = Number(parsedCalc.bmi);

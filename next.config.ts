@@ -34,18 +34,18 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
-    optimizePackageImports: ["firebase", "firebase-admin", "@hookform/resolvers"],
+    optimizePackageImports: ["@hookform/resolvers"],
   },
   async headers() {
     const isDev = process.env.NODE_ENV !== "production";
     const csp = [
       "default-src 'self'",
-      `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ""} https://checkout.razorpay.com`,
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://www.googletagmanager.com https://www.google-analytics.com https://apis.google.com`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com",
-      "connect-src 'self' https://*.googleapis.com https://*.razorpay.com",
-      "img-src 'self' data: https:",
+      "frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://*.firebaseapp.com https://accounts.google.com",
+      "connect-src 'self' https://*.googleapis.com https://*.razorpay.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://www.google-analytics.com https://*.google-analytics.com https://*.googletagmanager.com https://api.razorpay.com https://lumberjack.razorpay.com",
+      "img-src 'self' data: blob: https:",
       "object-src 'none'",
       "base-uri 'self'",
     ].join("; ");
