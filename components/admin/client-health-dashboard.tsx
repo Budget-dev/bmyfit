@@ -159,15 +159,20 @@ export function ClientHealthDashboard({
         </div>
 
         <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200/90 text-xs font-bold shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Live Auto-Sync Active</span>
+          </div>
           {onRefresh && (
             <button
               type="button"
               onClick={onRefresh}
               disabled={isSyncing}
-              className="px-4 py-2 rounded-xl bg-gray-900 hover:bg-black text-white font-bold text-xs flex items-center gap-2 shadow-xs transition active:scale-95 disabled:opacity-60 cursor-pointer"
+              title="Manual refresh fallback"
+              className="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs flex items-center gap-1.5 border border-gray-200 transition active:scale-95 disabled:opacity-60 cursor-pointer"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-emerald-400" : ""}`} />
-              <span>{isSyncing ? "Syncing Live Firestore..." : "Sync Live Firestore"}</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-emerald-600" : ""}`} />
+              <span>{isSyncing ? "Syncing..." : "Refresh"}</span>
             </button>
           )}
         </div>

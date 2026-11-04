@@ -24,6 +24,7 @@ import {
   getStoredAdminUsers,
   sanitizeAdminUserRecord,
   syncFirestoreUsersDirectly,
+  subscribeToLiveAdminUsers,
   saveStoredPlan,
   upsertStoredAdminUser,
   promoteStoredUserToPaid,
@@ -72,6 +73,113 @@ export function AdminDesktopConsole() {
   // Manual Promotion to Paid Modal State
   const [promoteUser, setPromoteUser] = useState<AdminUserRecord | null>(null);
   const [isPromoting, setIsPromoting] = useState<boolean>(false);
+
+  // Reusable real-time user updater and defensive stats calculator
+  const applyUsersAndStats = useCallback((rawUserList: AdminUserRecord[]) => {
+    const mergedUsers = rawUserList.filter((u) => {
+      const email = u.email?.toLowerCase().trim() || "";
+      const id = u.id || "";
+      const name = u.name?.toLowerCase().trim() || "";
+
+      // Strictly exclude Coach Naveen, mock entries, test emails, and test athlete account
+      if (
+        email === "bmyfitnesscoach@gmail.com" ||
+        id === "coach_naveen" ||
+        id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
+        id.startsWith("mock_") ||
+        id.startsWith("user_membership_") ||
+        id.startsWith("user_purchase_") ||
+        id.startsWith("user_purchased_") ||
+        email.includes("@test.com") ||
+        email.startsWith("test_") ||
+        email.includes("test_1793282473121") ||
+        name.includes("test athlete")
+      ) {
+        return false;
+      }
+
+      const isPaid =
+        u.membershipCategory === "purchased" ||
+        u.membershipCategory === "membership" ||
+        Boolean(u.order && u.order.status === "paid") ||
+        Boolean(u.order && (u.order.amountPaise || 0) > 0) ||
+        Boolean((u as { isPaid?: boolean }).isPaid);
+
+      // For non-paid users: ONLY real authenticated/signed-up accounts are shown in Admin Console
+      // Strictly exclude anonymous funnel leads, generated assessment IDs, guest IDs, and fake generated emails
+      if (!isPaid) {
+        if (
+          !email ||
+          email.length < 5 ||
+          !email.includes("@") ||
+          !email.includes(".") ||
+          email.endsWith("@lead.bmyfit.in") ||
+          email.endsWith("@client.bmyfit.in") ||
+          (email.endsWith("@example.com") && (id.startsWith("plan_") || id.startsWith("asm_") || id.startsWith("guest_"))) ||
+          name.startsWith("free score lead") ||
+          id.startsWith("plan_") ||
+          id.startsWith("asm_") ||
+          id.startsWith("guest_") ||
+          id.startsWith("anon_") ||
+          id.startsWith("chat_")
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    setUsers(mergedUsers);
+
+    // Recompute stats defensively
+    const totalUsers = mergedUsers.length;
+    const purchasedPlansCount = mergedUsers.filter(
+      (u) =>
+        u.membershipCategory === "purchased" ||
+        Boolean(u.order && u.order.status === "paid") ||
+        Boolean((u as { isPaid?: boolean }).isPaid)
+    ).length;
+    const activeMembershipsCount = mergedUsers.filter((u) => u.membershipCategory === "membership").length;
+    const freeMembersCount = mergedUsers.filter(
+      (u) =>
+        u.membershipCategory === "free" &&
+        !Boolean(u.order && u.order.status === "paid") &&
+        !Boolean((u as { isPaid?: boolean }).isPaid)
+    ).length;
+    const pendingReviewCount = mergedUsers.filter(
+      (u) => (u.plan?.status === "pending_review") || u.needsPlanReview
+    ).length;
+    const liveApprovedCount = mergedUsers.filter((u) => u.plan?.status === "approved" || u.plan?.status === "active").length;
+    const totalRevenueINR = mergedUsers.reduce(
+      (sum, u) => sum + (u.order ? Math.round(u.order.amountPaise / 100) : 0),
+      0
+    );
+
+    setStats({
+      totalUsers,
+      purchasedPlansCount,
+      activeMembershipsCount,
+      freeMembersCount,
+      pendingReviewCount,
+      approvedCount: liveApprovedCount,
+      liveApprovedCount,
+      totalRevenueINR,
+    });
+
+    setSelectedUser((prev) => {
+      if (!prev && mergedUsers.length > 0) {
+        return (
+          mergedUsers.find((u) => u.needsPlanReview || u.plan?.status === "pending_review") ||
+          mergedUsers[0]
+        );
+      }
+      if (prev) {
+        const updated = mergedUsers.find((u) => u.id === prev.id);
+        if (updated) return updated;
+      }
+      return prev;
+    });
+  }, []);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -173,124 +281,30 @@ export function AdminDesktopConsole() {
         userMap.set(targetKey, merged);
       });
 
-      const mergedUsers = Array.from(userMap.values()).filter((u) => {
-        const email = u.email?.toLowerCase().trim() || "";
-        const id = u.id || "";
-        const name = u.name?.toLowerCase().trim() || "";
-
-        // Strictly exclude Coach Naveen, mock entries, test emails, and test athlete account
-        if (
-          email === "bmyfitnesscoach@gmail.com" ||
-          id === "coach_naveen" ||
-          id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
-          id.startsWith("mock_") ||
-          id.startsWith("user_membership_") ||
-          id.startsWith("user_purchase_") ||
-          id.startsWith("user_purchased_") ||
-          email.includes("@test.com") ||
-          email.startsWith("test_") ||
-          email.includes("test_1793282473121") ||
-          name.includes("test athlete")
-        ) {
-          return false;
-        }
-
-        const isPaid =
-          u.membershipCategory === "purchased" ||
-          u.membershipCategory === "membership" ||
-          Boolean(u.order && u.order.status === "paid") ||
-          Boolean(u.order && (u.order.amountPaise || 0) > 0) ||
-          Boolean((u as { isPaid?: boolean }).isPaid);
-
-        // For non-paid users: ONLY real authenticated/signed-up accounts are shown in Admin Console
-        // Strictly exclude anonymous funnel leads, generated assessment IDs, guest IDs, and fake generated emails
-        if (!isPaid) {
-          if (
-            !email ||
-            email.length < 5 ||
-            !email.includes("@") ||
-            !email.includes(".") ||
-            email.endsWith("@lead.bmyfit.in") ||
-            email.endsWith("@client.bmyfit.in") ||
-            (email.endsWith("@example.com") && (id.startsWith("plan_") || id.startsWith("asm_") || id.startsWith("guest_"))) ||
-            name.startsWith("free score lead") ||
-            id.startsWith("plan_") ||
-            id.startsWith("asm_") ||
-            id.startsWith("guest_") ||
-            id.startsWith("anon_") ||
-            id.startsWith("chat_")
-          ) {
-            return false;
-          }
-        }
-        return true;
-      });
-      setUsers(mergedUsers);
-
-      // Recompute stats defensively
-      const totalUsers = mergedUsers.length;
-      const purchasedPlansCount = mergedUsers.filter(
-        (u) =>
-          u.membershipCategory === "purchased" ||
-          Boolean(u.order && u.order.status === "paid") ||
-          Boolean((u as { isPaid?: boolean }).isPaid)
-      ).length;
-      const activeMembershipsCount = mergedUsers.filter((u) => u.membershipCategory === "membership").length;
-      const freeMembersCount = mergedUsers.filter(
-        (u) =>
-          u.membershipCategory === "free" &&
-          !Boolean(u.order && u.order.status === "paid") &&
-          !Boolean((u as { isPaid?: boolean }).isPaid)
-      ).length;
-      const pendingReviewCount = mergedUsers.filter(
-        (u) => (u.plan?.status === "pending_review") || u.needsPlanReview
-      ).length;
-      const liveApprovedCount = mergedUsers.filter((u) => u.plan?.status === "approved" || u.plan?.status === "active").length;
-      const totalRevenueINR = mergedUsers.reduce(
-        (sum, u) => sum + (u.order ? Math.round(u.order.amountPaise / 100) : 0),
-        0
-      );
-
-      setStats({
-        totalUsers,
-        purchasedPlansCount,
-        activeMembershipsCount,
-        freeMembersCount,
-        pendingReviewCount,
-        approvedCount: liveApprovedCount,
-        liveApprovedCount,
-        totalRevenueINR,
-      });
-
-      setSelectedUser((prev) => {
-        if (!prev && mergedUsers.length > 0) {
-          return (
-            mergedUsers.find((u) => u.needsPlanReview || u.plan?.status === "pending_review") ||
-            mergedUsers[0]
-          );
-        }
-        if (prev) {
-          const updated = mergedUsers.find((u) => u.id === prev.id);
-          if (updated) return updated;
-        }
-        return prev;
-      });
+      applyUsersAndStats(Array.from(userMap.values()));
     } catch (err) {
       console.error("Failed to load admin users:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyUsersAndStats]);
 
   useEffect(() => {
     void fetchUsers();
-  }, [fetchUsers]);
+    // Real-time push listener: automatically updates React state whenever users, orders, plans change in Firestore
+    const unsubscribe = subscribeToLiveAdminUsers((liveUsers) => {
+      applyUsersAndStats(liveUsers);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [fetchUsers, applyUsersAndStats]);
 
   const handleRefreshData = useCallback(async () => {
     setIsSyncing(true);
     try {
       const direct = await syncFirestoreUsersDirectly();
-      await fetchUsers();
+      applyUsersAndStats(direct);
       setGlobalAlert(`Successfully synced ${direct.length} clients and plans directly from live Firestore!`);
       setTimeout(() => setGlobalAlert(null), 4000);
     } catch (err) {
@@ -300,7 +314,7 @@ export function AdminDesktopConsole() {
     } finally {
       setIsSyncing(false);
     }
-  }, [fetchUsers]);
+  }, [applyUsersAndStats]);
 
   // Filtered users list
   const filteredUsers = users.filter((u) => {
@@ -955,6 +969,10 @@ export function AdminDesktopConsole() {
               </div>
 
               <div className="flex items-center gap-2.5">
+                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200/90 text-xs font-bold shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Live Stream Active</span>
+                </div>
                 <button
                   type="button"
                   onClick={handleRefreshData}
