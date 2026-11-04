@@ -4,6 +4,7 @@ import {
   promoteAdminUserToPaid,
   registerPurchasedClient,
   registerOrUpdateAuthUser,
+  deleteAdminUser,
 } from "@/features/admin/admin-data";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 
@@ -176,6 +177,32 @@ describe("Admin User Management & Paid Customer Promotion", () => {
     // 3. Anonymous assessment lead MUST NOT be visible
     expect(users.some((u) => u.email?.includes("@lead.bmyfit.in"))).toBe(false);
     expect(users.some((u) => u.name?.startsWith("Free Score Lead"))).toBe(false);
+  });
+
+  it("should allow admin to delete a user account permanently", async () => {
+    // 1. Register a client
+    await registerOrUpdateAuthUser({
+      id: "client_to_delete_99",
+      name: "Temporary Client",
+      email: "temp.client@example.com",
+    });
+
+    const { users: beforeUsers } = await fetchAllAdminUsers();
+    expect(beforeUsers.some((u) => u.id === "client_to_delete_99")).toBe(true);
+
+    // 2. Admin deletes user
+    const result = await deleteAdminUser("client_to_delete_99");
+    expect(result).toBe(true);
+
+    // 3. User is no longer in admin directory
+    const { users: afterUsers } = await fetchAllAdminUsers();
+    expect(afterUsers.some((u) => u.id === "client_to_delete_99")).toBe(false);
+  });
+
+  it("should protect coach account from being deleted", async () => {
+    await expect(deleteAdminUser("coach_naveen")).rejects.toThrow(
+      "Cannot delete Head Coach admin account."
+    );
   });
 });
 

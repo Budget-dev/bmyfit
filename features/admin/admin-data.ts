@@ -301,8 +301,8 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
             memoryStore.get(doc.id) ||
             (userData.email
               ? Array.from(memoryStore.values()).find(
-                  (u) => u.email && u.email.toLowerCase() === String(userData.email).toLowerCase()
-                )
+                (u) => u.email && u.email.toLowerCase() === String(userData.email).toLowerCase()
+              )
               : undefined);
           if (existing) {
             if (userData.name) existing.name = userData.name;
@@ -1438,8 +1438,8 @@ export async function promoteAdminUserToPaid(
   const methodLabel = isCash
     ? "Cash Received by Hand"
     : cleanTxnId
-    ? `UPI (Txn: ${cleanTxnId})`
-    : "Manual Entry";
+      ? `UPI (Txn: ${cleanTxnId})`
+      : "Manual Entry";
   const amountPaise = options?.amountPaise || 9900;
   const amountFormatted = `₹${Math.round(amountPaise / 100)}`;
 
@@ -1635,5 +1635,56 @@ export async function registerOrUpdateAuthUser(params: {
   }
 
   return newRecord;
+}
+
+/**
+ * Deletes an admin user record from memory, Firestore collections, and Firebase Authentication
+ */
+export async function deleteAdminUser(id: string): Promise<boolean> {
+  if (!id) return false;
+
+  const target = memoryStore.get(id);
+  const targetEmail = target?.email?.toLowerCase().trim() || "";
+
+  // Never allow deleting the head coach admin account
+  if (
+    id === "coach_naveen" ||
+    id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
+    targetEmail === "bmyfitnesscoach@gmail.com"
+  ) {
+    throw new Error("Cannot delete Head Coach admin account.");
+  }
+
+  // 1. Remove from in-memory cache
+  memoryStore.delete(id);
+  // Also clean up any alias or assessmentId keys
+  for (const [key, u] of memoryStore.entries()) {
+    if (u.id === id || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
+      memoryStore.delete(key);
+    }
+  }
+
+  // 2. Delete from server-side Firestore & Firebase Auth if credentials present
+  if (hasAdminCredentials) {
+    try {
+      await adminDb.collection("users").doc(id).delete().catch(() => {});
+      await adminDb.collection("plans").doc(id).delete().catch(() => {});
+      await adminDb.collection("assessments").doc(id).delete().catch(() => {});
+      await adminDb.collection("subscriptions").doc(id).delete().catch(() => {});
+    } catch (fsErr) {
+      console.warn(`Firestore user deletion notice for ${id}:`, fsErr);
+    }
+
+    try {
+      // Also attempt to remove from Firebase Auth
+      await adminAuth.deleteUser(id).catch((authErr) => {
+        console.debug(`Firebase Auth delete notice for ${id}:`, authErr);
+      });
+    } catch (authErr) {
+      console.debug(`adminAuth.deleteUser notice for ${id}:`, authErr);
+    }
+  }
+
+  return true;
 }
 

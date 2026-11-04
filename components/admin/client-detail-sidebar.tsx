@@ -48,6 +48,7 @@ interface ClientDetailSidebarProps {
     customWeeks?: WeekPlanData[]
   ) => Promise<void>;
   onPromoteToPaid?: (user: AdminUserRecord) => void | Promise<void>;
+  onDeleteUser?: (user: AdminUserRecord) => void;
   onOpenStudio: (user: AdminUserRecord) => void;
   onOpenChat: (user: AdminUserRecord) => void;
   onSendAlert: (user: AdminUserRecord) => void;
@@ -60,6 +61,7 @@ export function ClientDetailSidebar({
   onClose,
   onPushPlan,
   onPromoteToPaid,
+  onDeleteUser,
   onOpenStudio,
   onOpenChat,
   onSendAlert,
@@ -517,6 +519,17 @@ export function ClientDetailSidebar({
                 <MessageCircle className="w-3.5 h-3.5 fill-current" />
                 <span>Chat</span>
               </button>
+
+              {onDeleteUser && (
+                <button
+                  type="button"
+                  onClick={() => onDeleteUser(user)}
+                  className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition active:scale-95 cursor-pointer"
+                  title="Delete Client Account"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
 
               <button
                 type="button"

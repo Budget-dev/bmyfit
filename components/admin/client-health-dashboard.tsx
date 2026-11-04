@@ -17,6 +17,7 @@ import {
   BellRing,
   Sparkles,
   Zap,
+  Trash2,
 } from "@/components/ui/icons";
 import type { AdminUserRecord } from "@/types/admin";
 import { calculateDetailedAdherence } from "@/features/plan/dashboard-data";
@@ -28,6 +29,7 @@ interface ClientHealthDashboardProps {
   onOpenBiometrics: (user: AdminUserRecord) => void;
   onSendAlert: (user: AdminUserRecord) => void;
   onPromoteToPaid?: (user: AdminUserRecord) => void;
+  onDeleteUser?: (user: AdminUserRecord) => void;
   onRefresh?: () => void;
   isSyncing?: boolean;
 }
@@ -66,6 +68,7 @@ export function ClientHealthDashboard({
   onOpenBiometrics,
   onSendAlert,
   onPromoteToPaid,
+  onDeleteUser,
   onRefresh,
   isSyncing = false,
 }: ClientHealthDashboardProps) {
@@ -604,6 +607,18 @@ export function ClientHealthDashboard({
                           >
                             <BellRing className="w-3.5 h-3.5" />
                           </button>
+
+                          {/* Delete User */}
+                          {onDeleteUser && (
+                            <button
+                              type="button"
+                              onClick={() => onDeleteUser(user)}
+                              title={`Delete ${user.name}'s account`}
+                              className="p-1.5 rounded-lg text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition cursor-pointer active:scale-95"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -756,6 +771,17 @@ export function ClientHealthDashboard({
                   >
                     <Eye className="w-3.5 h-3.5" />
                   </button>
+
+                  {onDeleteUser && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteUser(user)}
+                      title={`Delete ${user.name}'s account`}
+                      className="p-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition cursor-pointer active:scale-95"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             );

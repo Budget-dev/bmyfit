@@ -9,6 +9,7 @@ import {
   setDoc,
   getDoc,
   getDocs,
+  deleteDoc,
   collection,
   onSnapshot,
 } from "@/lib/firebase/client";
@@ -115,6 +116,43 @@ export function notifyAdminSubscribers(): void {
   });
 }
 
+// Persistent tracking of deleted user IDs so deleted users are never restored by cache or background sync
+export const deletedUserIds = new Set<string>();
+
+if (typeof window !== "undefined") {
+  try {
+    const raw = localStorage.getItem("bmyfit_deleted_user_ids");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((id) => {
+          if (typeof id === "string") deletedUserIds.add(id);
+        });
+      }
+    }
+  } catch {}
+}
+
+export function recordDeletedUserId(id: string): void {
+  if (!id) return;
+  deletedUserIds.add(id);
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem("bmyfit_deleted_user_ids", JSON.stringify(Array.from(deletedUserIds)));
+    } catch {}
+  }
+}
+
+export function isUserDeleted(id?: string | null, email?: string | null): boolean {
+  if (!id && !email) return false;
+  if (id && deletedUserIds.has(id)) return true;
+  if (email) {
+    const lower = email.toLowerCase().trim();
+    if (deletedUserIds.has(lower)) return true;
+  }
+  return false;
+}
+
 // Exact UIDs from Firebase Auth console
 const venkateshUid = "v0vsUoxTrkMGbNs7hstEXODyD2f2";
 export const knownAuthClients = [
@@ -172,7 +210,7 @@ export const knownAuthClients = [
 
 export function ensureKnownClientsInitialized() {
   inMemoryUsers.delete("nqOlc3cJFVIzJB3oGRVyu4g9r4L2");
-  if (!inMemoryUsers.has(venkateshUid)) {
+  if (!inMemoryUsers.has(venkateshUid) && !isUserDeleted(venkateshUid, "venkateshchop14@gmail.com")) {
     inMemoryUsers.set(
       venkateshUid,
       sanitizeAdminUserRecord(
@@ -194,6 +232,9 @@ export function ensureKnownClientsInitialized() {
     );
   }
   for (const client of knownAuthClients) {
+    if (isUserDeleted(client.id, client.email)) {
+      continue;
+    }
     if (!inMemoryUsers.has(client.id)) {
       inMemoryUsers.set(
         client.id,
@@ -340,6 +381,7 @@ export function initFirebaseListeners() {
           const id = change.doc.id;
 
           if (
+            isUserDeleted(id, email) ||
             email === "bmyfitnesscoach@gmail.com" ||
             id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
             email.includes("@test.com") ||
@@ -347,6 +389,10 @@ export function initFirebaseListeners() {
             email.includes("test_1793282473121") ||
             data.name?.toLowerCase().includes("test athlete")
           ) {
+            if (inMemoryUsers.has(id)) {
+              inMemoryUsers.delete(id);
+              hasChanges = true;
+            }
             return;
           }
 
@@ -594,6 +640,7 @@ export function getStoredAdminUsers(): AdminUserRecord[] {
     .filter(
       (u) => {
         if (
+          isUserDeleted(u.id, u.email) ||
           u.id.startsWith("user_membership_") ||
           u.id.startsWith("user_purchase_") ||
           u.id.startsWith("user_purchased_") ||
@@ -777,6 +824,61 @@ export function promoteStoredUserToPaid(
   }
 
   return user;
+}
+
+/**
+ * Permanently delete an admin user from in-memory cache, persistent deleted list, and client-side Firestore
+ */
+export async function deleteStoredAdminUser(id: string): Promise<boolean> {
+  if (!id) return false;
+
+  const user = inMemoryUsers.get(id);
+  const email = user?.email?.toLowerCase().trim() || "";
+
+  if (
+    id === "coach_naveen" ||
+    id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
+    email === "bmyfitnesscoach@gmail.com"
+  ) {
+    throw new Error("Cannot delete Head Coach admin account.");
+  }
+
+  // 1. Permanently record as deleted so background sync or refresh never resurrects
+  recordDeletedUserId(id);
+  if (email) recordDeletedUserId(email);
+  if (user?.assessmentId) recordDeletedUserId(user.assessmentId);
+
+  // 2. Remove from all local caches
+  inMemoryUsers.delete(id);
+  if (user?.assessmentId) inMemoryUsers.delete(user.assessmentId);
+  for (const [key, u] of inMemoryUsers.entries()) {
+    if (u.id === id || (email && u.email?.toLowerCase().trim() === email)) {
+      inMemoryUsers.delete(key);
+    }
+  }
+  inMemoryPlans.delete(id);
+  inMemoryConsultations.delete(id);
+  inMemorySubscriptions.delete(id);
+
+  // 3. Delete directly from client Firestore collections
+  if (isClient()) {
+    try {
+      await deleteDoc(doc(db, "users", id));
+      if (user?.assessmentId) {
+        await deleteDoc(doc(db, "users", user.assessmentId)).catch(() => {});
+        await deleteDoc(doc(db, "assessments", user.assessmentId)).catch(() => {});
+      }
+      await deleteDoc(doc(db, "plans", id)).catch(() => {});
+      await deleteDoc(doc(db, "subscriptions", id)).catch(() => {});
+    } catch (err) {
+      console.warn("Client Firestore deleteDoc error:", err);
+    }
+  }
+
+  // 4. Notify live admin subscribers to update React UI instantly
+  notifyAdminSubscribers();
+
+  return true;
 }
 
 /**
@@ -1094,12 +1196,14 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
         const data = docSnap.data() as Partial<AdminUserRecord> & { isPaid?: boolean; paymentStatus?: string };
         const email = (data.email || "").toLowerCase();
         if (
+          isUserDeleted(docSnap.id, email) ||
           email === "bmyfitnesscoach@gmail.com" ||
           docSnap.id === "nqOlc3cJFVIzJB3oGRVyu4g9r4L2" ||
           email.includes("@test.com") ||
           email.startsWith("test_") ||
           data.name?.toLowerCase().includes("test athlete")
         ) {
+          inMemoryUsers.delete(docSnap.id);
           return;
         }
 

@@ -17,6 +17,7 @@ import {
   Activity,
   BarChart2,
   MessageCircle,
+  Trash2,
 } from "@/components/ui/icons";
 import type { AdminUserRecord, AdminStats, MembershipCategory } from "@/types/admin";
 import type { PlanDashboardData, PlanReleaseHistoryItem, WeekPlanData } from "@/types/plan-dashboard";
@@ -28,6 +29,7 @@ import {
   saveStoredPlan,
   upsertStoredAdminUser,
   promoteStoredUserToPaid,
+  deleteStoredAdminUser,
 } from "@/lib/storage/mock-storage";
 import { formatPlanDuration, calculateDetailedAdherence } from "@/features/plan/dashboard-data";
 import { adminFetch } from "@/lib/admin-api-client";
@@ -40,6 +42,7 @@ import { ClientHealthDashboard } from "./client-health-dashboard";
 import { SubscriptionsDashboard } from "./subscriptions-dashboard";
 import { AlertDispatchModal } from "./alert-dispatch-modal";
 import { ManualPromoteModal, type ManualPromoteOptions } from "./manual-promote-modal";
+import { DeleteUserModal } from "./delete-user-modal";
 import { ClientDetailSidebar } from "./client-detail-sidebar";
 import type { PlanVideo, PlanSupplementRecommendation } from "@/types/plan-dashboard";
 
@@ -73,6 +76,10 @@ export function AdminDesktopConsole() {
   // Manual Promotion to Paid Modal State
   const [promoteUser, setPromoteUser] = useState<AdminUserRecord | null>(null);
   const [isPromoting, setIsPromoting] = useState<boolean>(false);
+
+  // Delete User Confirmation Modal State
+  const [userToDelete, setUserToDelete] = useState<AdminUserRecord | null>(null);
+  const [isDeletingUser, setIsDeletingUser] = useState<boolean>(false);
 
   // Reusable real-time user updater and defensive stats calculator
   const applyUsersAndStats = useCallback((rawUserList: AdminUserRecord[]) => {
@@ -512,6 +519,55 @@ export function AdminDesktopConsole() {
       alert("Failed to promote user to paid. Please try again.");
     } finally {
       setIsPromoting(false);
+    }
+  };
+
+  const handleDeleteUser = (targetUser: AdminUserRecord) => {
+    setUserToDelete(targetUser);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return;
+
+    try {
+      setIsDeletingUser(true);
+      const targetId = userToDelete.id;
+      const targetName = userToDelete.name;
+      const targetEmail = userToDelete.email;
+
+      // 1. Delete on backend API (removes from Firebase Auth and server Firestore if configured)
+      try {
+        await adminFetch(`/api/admin/users/${encodeURIComponent(targetId)}`, {
+          method: "DELETE",
+        });
+      } catch (apiErr) {
+        console.warn("Server delete user endpoint notice:", apiErr);
+      }
+
+      // 2. Delete on client storage & client Firestore collections
+      await deleteStoredAdminUser(targetId);
+
+      // 3. Update local state
+      setUsers((prev) => {
+        const remaining = prev.filter((u) => u.id !== targetId);
+        applyUsersAndStats(remaining);
+        return remaining;
+      });
+
+      // 4. Reset selection and close sidebar if the deleted user is currently selected
+      if (selectedUser?.id === targetId) {
+        setSelectedUser(null);
+        setIsSidebarOpen(false);
+      }
+
+      setGlobalAlert(`🗑️ ${targetName} (${targetEmail || targetId}) was deleted successfully.`);
+      setTimeout(() => setGlobalAlert(null), 4000);
+      setUserToDelete(null);
+    } catch (err) {
+      console.error("Delete user error:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete user. Please try again.");
+    } finally {
+      setIsDeletingUser(false);
     }
   };
 
@@ -1071,6 +1127,7 @@ export function AdminDesktopConsole() {
                   setAlertUser(u);
                 }}
                 onPromoteToPaid={handlePromoteUserToPaid}
+                onDeleteUser={handleDeleteUser}
                 onRefresh={handleRefreshData}
                 isSyncing={isSyncing}
               />
@@ -1486,6 +1543,15 @@ export function AdminDesktopConsole() {
                                   >
                                     <ExternalLink className="w-4 h-4" />
                                   </a>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteUser(u)}
+                                    className="p-1.5 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 transition shrink-0 active:scale-95 cursor-pointer"
+                                    title={`Delete ${u.name}'s account`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
                                 </div>
                               </td>
                             </tr>
@@ -1739,6 +1805,7 @@ export function AdminDesktopConsole() {
         onClose={() => setIsSidebarOpen(false)}
         onPushPlan={handlePushPlanFromSidebar}
         onPromoteToPaid={handlePromoteUserToPaid}
+        onDeleteUser={handleDeleteUser}
         onOpenStudio={(u) => {
           setSelectedUser(u);
           setIsSidebarOpen(false);
@@ -1765,6 +1832,16 @@ export function AdminDesktopConsole() {
           onClose={() => setPromoteUser(null)}
           onConfirm={handleConfirmPromotion}
           isPromoting={isPromoting}
+        />
+      )}
+
+      {/* Delete User Confirmation Modal */}
+      {userToDelete && (
+        <DeleteUserModal
+          user={userToDelete}
+          onClose={() => setUserToDelete(null)}
+          onConfirm={handleConfirmDelete}
+          isDeleting={isDeletingUser}
         />
       )}
 
