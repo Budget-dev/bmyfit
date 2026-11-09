@@ -62,6 +62,12 @@ export function SiteHeader() {
                 FREE
               </span>
             </Link>
+            <Link href="/calculators" className="hover:text-emerald-600 transition-colors flex items-center gap-1.5">
+              <span>More Calculators</span>
+              <span className="text-[10px] font-black bg-emerald-500/20 text-emerald-700 px-2 py-0.5 rounded-full">
+                22 TOOLS
+              </span>
+            </Link>
             <Link href="/#goals-section" className="hover:text-emerald-600 transition-colors">
               Fitness Goals
             </Link>
@@ -360,6 +366,14 @@ export function SiteHeader() {
                     >
                       <span>Body Calculator</span>
                       <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">FREE</span>
+                    </Link>
+                    <Link
+                      href="/calculators"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="px-3 py-2 rounded-xl text-gray-800 hover:bg-emerald-50 hover:text-emerald-700 font-semibold transition-colors flex items-center justify-between"
+                    >
+                      <span>All 22 Calculators</span>
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.5 rounded">NEW</span>
                     </Link>
                     <button
                       type="button"

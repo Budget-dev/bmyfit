@@ -40,6 +40,11 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
+                <Link href="/calculators" className="hover:text-emerald-600 transition-colors font-bold text-emerald-700">
+                  22 Health &amp; Fitness Calculators
+                </Link>
+              </li>
+              <li>
                 <Link href="/#goals-section" className="hover:text-emerald-600 transition-colors">
                   Fat Loss Blueprint
                 </Link>

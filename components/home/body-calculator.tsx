@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { calculateBmi } from "@/features/calculator/bmi";
 import { saveDraftDetails } from "@/features/assessment/session-store";
 import type { Gender } from "@/types/fitness";
+import { CalculatorsHub } from "@/components/calculator/calculators-hub";
 
 interface CalculationState {
   bmi: number;
@@ -38,6 +40,7 @@ export function BodyCalculator({ className }: { className?: string } = {}) {
   });
 
   const [error, setError] = useState<string | null>(null);
+  const [showMoreCalculators, setShowMoreCalculators] = useState(false);
   const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -487,6 +490,34 @@ export function BodyCalculator({ className }: { className?: string } = {}) {
 
           </div>
 
+        </div>
+
+        {/* Show More Calculators Toggle Bar */}
+        <div className="mt-2.5 pt-2 border-t border-gray-100 flex flex-col items-center">
+          <div className="w-full flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setShowMoreCalculators(!showMoreCalculators)}
+              className="flex-1 py-1.5 px-3 rounded-full bg-emerald-50 hover:bg-emerald-100/80 text-emerald-900 text-[10.5px] min-[390px]:text-[11.5px] font-extrabold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer border border-emerald-200/60"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00e676]" />
+              <span>{showMoreCalculators ? "Hide Extra Calculators ▲" : "Show More Calculators (22 Free Tools) ▼"}</span>
+            </button>
+
+            <Link
+              href="/calculators"
+              className="py-1.5 px-3 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-800 text-[10.5px] min-[390px]:text-[11.5px] font-bold shrink-0 transition-all"
+            >
+              View Hub →
+            </Link>
+          </div>
+
+          {/* Expandable Calculators Suite */}
+          {showMoreCalculators && (
+            <div className="w-full mt-4 pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-300">
+              <CalculatorsHub />
+            </div>
+          )}
         </div>
 
       </div>

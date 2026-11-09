@@ -35,6 +35,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { saveDraftDetails, saveDraftGoal } from "@/features/assessment/session-store";
 import type { Gender } from "@/types/fitness";
+import { CalculatorsHub } from "@/components/calculator/calculators-hub";
 
 export function DesktopHomeView() {
   const router = useRouter();
@@ -48,6 +49,7 @@ export function DesktopHomeView() {
   const [bodyFat, setBodyFat] = useState<number>(18.2);
   const [leanMass, setLeanMass] = useState<number>(58.4);
   const [dailyCalories, setDailyCalories] = useState<number>(1900);
+  const [showDesktopCalculators, setShowDesktopCalculators] = useState<boolean>(false);
 
   // FAQ Accordion State
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
@@ -523,6 +525,42 @@ export function DesktopHomeView() {
               </div>
             </Card>
           </div>
+
+          {/* Show More Calculators CTA Bar on Desktop */}
+          <div className="mt-8 p-4 sm:p-5 rounded-2xl bg-[#0b1d14] border border-emerald-500/25 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 text-left">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-[#00e676] flex items-center justify-center font-black text-lg shrink-0">
+                ∑
+              </div>
+              <div>
+                <h4 className="text-sm font-extrabold text-white">Need More Fitness &amp; Health Calculators?</h4>
+                <p className="text-xs text-emerald-200/70">Ideal Weight, Running Pace, Army Body Fat, 1RM, Target Heart Rate, Macros, GFR &amp; more.</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowDesktopCalculators(!showDesktopCalculators)}
+                className="px-4 py-2 rounded-full bg-[#00e676] hover:bg-[#00c864] text-black text-xs font-black transition-all cursor-pointer shadow-sm active:scale-95"
+              >
+                {showDesktopCalculators ? "Hide All Calculators ▲" : "Show All 22 Calculators ▼"}
+              </button>
+              <Link
+                href="/calculators"
+                className="px-4 py-2 rounded-full bg-emerald-950 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all"
+              >
+                Full Page Hub →
+              </Link>
+            </div>
+          </div>
+
+          {/* Expanded Calculators Hub on Desktop */}
+          {showDesktopCalculators && (
+            <div className="mt-6 p-6 rounded-3xl bg-white text-gray-900 shadow-2xl border border-emerald-500/30 animate-in fade-in duration-300">
+              <CalculatorsHub />
+            </div>
+          )}
         </div>
       </section>
 
