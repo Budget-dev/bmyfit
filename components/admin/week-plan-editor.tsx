@@ -129,6 +129,64 @@ const PRESET_MEALS: Array<Omit<MealSlotItem, "id">> = [
     ],
   },
   {
+    slot: "Mid-Morning",
+    name: "Sprouted Moong Chaat + Soaked Almonds",
+    itemsDescription: "Sprouts Chaat + Almonds",
+    portion: "100g sprouted moong tossed with cucumber, lemon & 6 soaked almonds",
+    calories: 180,
+    proteinGrams: 12,
+    carbsGrams: 24,
+    fatsGrams: 5,
+    image: "/images/meal-sprouts.jpg",
+    recipeNotes: [
+      "Light mid-morning digestion booster rich in active enzymes and fiber.",
+      "Toss with finely chopped onion, tomato, lemon juice, and pink Himalayan salt.",
+    ],
+  },
+  {
+    slot: "Pre-Workout",
+    name: "Banana + Peanut Butter Toast & Black Coffee",
+    itemsDescription: "Banana + Peanut Butter",
+    portion: "1 medium banana + 1 brown bread slice with 1 tsp natural peanut butter",
+    calories: 210,
+    proteinGrams: 6,
+    carbsGrams: 36,
+    fatsGrams: 5,
+    image: "/images/meal-fruits-nuts.jpg",
+    recipeNotes: [
+      "Eat 30-45 minutes before strength or cardio training.",
+      "Delivers fast-acting clean carbs to fuel muscle glycogen.",
+    ],
+  },
+  {
+    slot: "Post-Workout",
+    name: "Whey Isolate Shake + 2 Boiled Egg Whites",
+    itemsDescription: "Whey Protein / Greek Curd",
+    portion: "1 scoop Whey Protein in 250ml water + 2 boiled egg whites (or 150g Greek curd)",
+    calories: 220,
+    proteinGrams: 32,
+    carbsGrams: 6,
+    fatsGrams: 3,
+    image: "/images/meal-poha-eggs.jpg",
+    recipeNotes: [
+      "Consume within 30-45 minutes post-workout to accelerate muscle recovery and protein synthesis.",
+    ],
+  },
+  {
+    slot: "Evening Snack",
+    name: "Roasted Makhana (Foxnuts) + Green Tea",
+    itemsDescription: "Roasted Makhana + Green Tea",
+    portion: "30g makhana roasted with pinch of rock salt and jeera + warm green tea",
+    calories: 140,
+    proteinGrams: 4,
+    carbsGrams: 24,
+    fatsGrams: 2,
+    image: "/images/meal-fruits-nuts.jpg",
+    recipeNotes: [
+      "Low-glycemic evening crunch that eliminates pre-dinner junk cravings.",
+    ],
+  },
+  {
     slot: "Dinner",
     name: "Soya Chunk Pulao + Greek Yogurt Mint Raita",
     itemsDescription: "Soya Chunk Pulao",
@@ -1459,8 +1517,11 @@ export function WeekPlanEditor({
                         className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 font-black text-xs border border-emerald-300 focus:outline-none"
                       >
                         <option value="Breakfast">Breakfast</option>
+                        <option value="Mid-Morning">Mid-Morning Snack</option>
                         <option value="Lunch">Lunch</option>
-                        <option value="Snack">Evening Snack</option>
+                        <option value="Pre-Workout">Pre-Workout Snack</option>
+                        <option value="Post-Workout">Post-Workout Meal</option>
+                        <option value="Evening Snack">Evening Snack</option>
                         <option value="Dinner">Dinner</option>
                       </select>
 

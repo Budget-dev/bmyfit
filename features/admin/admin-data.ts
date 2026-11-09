@@ -6,6 +6,7 @@ import type {
   MedicalAssessment,
   UserPurchaseOrder,
 } from "@/types/admin";
+import type { FitnessGoal } from "@/types/fitness";
 import type { PlanDashboardData, TaskLogState, PlanReleaseHistoryItem, DailyCheckInLog } from "@/types/plan-dashboard";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 import { adminDb, adminAuth, hasAdminCredentials } from "@/lib/firebase/admin";
@@ -1047,7 +1048,7 @@ export interface RegisterPurchasedClientParams {
   customerPhone?: string;
   city?: string;
   biometrics?: Partial<UserBiometrics>;
-  goal?: "fat-loss" | "weight-loss" | "muscle-gain" | "weight-gain";
+  goal?: FitnessGoal;
   goalDisplay?: string;
   medicalAssessment?: MedicalAssessment;
   durationMonths?: number;

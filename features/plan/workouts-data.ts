@@ -225,4 +225,57 @@ export const WORKOUT_SCHEDULES: Record<FitnessGoal, Workout[]> = {
       homeAlternative: "Heavy bucket or backpack deadlifts and carries.",
     },
   ],
+  "recomposition": [
+    {
+      day: "Monday",
+      title: "Upper Body Hypertrophy & Density",
+      exercises: [
+        "Incline Dumbbell Press: 4 sets × 8–10 reps (Rest: 75s)",
+        "Chest-Supported / Barbell Row: 4 sets × 8–10 reps (Rest: 75s)",
+        "Standing Dumbbell Overhead Press: 3 sets × 10 reps (Rest: 60s)",
+        "Cable / Band Face Pulls: 3 sets × 15 reps (Rest: 45s)",
+        "Incline Dumbbell Curl superset with Overhead Tricep Extension: 3 sets × 12 reps (Rest: 60s)",
+      ],
+      durationMinutes: 45,
+      homeAlternative: "Push-ups with elevated feet + resistance band rows + bottle lateral raises.",
+    },
+    {
+      day: "Tuesday",
+      title: "Lower Body Strength & Glute Focus",
+      exercises: [
+        "Barbell / Goblet Squat: 4 sets × 8 reps (Rest: 90s)",
+        "Romanian Deadlift: 3 sets × 10 reps (Rest: 90s)",
+        "Bulgarian Split Squats: 3 sets × 10 reps per leg (Rest: 60s)",
+        "Standing Calf Raises: 4 sets × 15 reps (Rest: 45s)",
+        "Hanging Leg Raises / Lying Leg Tucks: 3 sets × 15 reps (Rest: 45s)",
+      ],
+      durationMinutes: 45,
+      homeAlternative: "Backpack goblet squats + single leg Romanian deadlifts + wall sit 3x45s.",
+    },
+    {
+      day: "Thursday",
+      title: "Push-Pull Metabolic Conditioning",
+      exercises: [
+        "Flat Dumbbell Press: 3 sets × 10–12 reps (Rest: 60s)",
+        "Lat Pulldown or Pull-ups: 3 sets × 8–10 reps (Rest: 60s)",
+        "Dumbbell Lateral Raises: 4 sets × 12–15 reps (Rest: 45s)",
+        "Cable / Dumbbell Hammer Curls: 3 sets × 12 reps (Rest: 45s)",
+        "Rope Tricep Pushdown: 3 sets × 12 reps (Rest: 45s)",
+      ],
+      durationMinutes: 40,
+      homeAlternative: "Standard floor push-ups + doorway rows + chair dips.",
+    },
+    {
+      day: "Saturday",
+      title: "Full Body Functional Core & HIIT Intervals",
+      exercises: [
+        "Kettlebell / Dumbbell Swings: 4 sets × 15 reps (Rest: 60s)",
+        "Walking Dumbbell Lunges: 3 sets × 12 paces per leg (Rest: 60s)",
+        "Renegade Rows / Plank Shoulder Taps: 3 sets × 12 reps (Rest: 45s)",
+        "Incline Brisk Walking: 15 minutes steady cardio (Zone 2)",
+      ],
+      durationMinutes: 40,
+      homeAlternative: "Bodyweight jump squats + mountain climbers + brisk neighborhood walk.",
+    },
+  ],
 };

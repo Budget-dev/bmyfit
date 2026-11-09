@@ -150,7 +150,14 @@ export async function POST(request: Request) {
           customerEmail: payment?.email,
           customerPhone: payment?.contact,
           goal: assessment.goal,
-          goalDisplay: assessment.goal === "fat-loss" ? "Fat Loss & Metabolic Reset" : "Custom Goal",
+          goalDisplay:
+            assessment.goal === "fat-loss"
+              ? "Fat Loss & Metabolic Reset"
+              : assessment.goal === "muscle-gain"
+              ? "Hypertrophy & Conditioning"
+              : assessment.goal === "recomposition"
+              ? "Body Recomposition & Muscle Sculpt"
+              : "Custom Goal",
           biometrics: {
             gender: assessment.gender,
             age: assessment.age,

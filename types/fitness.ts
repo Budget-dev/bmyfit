@@ -1,7 +1,7 @@
 export type Gender = "male" | "female";
 export type Sex = Gender;
 
-export type FitnessGoal = "fat-loss" | "weight-loss" | "muscle-gain" | "weight-gain";
+export type FitnessGoal = "fat-loss" | "weight-loss" | "muscle-gain" | "weight-gain" | "recomposition";
 
 export type ActivityLevel =
   | "sedentary"

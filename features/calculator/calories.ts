@@ -85,6 +85,11 @@ export function calculateCaloriePlan(input: {
         targetCalories = Math.round(tdee * 1.15);
         proteinRate = 1.8; // 1.6-2.0 g/kg range
         break;
+      case "recomposition":
+        // TDEE - 5% (maintenance to slight deficit for simultaneous fat burn & muscle preservation)
+        targetCalories = Math.max(floor, Math.round(tdee * 0.95));
+        proteinRate = 2.2; // High protein to support muscle synthesis
+        break;
     }
   }
 

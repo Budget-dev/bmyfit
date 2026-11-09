@@ -304,14 +304,20 @@ export function BodyCalculator({ className }: { className?: string } = {}) {
                 <select
                   value={heightUnit}
                   onChange={(e) => setHeightUnit(e.target.value as "cm" | "ft")}
-                  className="appearance-none bg-transparent text-[9.5px] font-bold text-gray-700 pr-3 focus:outline-none cursor-pointer"
+                  className="appearance-none bg-transparent text-[9.5px] font-bold text-gray-700 pr-3.5 focus:outline-none cursor-pointer"
                 >
                   <option value="cm">cm</option>
                   <option value="ft">ft</option>
                 </select>
-                <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-[8px]">
-                  ▼
-                </span>
+                <svg
+                  className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-gray-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
             </div>
 
@@ -338,14 +344,20 @@ export function BodyCalculator({ className }: { className?: string } = {}) {
                 <select
                   value={weightUnit}
                   onChange={(e) => setWeightUnit(e.target.value as "kg" | "lbs")}
-                  className="appearance-none bg-transparent text-[9.5px] font-bold text-gray-700 pr-3 focus:outline-none cursor-pointer"
+                  className="appearance-none bg-transparent text-[9.5px] font-bold text-gray-700 pr-3.5 focus:outline-none cursor-pointer"
                 >
                   <option value="kg">kg</option>
                   <option value="lbs">lbs</option>
                 </select>
-                <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-[8px]">
-                  ▼
-                </span>
+                <svg
+                  className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-gray-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
             </div>
 
@@ -501,7 +513,16 @@ export function BodyCalculator({ className }: { className?: string } = {}) {
               className="flex-1 py-1.5 px-3 rounded-full bg-emerald-50 hover:bg-emerald-100/80 text-emerald-900 text-[10.5px] min-[390px]:text-[11.5px] font-extrabold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer border border-emerald-200/60"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#00e676]" />
-              <span>{showMoreCalculators ? "Hide Extra Calculators ▲" : "Show More Calculators (22 Free Tools) ▼"}</span>
+              <span>{showMoreCalculators ? "Hide Extra Calculators" : "Show More Calculators (22 Free Tools)"}</span>
+              <svg
+                className={`w-3 h-3 text-emerald-700 transition-transform duration-200 ${showMoreCalculators ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
 
             <Link

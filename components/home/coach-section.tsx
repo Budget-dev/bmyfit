@@ -16,7 +16,7 @@ export function CoachSection() {
           
           {/* Left Column: Coach Portrait */}
           <div className="w-[30%] min-[390px]:w-[32%] sm:w-40 md:w-52 lg:w-56 shrink-0">
-            <div className="relative w-full aspect-[4/4.8] rounded-xl md:rounded-2xl overflow-hidden border border-emerald-500/30 bg-gray-900 shadow-md">
+            <div className="relative w-full aspect-[4/4.8] rounded-xl md:rounded-2xl overflow-hidden border border-gray-700/60 bg-gray-900 shadow-lg">
               <Image
                 src="/images/coach-naveen.jpg"
                 alt="Coach Naveen · Blaze Gym Owner & Head Coach"
@@ -25,7 +25,6 @@ export function CoachSection() {
                 className="object-cover object-top select-none"
                 priority
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#021811]/50 via-transparent to-transparent pointer-events-none" />
             </div>
           </div>
 
@@ -168,7 +167,7 @@ export function CoachSection() {
               </div>
               <div className="font-medium flex items-center gap-1.5 text-emerald-800">
                 <span className="text-[#00c853]">✓</span>
-                <span>Scientific Resistance Protocols &amp; Direct Coach WhatsApp Review</span>
+                <span>Scientific Resistance Protocols &amp; Direct Coach Plan Review</span>
               </div>
             </div>
 

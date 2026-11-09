@@ -100,13 +100,13 @@ export function TransformationGuide() {
           className="flex items-center gap-2 md:gap-3 bg-[#f4fbf7] hover:bg-[#e6f7ee] border border-[#d1fae5] rounded-full md:rounded-2xl py-1.5 md:py-3 px-3 md:px-4 shrink-0 shadow-xs cursor-pointer active:scale-95 transition-all text-left"
         >
           <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full bg-white border border-[#a7f3d0] flex items-center justify-center text-[#057a44] shrink-0">
-            <svg className="w-3.5 h-3.5 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0012.04 2zm0 18.15c-1.5 0-2.97-.4-4.25-1.16l-.3-.18-3.15.83.84-3.07-.2-.32a8.2 8.2 0 01-1.26-4.36c0-4.55 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.83 2.42a8.18 8.18 0 012.41 5.83c0 4.54-3.7 8.23-8.25 8.23z" />
+            <svg className="w-3.5 h-3.5 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
             </svg>
           </div>
           <div className="text-left">
             <div className="text-[10px] sm:text-[11px] md:text-sm font-black text-gray-950 leading-tight">Support</div>
-            <div className="text-[7.5px] sm:text-[8.5px] md:text-xs text-gray-500 leading-tight">WhatsApp Guidance</div>
+            <div className="text-[7.5px] sm:text-[8.5px] md:text-xs text-gray-500 leading-tight">Coach Guidance</div>
           </div>
         </button>
       </div>
@@ -511,13 +511,13 @@ export function TransformationGuide() {
 
             <div className="flex items-center gap-2.5 mb-3">
               <div className="w-10 h-10 rounded-full bg-[#e8f7ee] text-[#057a44] flex items-center justify-center shrink-0">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0012.04 2zm0 18.15c-1.5 0-2.97-.4-4.25-1.16l-.3-.18-3.15.83.84-3.07-.2-.32a8.2 8.2 0 01-1.26-4.36c0-4.55 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.83 2.42a8.18 8.18 0 012.41 5.83c0 4.54-3.7 8.23-8.25 8.23z" />
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-sm font-extrabold text-gray-950">WhatsApp Assistance</h3>
-                <p className="text-[10px] text-emerald-600 font-semibold">Online · Instant Support</p>
+                <h3 className="text-sm font-extrabold text-gray-950">Coach Support Hotline</h3>
+                <p className="text-[10px] text-emerald-600 font-semibold">Online · Direct Coach Guidance</p>
               </div>
             </div>
 
@@ -540,7 +540,7 @@ export function TransformationGuide() {
               onClick={() => setShowSupportModal(false)}
               className="w-full py-2.5 px-3 rounded-full bg-[#00e676] hover:bg-[#00c864] text-black font-extrabold text-xs text-center flex items-center justify-center gap-2 transition-all shadow-md active:scale-95"
             >
-              <span>Chat on WhatsApp</span>
+              <span>Connect with Coach</span>
               <span>→</span>
             </a>
           </div>

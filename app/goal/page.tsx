@@ -16,8 +16,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { saveDraftGoal, loadDraftGoal } from "@/features/assessment/session-store";
 import type { FitnessGoal } from "@/types/fitness";
+import { CalculatorsHub, type CalculatorId } from "@/components/calculator/calculators-hub";
 
-type FocusOption = "lose-fat" | "build-strength" | "improve-fitness" | "build-consistency";
+type FocusOption = "lose-fat" | "build-strength" | "recomposition" | "improve-fitness" | "build-consistency";
 type ExperienceOption = "beginner" | "intermediate" | "advanced";
 
 const GOAL_HERO_CARDS: Record<
@@ -60,6 +61,20 @@ const GOAL_HERO_CARDS: Record<
       "Tendon & joint recovery protocols",
     ],
   },
+  "recomposition": {
+    image: "/images/goal-card-lose-fat.png",
+    desktopImage: "/images/model-lose-fat.jpg",
+    alt: "Selected Goal: Body Recomposition - Burn fat & build lean muscle simultaneously",
+    title: "Body Recomposition",
+    subtitle: "Burn fat & build lean muscle.",
+    description:
+      "Simultaneous fat burning and lean hypertrophy. Optimized at a tight 5% deficit/maintenance with elevated protein density (2.0–2.2g/kg) and progressive overload lifting.",
+    benefits: [
+      "Simultaneous fat loss & muscle definition",
+      "High-protein Indian meal balancing (2.0–2.2g/kg)",
+      "Targeted compound lifting split with active recovery",
+    ],
+  },
   "improve-fitness": {
     image: "/images/goal-card-improve-fitness.png",
     desktopImage: "/images/model-improve-fitness.jpg",
@@ -95,6 +110,8 @@ export default function GoalPage() {
 
   const [selectedFocus, setSelectedFocus] = useState<FocusOption>("lose-fat");
   const [experienceLevel, setExperienceLevel] = useState<ExperienceOption>("beginner");
+  const [showAllCalculators, setShowAllCalculators] = useState(false);
+  const [selectedCalculator, setSelectedCalculator] = useState<CalculatorId>("calories");
 
   React.useEffect(() => {
     router.prefetch("/details");
@@ -102,6 +119,7 @@ export default function GoalPage() {
     if (draft?.goal) {
       if (draft.goal === "fat-loss") setSelectedFocus("lose-fat");
       else if (draft.goal === "muscle-gain") setSelectedFocus("build-strength");
+      else if (draft.goal === "recomposition") setSelectedFocus("recomposition");
       else if (draft.goal === "weight-loss") setSelectedFocus("improve-fitness");
       else if (draft.goal === "weight-gain") setSelectedFocus("build-consistency");
     }
@@ -111,6 +129,7 @@ export default function GoalPage() {
     let goal: FitnessGoal = "fat-loss";
     if (selectedFocus === "lose-fat") goal = "fat-loss";
     else if (selectedFocus === "build-strength") goal = "muscle-gain";
+    else if (selectedFocus === "recomposition") goal = "recomposition";
     else if (selectedFocus === "improve-fitness") goal = "weight-loss";
     else if (selectedFocus === "build-consistency") goal = "weight-gain";
 
@@ -207,7 +226,7 @@ export default function GoalPage() {
                 Select the primary transformation focus for your custom blueprint.
               </p>
 
-              {/* 2x2 Grid of Focus Radio Cards */}
+              {/* 5 Focus Radio Cards - All 5 Visible at Once */}
               <div className="grid grid-cols-2 gap-2 md:gap-3 pt-1">
                 {/* 1. Lose body fat */}
                 <div
@@ -271,7 +290,41 @@ export default function GoalPage() {
                   </div>
                 </div>
 
-                {/* 3. Improve fitness */}
+                {/* 3. Body recomposition (Featured - Spans across both columns so all 5 are visible cleanly) */}
+                <div
+                  onClick={() => setSelectedFocus("recomposition")}
+                  className={`col-span-2 p-3 md:p-4 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${selectedFocus === "recomposition"
+                      ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
+                      : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
+                    }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 pr-1">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100/80 flex items-center justify-center shrink-0 text-[#057a44]">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs md:text-sm font-bold text-gray-950 truncate">Body recomposition</span>
+                        <span className="text-[9px] md:text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-[#00c853]/15 text-[#057a44]">
+                          Burn Fat + Build Muscle
+                        </span>
+                      </div>
+                      <div className="text-[10px] md:text-xs text-gray-500 leading-tight truncate">
+                        Shed fat and sculpt lean muscle simultaneously
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${selectedFocus === "recomposition" ? "border-2 border-[#00c853] bg-transparent" : "border border-gray-300 bg-white"
+                      }`}
+                  >
+                    {selectedFocus === "recomposition" && <div className="w-2 h-2 rounded-full bg-[#00c853]" />}
+                  </div>
+                </div>
+
+                {/* 4. Improve fitness */}
                 <div
                   onClick={() => setSelectedFocus("improve-fitness")}
                   className={`p-3 md:p-4 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${selectedFocus === "improve-fitness"
@@ -447,6 +500,89 @@ export default function GoalPage() {
                   Combines Indian nutritional guidelines with calibrated macro balance so you can eat home meals with your family without guilt.
                 </div>
               </div>
+            </div>
+
+            {/* Section 3: Free Calculators · Where It Matters Most */}
+            <div className="pt-3 border-t border-gray-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#00c853] animate-pulse" />
+                    <h2 className="text-sm md:text-base font-black text-gray-950 tracking-tight">
+                      Calculators · Where It Matters Most
+                    </h2>
+                  </div>
+                  <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">
+                    Calculate your metabolic metrics instantly to dial in your goal.
+                  </p>
+                </div>
+                <span className="text-[10px] md:text-[11px] font-black text-[#057a44] bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                  22 Free Tools
+                </span>
+              </div>
+
+              {/* 5 Quick Calculators Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                {[
+                  { id: "calories" as CalculatorId, name: "Calorie Needs", desc: "Daily targets", icon: "🔥" },
+                  { id: "body_fat" as CalculatorId, name: "Body Fat %", desc: "Navy method", icon: "📐" },
+                  { id: "bmi" as CalculatorId, name: "BMI & Health", desc: "WHO standard", icon: "⚖️" },
+                  { id: "ideal_weight" as CalculatorId, name: "Ideal Weight", desc: "4 formulas", icon: "🎯" },
+                  { id: "macros" as CalculatorId, name: "Macros & TDEE", desc: "Protein & energy", icon: "🥗" },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCalculator(item.id);
+                      setShowAllCalculators(true);
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer active:scale-95 ${
+                      selectedCalculator === item.id && showAllCalculators
+                        ? "bg-[#eaf7ee] border-emerald-500 shadow-xs ring-1 ring-emerald-500/30"
+                        : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
+                    }`}
+                  >
+                    <div className="text-base mb-1">{item.icon}</div>
+                    <div className="text-[11px] font-bold text-gray-950 truncate">{item.name}</div>
+                    <div className="text-[9.5px] text-gray-500 truncate">{item.desc}</div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Show More / Show Less Toggle Button with Clean Chevron */}
+              <button
+                type="button"
+                onClick={() => setShowAllCalculators((prev) => !prev)}
+                className="w-full py-2.5 px-4 rounded-xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100/60 text-emerald-950 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-98"
+              >
+                <span>
+                  {showAllCalculators
+                    ? "Collapse Calculators"
+                    : "Show More Calculators (All 22 Fitness & Health Tools)"}
+                </span>
+                <svg
+                  className={`w-3.5 h-3.5 text-emerald-700 transition-transform duration-200 ${
+                    showAllCalculators ? "rotate-180" : ""
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+              </button>
+
+              {/* Expandable Hub with all 22 tools */}
+              {showAllCalculators && (
+                <div className="mt-3 pt-2 rounded-2xl border border-gray-800 bg-slate-950 p-2 sm:p-4 text-white shadow-xl animate-in fade-in duration-200">
+                  <CalculatorsHub
+                    initialCalculator={selectedCalculator}
+                    onSelectCalculator={(id) => setSelectedCalculator(id)}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Desktop Continue Button (inside flow on md:block) */}

@@ -124,7 +124,9 @@ export async function POST(request: Request) {
           ? "Fat Loss & Metabolic Reset"
           : assessment.goal === "muscle-gain"
           ? "Hypertrophy & Conditioning"
-          : "Body Recomposition",
+          : assessment.goal === "recomposition"
+          ? "Body Recomposition & Muscle Sculpt"
+          : "General Fitness & Health",
       biometrics: {
         gender: assessment.gender,
         age: assessment.age,

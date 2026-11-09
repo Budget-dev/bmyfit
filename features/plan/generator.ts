@@ -15,6 +15,8 @@ const TIMELINE_BY_GOAL: Record<FitnessGoal, string> = {
     "Realistic lean hypertrophy is 0.25–0.5 kg of total body mass per month for natural trainees. Progressive overload in the gym is paramount.",
   "weight-gain":
     "Aim for 0.3–0.5 kg weight increase per week by maintaining a steady 300–400 kcal surplus and prioritizing compound resistance lifts.",
+  "recomposition":
+    "Focus on progressive strength gains and gradual waist reduction over 8–16 weeks. Recomposition prioritizes high dietary protein and consistent resistance training.",
 };
 
 const HABITS_BY_GOAL: Record<FitnessGoal, string[]> = {
@@ -45,6 +47,13 @@ const HABITS_BY_GOAL: Record<FitnessGoal, string[]> = {
     "Sleep: Minimum 8 hours of quality sleep for hormonal balance and cellular growth.",
     "Hydration: Sip water throughout the day, but avoid drinking large quantities immediately before meals.",
     "Avoid Excessive Cardio: Keep intense cardio to 1-2 short sessions weekly to prevent burning excess calories.",
+  ],
+  "recomposition": [
+    "Protein Timing: Aim for 2.0–2.2g of protein per kg bodyweight, spaced across 4–5 meals including pre and post workout.",
+    "Progressive Resistance: Track your lifting numbers weekly. Building lean mass requires consistent mechanical tension.",
+    "Daily Steps: Maintain 8,000–9,000 steps daily for non-exercise activity thermogenesis (NEAT) without cardio exhaustion.",
+    "Sleep Recovery: 7.5 to 8.5 hours of uninterrupted sleep every night to maximize growth hormone and muscle recovery.",
+    "Carb Modulation: Eat higher carbs on resistance training days and moderate carbs on active recovery days.",
   ],
 };
 

@@ -41,6 +41,7 @@ describe("Calorie and Macro Calculator (Mifflin-St Jeor)", () => {
 
     const fatLoss = calculateCaloriePlan({ ...base, goal: "fat-loss" });
     const weightLoss = calculateCaloriePlan({ ...base, goal: "weight-loss" });
+    const recomp = calculateCaloriePlan({ ...base, goal: "recomposition" });
     const muscleGain = calculateCaloriePlan({ ...base, goal: "muscle-gain" });
     const weightGain = calculateCaloriePlan({ ...base, goal: "weight-gain" });
 
@@ -48,13 +49,17 @@ describe("Calorie and Macro Calculator (Mifflin-St Jeor)", () => {
     expect(fatLoss.calories).toBe(Math.round(fatLoss.tdee * 0.8));
     // Weight Loss should be TDEE - 18%
     expect(weightLoss.calories).toBe(Math.round(weightLoss.tdee * 0.82));
+    // Recomposition should be TDEE - 5% (tight deficit / maintenance)
+    expect(recomp.calories).toBe(Math.round(recomp.tdee * 0.95));
+    expect(recomp.macros.proteinGrams).toBe(Math.round(75 * 2.2));
     // Muscle Gain should be TDEE + 10%
     expect(muscleGain.calories).toBe(Math.round(muscleGain.tdee * 1.1));
     // Weight Gain should be TDEE + 15%
     expect(weightGain.calories).toBe(Math.round(weightGain.tdee * 1.15));
 
     // Proper calorie ordering
-    expect(fatLoss.calories).toBeLessThan(muscleGain.calories);
+    expect(fatLoss.calories).toBeLessThan(recomp.calories);
+    expect(recomp.calories).toBeLessThan(muscleGain.calories);
     expect(muscleGain.calories).toBeLessThan(weightGain.calories);
   });
 

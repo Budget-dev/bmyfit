@@ -46,7 +46,7 @@ const GOALS: GoalItem[] = [
     ),
   },
   {
-    id: "weight-loss",
+    id: "recomposition",
     title: "Body Recomposition",
     splitTitle: ["Body", "Recomposition"],
     description: "Lose fat while building muscle.",

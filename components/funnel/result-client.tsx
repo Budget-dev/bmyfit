@@ -316,6 +316,11 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
       icon: "💪",
       tagline: "Healthy calorie surplus with optimal protein.",
     },
+    "recomposition": {
+      name: "Body Recomposition",
+      icon: "⚡",
+      tagline: "Burn stubborn fat and build lean muscle simultaneously.",
+    },
   }[rawGoal] || {
     name: "Fat Loss",
     icon: "🔥",

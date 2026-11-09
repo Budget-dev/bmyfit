@@ -16,7 +16,7 @@ export const dietPreferenceSchema = z.enum(
 );
 
 export const fitnessGoalSchema = z.enum(
-  ["fat-loss", "weight-loss", "muscle-gain", "weight-gain"],
+  ["fat-loss", "weight-loss", "muscle-gain", "weight-gain", "recomposition"],
   { required_error: "Please choose a fitness goal" },
 );
 

@@ -4,7 +4,7 @@ export type PlanStatus = "pending_review" | "approved" | "active";
 
 export interface MealSlotItem {
   id: string;
-  slot: "Breakfast" | "Lunch" | "Snack" | "Dinner";
+  slot: "Breakfast" | "Mid-Morning" | "Lunch" | "Pre-Workout" | "Post-Workout" | "Evening Snack" | "Dinner" | "Snack" | string;
   name: string;
   itemsDescription: string;
   portion: string;

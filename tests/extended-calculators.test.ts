@@ -193,3 +193,4 @@ describe("Extended Calculators Suite", () => {
     expect(bac.hoursUntilSober).toBeGreaterThan(0);
   });
 });
+

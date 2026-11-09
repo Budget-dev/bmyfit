@@ -506,21 +506,23 @@ export function DesktopHomeView() {
               </div>
 
               {/* Framed Coach Portrait */}
-              <div className="mt-6 p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/30 flex items-center gap-4 z-10">
-                <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-[#00e676]">
+              <div className="mt-6 p-4 rounded-2xl bg-gray-900/90 border border-gray-700/60 flex items-center gap-4 z-10">
+                <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-gray-600 shadow-md">
                   <Image
                     src="/images/coach-portrait.jpg"
                     alt="Coach Naveen"
                     fill
-                    className="object-cover object-[center_35%]"
+                    className="object-cover object-top"
                   />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <FontAwesomeIcon icon={faWhatsapp} className="w-4 h-4 text-[#25D366]" />
+                    <svg className="w-4 h-4 text-[#00e676]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
                     <h4 className="text-sm font-black text-white">1-on-1 Direct Support</h4>
                   </div>
-                  <p className="text-xs text-gray-300 mt-0.5">Every ₹99 plan includes direct WhatsApp chat access to Coach Naveen.</p>
+                  <p className="text-xs text-gray-300 mt-0.5">Every ₹99 plan includes direct 1-on-1 coach guidance with Coach Naveen.</p>
                 </div>
               </div>
             </Card>
@@ -542,9 +544,18 @@ export function DesktopHomeView() {
               <button
                 type="button"
                 onClick={() => setShowDesktopCalculators(!showDesktopCalculators)}
-                className="px-4 py-2 rounded-full bg-[#00e676] hover:bg-[#00c864] text-black text-xs font-black transition-all cursor-pointer shadow-sm active:scale-95"
+                className="px-4 py-2 rounded-full bg-[#00e676] hover:bg-[#00c864] text-black text-xs font-black transition-all cursor-pointer shadow-sm active:scale-95 flex items-center gap-1.5"
               >
-                {showDesktopCalculators ? "Hide All Calculators ▲" : "Show All 22 Calculators ▼"}
+                <span>{showDesktopCalculators ? "Hide All Calculators" : "Show All 22 Calculators"}</span>
+                <svg
+                  className={`w-3.5 h-3.5 transition-transform duration-200 ${showDesktopCalculators ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
               <Link
                 href="/calculators"
@@ -642,15 +653,16 @@ export function DesktopHomeView() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Big Photo (5 cols) */}
             <div className="lg:col-span-5 relative">
-              <div className="relative w-full aspect-[4/4.5] rounded-3xl overflow-hidden shadow-2xl border border-emerald-500/30 bg-emerald-950/40">
+              <div className="relative w-full aspect-[4/4.5] rounded-3xl overflow-hidden shadow-2xl border border-gray-700/80 bg-gray-900">
                 <Image
                   src="/images/coach-portrait.jpg"
-                  alt="Coach Naveen in the gym"
+                  alt="Coach Naveen"
                   fill
-                  className="object-cover object-[center_35%]"
+                  className="object-cover object-top"
                   sizes="(max-width: 1024px) 100vw, 500px"
+                  priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
                 <div className="absolute bottom-6 left-6 text-white text-left">
                   <div className="text-3xl font-black text-[#00e676]">7+ YEARS</div>
                   <div className="text-xs font-bold uppercase tracking-wider text-gray-200">
@@ -1115,9 +1127,11 @@ export function DesktopHomeView() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-emerald-950/80 border border-emerald-500/30 flex items-center justify-center text-[#00e676] shrink-0">
-                    <FontAwesomeIcon icon={faWhatsapp} className="w-4 h-4 text-[#25D366]" />
+                    <svg className="w-4 h-4 text-[#00e676]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
                   </div>
-                  <span>WhatsApp Helpline: +91 98490 12345</span>
+                  <span>Coach Helpline: +91 98490 12345</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-emerald-950/80 border border-emerald-500/30 flex items-center justify-center text-[#00e676] shrink-0">

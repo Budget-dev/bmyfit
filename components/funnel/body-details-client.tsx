@@ -366,6 +366,12 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
       image: "/images/model-build-consistency.jpg",
       icon: "target",
     },
+    "recomposition": {
+      title: "Body Recomposition",
+      subtitle: "Burn fat & build lean muscle.",
+      image: "/images/model-lose-fat.jpg",
+      icon: "flame",
+    },
   }[goal] || {
     title: "Muscle Gain",
     subtitle: "Build lean muscle & strength",
