@@ -434,27 +434,42 @@ export function initFirebaseListeners() {
             }
 
             const existing = inMemoryUsers.get(id) || (email ? Array.from(inMemoryUsers.values()).find((u) => u.email && u.email.toLowerCase().trim() === email) : undefined);
-            const primaryId = existing?.id || id;
-            const effectiveCategory = data.membershipCategory === "membership"
-              ? "membership"
-              : isPurchased
-                ? "purchased"
-                : (data.membershipCategory || existing?.membershipCategory || "free");
+            if (existing) {
+              const effectiveCategory = data.membershipCategory === "membership"
+                ? "membership"
+                : isPurchased
+                  ? "purchased"
+                  : (data.membershipCategory || existing?.membershipCategory || "free");
 
-            const record = sanitizeAdminUserRecord(
-              {
-                ...existing,
-                ...data,
-                id: primaryId,
-                isPaid: isPurchased || Boolean(existing?.isPaid),
-                membershipCategory: effectiveCategory,
-                needsPlanReview: data.plan?.status === "approved" ? false : (isPurchased || Boolean(data.needsPlanReview)),
-                plan: data.plan || existing?.plan,
-              },
-              primaryId
-            );
-            inMemoryUsers.set(primaryId, record);
-            hasChanges = true;
+              const record = sanitizeAdminUserRecord(
+                {
+                  ...existing,
+                  ...data,
+                  id: existing.id,
+                  isPaid: isPurchased || Boolean(existing?.isPaid),
+                  membershipCategory: effectiveCategory,
+                  needsPlanReview: data.plan?.status === "approved" ? false : (isPurchased || Boolean(data.needsPlanReview)),
+                  plan: data.plan || existing?.plan,
+                },
+                existing.id
+              );
+              inMemoryUsers.set(existing.id, record);
+              hasChanges = true;
+            } else if (isPurchased) {
+              const record = sanitizeAdminUserRecord(
+                {
+                  ...data,
+                  id,
+                  isPaid: true,
+                  membershipCategory: data.membershipCategory === "membership" ? "membership" : "purchased",
+                  needsPlanReview: data.plan?.status === "approved" ? false : true,
+                  plan: data.plan,
+                },
+                id
+              );
+              inMemoryUsers.set(id, record);
+              hasChanges = true;
+            }
           }
         });
         if (hasChanges) notifyAdminSubscribers();
@@ -1245,26 +1260,41 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
               (u) => u.email && u.email.toLowerCase() === email
             )
             : undefined);
-        const primaryId = existing?.id || docSnap.id;
-        const effectiveCategory = data.membershipCategory === "membership"
-          ? "membership"
-          : isPurchased
-            ? "purchased"
-            : (data.membershipCategory || existing?.membershipCategory || "free");
 
-        const record = sanitizeAdminUserRecord(
-          {
-            ...existing,
-            ...data,
-            id: primaryId,
-            isPaid: isPurchased || Boolean(existing?.isPaid),
-            membershipCategory: effectiveCategory,
-            needsPlanReview: data.plan?.status === "approved" ? false : (isPurchased || Boolean(data.needsPlanReview)),
-            plan: data.plan || existing?.plan,
-          },
-          primaryId
-        );
-        inMemoryUsers.set(primaryId, record);
+        if (existing) {
+          const effectiveCategory = data.membershipCategory === "membership"
+            ? "membership"
+            : isPurchased
+              ? "purchased"
+              : (data.membershipCategory || existing?.membershipCategory || "free");
+
+          const record = sanitizeAdminUserRecord(
+            {
+              ...existing,
+              ...data,
+              id: existing.id,
+              isPaid: isPurchased || Boolean(existing?.isPaid),
+              membershipCategory: effectiveCategory,
+              needsPlanReview: data.plan?.status === "approved" ? false : (isPurchased || Boolean(data.needsPlanReview)),
+              plan: data.plan || existing?.plan,
+            },
+            existing.id
+          );
+          inMemoryUsers.set(existing.id, record);
+        } else if (isPurchased) {
+          const record = sanitizeAdminUserRecord(
+            {
+              ...data,
+              id: docSnap.id,
+              isPaid: true,
+              membershipCategory: data.membershipCategory === "membership" ? "membership" : "purchased",
+              needsPlanReview: data.plan?.status === "approved" ? false : true,
+              plan: data.plan,
+            },
+            docSnap.id
+          );
+          inMemoryUsers.set(docSnap.id, record);
+        }
       });
     } catch (e) {
       console.warn("Direct Firestore users collection sync notice:", e);
@@ -1301,13 +1331,40 @@ export async function syncFirestoreUsersDirectly(): Promise<AdminUserRecord[]> {
       asmSnap.forEach((docSnap) => {
         const asm = docSnap.data();
         const id = (asm.uid && asm.uid !== "anonymous-user" && !String(asm.uid).startsWith("guest_")) ? asm.uid : null;
-        if (!id) return; // Do NOT create synthetic users for anonymous visitors checking free scores
-        const existing = inMemoryUsers.get(id) || inMemoryUsers.get(docSnap.id);
+        let existing = (id ? inMemoryUsers.get(id) : null) || inMemoryUsers.get(docSnap.id);
+        if (!existing && asm.email) {
+          existing = Array.from(inMemoryUsers.values()).find(
+            (u) => u.email && u.email.toLowerCase().trim() === String(asm.email).toLowerCase().trim()
+          );
+        }
         if (existing) {
+          existing.assessmentId = docSnap.id;
+          if (asm.goal) {
+            existing.goal = asm.goal;
+            const goalMap: Record<string, string> = {
+              "fat-loss": "Fat Loss",
+              "muscle-gain": "Muscle Gain",
+              "weight-loss": "Weight Loss",
+              "weight-gain": "Weight Gain",
+            };
+            existing.goalDisplay = goalMap[asm.goal] || String(asm.goal).replace("-", " ");
+          }
           if (asm.weightKg && existing.biometrics) {
-            existing.biometrics.weightKg = asm.weightKg;
+            const currentWeight = Number(asm.weightKg);
+            let targetWeight = asm.targetWeightKg;
+            if (!targetWeight) {
+              if (asm.goal === "muscle-gain" || asm.goal === "weight-gain") {
+                targetWeight = currentWeight + 4;
+              } else if (asm.goal === "fat-loss" || asm.goal === "weight-loss") {
+                targetWeight = currentWeight - 5;
+              } else {
+                targetWeight = currentWeight;
+              }
+            }
+            existing.biometrics.weightKg = currentWeight;
+            existing.biometrics.targetWeightKg = targetWeight;
             existing.biometrics.heightCm = asm.heightCm || existing.biometrics.heightCm;
-            existing.biometrics.bmi = asm.bmi || existing.biometrics.bmi;
+            existing.biometrics.bmi = asm.bmi || Math.round((currentWeight / Math.pow((existing.biometrics.heightCm || 175) / 100, 2)) * 10) / 10;
             existing.biometrics.bodyFatPercent = asm.bodyFatPercent || existing.biometrics.bodyFatPercent;
           }
         }

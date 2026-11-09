@@ -33,10 +33,10 @@ export async function processAndStoreAssessment(
   return { assessmentId, assessment: created };
 }
 
-export async function fetchUserAssessment(uid: string, assessmentId: string): Promise<Assessment> {
+export async function fetchUserAssessment(uid: string, assessmentId: string): Promise<Assessment | null> {
   return getAssessment(uid, assessmentId);
 }
 
-export async function fetchAssessmentByIdUnchecked(assessmentId: string): Promise<Assessment> {
+export async function fetchAssessmentByIdUnchecked(assessmentId: string): Promise<Assessment | null> {
   return getAssessmentById(assessmentId);
 }

@@ -18,8 +18,12 @@ export async function POST(request: Request) {
     } catch {
       throw new AppError("INVALID_REQUEST", "The request payload is invalid", 400);
     }
+    let preferredId: string | undefined;
+    if (typeof body === "object" && body !== null && "id" in body && typeof (body as { id?: unknown }).id === "string") {
+      preferredId = (body as { id: string }).id;
+    }
     const input = assessmentSchema.parse(body);
-    const assessmentId = await createAssessment(uid, input, calculateAssessment(input));
+    const assessmentId = await createAssessment(uid, input, calculateAssessment(input), preferredId);
     return Response.json({ assessmentId }, { status: 201 });
   } catch (error) {
     return toErrorResponse(error);

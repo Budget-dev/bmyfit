@@ -302,8 +302,25 @@ export function AdminDesktopConsole() {
     const unsubscribe = subscribeToLiveAdminUsers((liveUsers) => {
       applyUsersAndStats(liveUsers);
     });
+
+    const onFocus = () => {
+      void fetchUsers();
+    };
+    window.addEventListener("focus", onFocus);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void fetchUsers();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    // Background polling every 15s to guarantee real-time fresh state without manual clicks
+    const pollTimer = setInterval(() => {
+      void fetchUsers();
+    }, 15000);
+
     return () => {
       unsubscribe();
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      clearInterval(pollTimer);
     };
   }, [fetchUsers, applyUsersAndStats]);
 

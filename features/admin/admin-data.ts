@@ -108,17 +108,40 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
   if (typeof globalThis !== "undefined" && globalThis.__bmyfit_assessments_store__) {
     for (const [asmId, asm] of globalThis.__bmyfit_assessments_store__.entries()) {
       const targetId = asm.uid && asm.uid !== "anonymous-user" && !String(asm.uid).startsWith("guest_") ? asm.uid : null;
-      if (targetId && memoryStore.has(targetId)) {
-        const user = memoryStore.get(targetId)!;
+      let user = targetId ? memoryStore.get(targetId) : undefined;
+      if (!user && (asm as unknown as { email?: string }).email) {
+        user = Array.from(memoryStore.values()).find(
+          (u) => u.email && u.email.toLowerCase().trim() === String((asm as unknown as { email?: string }).email).toLowerCase().trim()
+        );
+      }
+      if (user) {
         user.assessmentId = asmId;
         if (asm.goal) {
           user.goal = asm.goal;
-          user.goalDisplay = String(asm.goal).replace("-", " ");
+          const goalMap: Record<string, string> = {
+            "fat-loss": "Fat Loss",
+            "muscle-gain": "Muscle Gain",
+            "weight-loss": "Weight Loss",
+            "weight-gain": "Weight Gain",
+          };
+          user.goalDisplay = goalMap[asm.goal] || String(asm.goal).replace("-", " ");
         }
         if (asm.weightKg) {
-          user.biometrics.weightKg = asm.weightKg;
+          const currentWeight = Number(asm.weightKg);
+          let targetWeight = (asm as unknown as { targetWeightKg?: number }).targetWeightKg;
+          if (!targetWeight) {
+            if (asm.goal === "muscle-gain" || asm.goal === "weight-gain") {
+              targetWeight = currentWeight + 4;
+            } else if (asm.goal === "fat-loss" || asm.goal === "weight-loss") {
+              targetWeight = currentWeight - 5;
+            } else {
+              targetWeight = currentWeight;
+            }
+          }
+          user.biometrics.weightKg = currentWeight;
+          user.biometrics.targetWeightKg = targetWeight;
           user.biometrics.heightCm = asm.heightCm || user.biometrics.heightCm;
-          user.biometrics.bmi = asm.bmi || user.biometrics.bmi;
+          user.biometrics.bmi = asm.bmi || Math.round((currentWeight / Math.pow((user.biometrics.heightCm || 175) / 100, 2)) * 10) / 10;
           user.biometrics.bodyFatPercent = asm.bodyFatPercent ?? user.biometrics.bodyFatPercent;
         }
       }
@@ -331,56 +354,15 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
             if (userData.medicalAssessment) existing.medicalAssessment = { ...existing.medicalAssessment, ...userData.medicalAssessment };
             if (userData.needsPlanReview !== undefined) existing.needsPlanReview = userData.needsPlanReview;
             memoryStore.set(existing.id, existing);
-          } else {
-            memoryStore.set(doc.id, {
+          } else if (isPaid) {
+            // Only verified paying customers are added if not previously registered in Auth
+            memoryStore.set(doc.id, sanitizeAdminUser({
+              ...userData,
               id: doc.id,
-              name: userData.name || "BMYFIT Member",
-              email: userData.email,
-              phone: userData.phone || "",
-              city: userData.city || "",
-              avatar:
-                userData.avatarUrl ||
-                "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
-              joinedAt: userData.createdAt || new Date().toISOString(),
-              lastActive: "Active Today",
-              membershipCategory: userData.membershipCategory || "free",
-              membershipTitle:
-                userData.membershipTitle ||
-                (userData.membershipCategory === "purchased"
-                  ? "Purchased Client Plan"
-                  : "Free Registered Member"),
-              goal: userData.goal || "fat-loss",
-              goalDisplay: userData.goalDisplay || "Fat Loss & Conditioning",
-              needsPlanReview: userData.needsPlanReview ?? false,
-              biometrics: userData.biometrics || {
-                gender: "male",
-                age: userData.age || 28,
-                heightCm: 175,
-                weightKg: 78,
-                targetWeightKg: 70,
-                waistIn: 34,
-                neckIn: 15.5,
-                bmi: 24.5,
-                bmiCategory: "normal",
-                bodyFatPercent: 21.0,
-                bodyFatCategory: "average",
-                bmr: 1700,
-                tdee: 2350,
-                caloricTarget: 1800,
-                proteinTargetGrams: 120,
-                activityLevel: "moderately-active",
-                dietPreference: "vegetarian",
-                waterLitres: 3.5,
-                dailyStepGoal: 10000,
-              },
-              plan:
-                userData.plan ||
-                generateDashboardPlan(doc.id, {
-                  customerName: userData.name || "BMYFIT Member",
-                  status: userData.membershipCategory === "purchased" ? "pending_review" : "active",
-                  weeksCount: 8,
-                }),
-            });
+              membershipCategory: userData.membershipCategory === "membership" ? "membership" : "purchased",
+              isPaid: true,
+              needsPlanReview: userData.plan?.status === "approved" ? false : true,
+            }, doc.id));
           }
         }
       }
@@ -395,8 +377,12 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
         for (const doc of asmSnap.docs) {
           const asm = doc.data();
           const targetUid = asm.uid && asm.uid !== "anonymous-user" && !String(asm.uid).startsWith("guest_") ? asm.uid : null;
-          if (!targetUid) continue; // Skip anonymous assessments from unauthenticated visitors
-          const existing = memoryStore.get(targetUid) || memoryStore.get(doc.id);
+          let existing = (targetUid ? memoryStore.get(targetUid) : null) || memoryStore.get(doc.id);
+          if (!existing && asm.email) {
+            existing = Array.from(memoryStore.values()).find(
+              (u) => u.email && u.email.toLowerCase().trim() === String(asm.email).toLowerCase().trim()
+            );
+          }
 
           if (existing) {
             existing.assessmentId = doc.id;
@@ -405,32 +391,31 @@ export async function fetchAllAdminUsers(): Promise<{ users: AdminUserRecord[]; 
             if (asm.phone && !existing.phone) existing.phone = asm.phone;
             if (asm.goal) {
               existing.goal = asm.goal;
-              existing.goalDisplay = String(asm.goal).replace("-", " ");
-            }
-            if (asm.bmi || asm.bodyFatPercent) {
-              existing.biometrics = {
-                ...existing.biometrics,
-                gender: asm.gender || existing.biometrics?.gender || "male",
-                age: asm.age || existing.biometrics?.age || 26,
-                heightCm: asm.heightCm || existing.biometrics?.heightCm || 175,
-                weightKg: asm.weightKg || existing.biometrics?.weightKg || 70,
-                targetWeightKg: asm.targetWeightKg || existing.biometrics?.targetWeightKg || 68,
-                waistIn: asm.waistIn || existing.biometrics?.waistIn || 32,
-                neckIn: asm.neckIn || existing.biometrics?.neckIn || 15,
-                hipIn: asm.hipIn,
-                bmi: asm.bmi || existing.biometrics?.bmi || 24.2,
-                bmiCategory: asm.bmiCategory || existing.biometrics?.bmiCategory || "normal",
-                bodyFatPercent: asm.bodyFatPercent || existing.biometrics?.bodyFatPercent || 18.4,
-                bodyFatCategory: asm.bodyFatCategory || existing.biometrics?.bodyFatCategory || "average",
-                bmr: asm.bmr || existing.biometrics?.bmr || 1600,
-                tdee: asm.tdee || existing.biometrics?.tdee || 2200,
-                caloricTarget: existing.biometrics?.caloricTarget || 1800,
-                proteinTargetGrams: existing.biometrics?.proteinTargetGrams || 120,
-                activityLevel: asm.activityLevel || existing.biometrics?.activityLevel || "moderately-active",
-                dietPreference: asm.dietPreference || existing.biometrics?.dietPreference || "vegetarian",
-                waterLitres: 3.5,
-                dailyStepGoal: 10000,
+              const goalMap: Record<string, string> = {
+                "fat-loss": "Fat Loss",
+                "muscle-gain": "Muscle Gain",
+                "weight-loss": "Weight Loss",
+                "weight-gain": "Weight Gain",
               };
+              existing.goalDisplay = goalMap[asm.goal] || String(asm.goal).replace("-", " ");
+            }
+            if (asm.weightKg) {
+              const currentWeight = Number(asm.weightKg);
+              let targetWeight = asm.targetWeightKg;
+              if (!targetWeight) {
+                if (asm.goal === "muscle-gain" || asm.goal === "weight-gain") {
+                  targetWeight = currentWeight + 4;
+                } else if (asm.goal === "fat-loss" || asm.goal === "weight-loss") {
+                  targetWeight = currentWeight - 5;
+                } else {
+                  targetWeight = currentWeight;
+                }
+              }
+              existing.biometrics.weightKg = currentWeight;
+              existing.biometrics.targetWeightKg = targetWeight;
+              existing.biometrics.heightCm = asm.heightCm || existing.biometrics.heightCm;
+              existing.biometrics.bmi = asm.bmi || Math.round((currentWeight / Math.pow((existing.biometrics.heightCm || 175) / 100, 2)) * 10) / 10;
+              existing.biometrics.bodyFatPercent = asm.bodyFatPercent ?? existing.biometrics.bodyFatPercent;
             }
           }
         }

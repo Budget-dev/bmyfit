@@ -31,9 +31,10 @@ globalThis.__bmyfit_webhook_events__ = memoryWebhooks;
 export async function createAssessment(
   uid: string,
   input: AssessmentInput,
-  computed: Pick<Assessment, "bmi" | "bmiCategory" | "bodyFatPercent" | "bodyFatCategory" | "bodyFatWarning">
+  computed: Pick<Assessment, "bmi" | "bmiCategory" | "bodyFatPercent" | "bodyFatCategory" | "bodyFatWarning">,
+  preferredId?: string
 ) {
-  const assessmentId = `asm_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+  const assessmentId = preferredId || `asm_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
   const record: Assessment = {
     id: assessmentId,
     uid,
@@ -49,6 +50,7 @@ export async function createAssessment(
     try {
       const ref = adminDb.collection("assessments").doc(assessmentId);
       await ref.set({
+        id: assessmentId,
         uid,
         ...input,
         ...computed,
@@ -64,7 +66,7 @@ export async function createAssessment(
   return assessmentId;
 }
 
-export async function getAssessment(uid: string, assessmentId: string): Promise<Assessment> {
+export async function getAssessment(uid: string, assessmentId: string): Promise<Assessment | null> {
   if (hasAdminCredentials) {
     try {
       const snapshot = await adminDb.collection("assessments").doc(assessmentId).get();
@@ -80,28 +82,10 @@ export async function getAssessment(uid: string, assessmentId: string): Promise<
   const fromMemory = memoryAssessments.get(assessmentId);
   if (fromMemory) return fromMemory;
 
-  // Safe fallback default assessment for test or local assessments
-  return {
-    id: assessmentId,
-    uid,
-    gender: "male",
-    age: 28,
-    heightCm: 175,
-    weightKg: 78,
-    waistIn: 34,
-    neckIn: 15.5,
-    bmi: 25.5,
-    bmiCategory: "overweight",
-    bodyFatPercent: 22.0,
-    bodyFatCategory: "average",
-    goal: "fat-loss",
-    activityLevel: "moderately-active",
-    dietPreference: "vegetarian",
-    createdAt: new Date().toISOString(),
-  };
+  return null;
 }
 
-export async function getAssessmentById(assessmentId: string): Promise<Assessment> {
+export async function getAssessmentById(assessmentId: string): Promise<Assessment | null> {
   if (hasAdminCredentials) {
     try {
       const snapshot = await adminDb.collection("assessments").doc(assessmentId).get();
@@ -117,25 +101,7 @@ export async function getAssessmentById(assessmentId: string): Promise<Assessmen
   const fromMemory = memoryAssessments.get(assessmentId);
   if (fromMemory) return fromMemory;
 
-  // Safe fallback default assessment (uid: "guest_user")
-  return {
-    id: assessmentId,
-    uid: "guest_user",
-    gender: "male",
-    age: 28,
-    heightCm: 175,
-    weightKg: 78,
-    waistIn: 34,
-    neckIn: 15.5,
-    bmi: 25.5,
-    bmiCategory: "overweight",
-    bodyFatPercent: 22.0,
-    bodyFatCategory: "average",
-    goal: "fat-loss",
-    activityLevel: "moderately-active",
-    dietPreference: "vegetarian",
-    createdAt: new Date().toISOString(),
-  };
+  return null;
 }
 
 function idempotencyId(uid: string, key: string) {

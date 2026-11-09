@@ -32,6 +32,7 @@ import {
   getFullDraftInput,
 } from "@/features/assessment/session-store";
 import { recordFootprint } from "@/lib/telemetry/footprints";
+import { db, doc, setDoc } from "@/lib/firebase/client";
 
 export interface ResultClientProps {
   id?: string;
@@ -47,8 +48,28 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
     (user && !user.isAnonymous && user.email && user.email.trim() !== "")
   );
 
-  const [assessment, setAssessment] = useState<Assessment | null>(initialAssessment ?? null);
-  const [loading, setLoading] = useState<boolean>(!initialAssessment);
+  const [assessment, setAssessment] = useState<Assessment | null>(() => {
+    if (initialAssessment) return initialAssessment;
+    if (typeof window !== "undefined") {
+      const stored = loadLocalAssessment(id);
+      if (stored && typeof stored === "object" && (stored.weightKg || stored.bmi)) {
+        return stored as unknown as Assessment;
+      }
+      const draftInput = getFullDraftInput();
+      if (draftInput && draftInput.weightKg) {
+        const calc = calculateAssessment(draftInput);
+        return {
+          id: id || "local",
+          uid: "guest",
+          ...draftInput,
+          ...calc,
+          createdAt: new Date().toISOString(),
+        } as Assessment;
+      }
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState<boolean>(() => !initialAssessment && !loadLocalAssessment(id));
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -68,19 +89,43 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
     }
   };
 
-  // Sync assessment to authenticated user so results are never lost
+  // Sync assessment to authenticated user in storage and Firestore
   useEffect(() => {
     if (isLoggedIn && user?.uid && assessment) {
       try {
         const enriched = {
           ...assessment,
           uid: user.uid,
+          email: user.email || "",
         };
         sessionStorage.setItem("bmyfit_local_assessment", JSON.stringify(enriched));
         localStorage.setItem("bmyfit_local_assessment", JSON.stringify(enriched));
+        if (assessment.id && assessment.id !== "local" && assessment.id !== "demo") {
+          void setDoc(
+            doc(db, "assessments", assessment.id),
+            { uid: user.uid, email: user.email || "" },
+            { merge: true }
+          ).catch(() => {});
+          void setDoc(
+            doc(db, "users", user.uid),
+            {
+              assessmentId: assessment.id,
+              goal: assessment.goal,
+              biometrics: {
+                gender: assessment.gender,
+                age: assessment.age,
+                heightCm: assessment.heightCm,
+                weightKg: assessment.weightKg,
+                bmi: assessment.bmi,
+                bodyFatPercent: assessment.bodyFatPercent,
+              },
+            },
+            { merge: true }
+          ).catch(() => {});
+        }
       } catch { }
     }
-  }, [isLoggedIn, user?.uid, assessment]);
+  }, [isLoggedIn, user?.uid, user?.email, assessment]);
 
   // Load assessment from local storage immediately, then sync with server
   useEffect(() => {
@@ -132,8 +177,16 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
         if (res.ok) {
           const data = await res.json();
           if (isMounted && data.assessment && (data.assessment.weightKg || data.assessment.bmi)) {
-            setAssessment(data.assessment);
-            saveLocalAssessment(data.assessment);
+            // Strictly preserve the user's selected goal and entered biometrics
+            setAssessment((prev) => {
+              const merged: Assessment = {
+                ...(prev || {}),
+                ...data.assessment,
+                goal: prev?.goal || data.assessment.goal || "fat-loss",
+              };
+              saveLocalAssessment(merged as unknown as Record<string, unknown>);
+              return merged;
+            });
           }
         }
       } catch (e) {
@@ -160,24 +213,33 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
     }
   }, [assessment]);
 
-  // Default fallback data for visual rendering if state is empty
-  const data: Assessment = assessment ?? {
-    id: id || "demo",
+  // Default fallback data for visual rendering if state is empty (derived from user draft if present)
+  const draftFallback = typeof window !== "undefined" ? getFullDraftInput() : null;
+  const draftCalculated = draftFallback ? calculateAssessment(draftFallback) : null;
+
+  const data: Assessment = assessment ?? (draftFallback ? {
+    id: id || "local",
+    uid: user?.uid || "guest",
+    ...draftFallback,
+    ...(draftCalculated || {}),
+    createdAt: new Date().toISOString(),
+  } as Assessment : {
+    id: id || "local",
     uid: "guest",
     gender: "male",
-    age: 24,
+    age: 26,
     heightCm: 175,
-    weightKg: 70,
-    waistIn: 31.5,
-    neckIn: 14.2,
-    bmi: 24.2,
+    weightKg: 72,
+    waistIn: 32,
+    neckIn: 15,
+    bmi: 23.5,
     bmiCategory: "normal",
-    bodyFatPercent: 18.4,
+    bodyFatPercent: 18.0,
     bodyFatCategory: "average",
     goal: "fat-loss",
     activityLevel: "moderately-active",
-    dietPreference: "non-vegetarian",
-  };
+    dietPreference: "vegetarian",
+  });
 
   // Category labels and colors
   const bmiValue = typeof data.bmi === "number" && !isNaN(data.bmi) ? data.bmi : 24.2;

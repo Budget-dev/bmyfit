@@ -106,9 +106,9 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
       setGoal(savedGoal.goal);
     } else {
       saveDraftGoal({
-        goal: "muscle-gain",
+        goal: "fat-loss",
         activityLevel: "moderately-active",
-        dietPreference: "non-vegetarian",
+        dietPreference: "vegetarian",
       });
     }
 
@@ -318,11 +318,11 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
       ...(gender === "female" ? { hipIn: finalHipIn, hipCm } : {}),
     });
 
-    // Ensure a default goal is recorded so assessment calculation is guaranteed to succeed
+    // Ensure current goal is recorded so assessment calculation is guaranteed to succeed
     const existingGoal = loadDraftGoal();
     if (!existingGoal?.goal) {
       saveDraftGoal({
-        goal: "fat-loss",
+        goal,
         activityLevel: "moderately-active",
         dietPreference: "vegetarian",
       });

@@ -15,6 +15,7 @@ import { PLAN_PRICE_PAISE, verifyPaymentSignature } from "@/lib/payments/razorpa
 import { generatePlan } from "@/features/plan";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 import { registerPurchasedClient } from "@/features/admin/admin-data";
+import type { Assessment } from "@/types/fitness";
 
 export const runtime = "nodejs";
 
@@ -99,7 +100,25 @@ export async function POST(request: Request) {
     }
 
     // Fetch assessment and generate tailored plans
-    const assessment = await getAssessmentById(currentOrder.assessmentId);
+    const rawAssessment = await getAssessmentById(currentOrder.assessmentId);
+    const assessment: Assessment = rawAssessment || {
+      id: currentOrder.assessmentId,
+      uid: currentOrder.uid,
+      gender: "male",
+      age: 28,
+      heightCm: 175,
+      weightKg: 75,
+      waistIn: 34,
+      neckIn: 15.5,
+      bmi: 24.5,
+      bmiCategory: "normal",
+      bodyFatPercent: 20.0,
+      bodyFatCategory: "average",
+      goal: "fat-loss",
+      activityLevel: "moderately-active",
+      dietPreference: "vegetarian",
+      createdAt: new Date().toISOString(),
+    };
     const detailedPlan = generatePlan(assessment, currentOrder.assessmentId);
     await storePlan(currentOrder.uid, currentOrder.assessmentId, detailedPlan);
 

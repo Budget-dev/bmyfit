@@ -15,6 +15,7 @@ import { generatePlan } from "@/features/plan";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 import { registerPurchasedClient } from "@/features/admin/admin-data";
 import type { PaymentOrderRecord, VerifyPaymentRequest } from "@/types/payment";
+import type { Assessment } from "@/types/fitness";
 
 export async function createOrderForUser(
   uid: string,
@@ -80,7 +81,25 @@ export async function verifyUserPayment(
   }
 
   // Generate and store the detailed plan
-  const assessment = await getAssessmentById(order.assessmentId);
+  const rawAssessment = await getAssessmentById(order.assessmentId);
+  const assessment: Assessment = rawAssessment || {
+    id: order.assessmentId,
+    uid,
+    gender: "male",
+    age: 28,
+    heightCm: 175,
+    weightKg: 75,
+    waistIn: 34,
+    neckIn: 15.5,
+    bmi: 24.5,
+    bmiCategory: "normal",
+    bodyFatPercent: 20.0,
+    bodyFatCategory: "average",
+    goal: "fat-loss",
+    activityLevel: "moderately-active",
+    dietPreference: "vegetarian",
+    createdAt: new Date().toISOString(),
+  };
   const plan = generatePlan(assessment, order.assessmentId);
   await storePlan(uid, order.assessmentId, plan);
 

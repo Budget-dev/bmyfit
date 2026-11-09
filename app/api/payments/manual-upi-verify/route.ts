@@ -9,7 +9,7 @@ import { AppError, toErrorResponse } from "@/lib/errors";
 import { enforceRateLimit, requestKey } from "@/lib/rate-limit";
 import { PLAN_PRICE_PAISE } from "@/lib/payments/razorpay";
 import { generatePlan } from "@/features/plan";
-import type { AssessmentInput } from "@/types/fitness";
+import type { Assessment, AssessmentInput } from "@/types/fitness";
 import { generateDashboardPlan } from "@/features/plan/dashboard-data";
 import { registerPurchasedClient } from "@/features/admin/admin-data";
 import { adminDb, hasAdminCredentials } from "@/lib/firebase/admin";
@@ -50,27 +50,26 @@ export async function POST(request: Request) {
     const paymentMethod = (input.paymentApp?.toLowerCase().includes("phonepe") ? "phonepe" : "upi_manual") as "phonepe" | "upi_manual";
 
     // 1. Fetch or generate assessment data
-    let assessment;
-    try {
-      assessment = await getAssessmentById(input.assessmentId);
-    } catch {
-      assessment = {
-        id: input.assessmentId,
-        uid,
-        gender: "male" as const,
-        age: 28,
-        heightCm: 175,
-        weightKg: 78,
-        waistIn: 34,
-        neckIn: 15.5,
-        bmi: 25.5,
-        goal: "fat-loss" as const,
-        activityLevel: "moderately-active" as const,
-        dietPreference: "vegetarian" as const,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-    }
+    const rawAssessment = await getAssessmentById(input.assessmentId).catch(() => null);
+    const assessment: Assessment = rawAssessment || {
+      id: input.assessmentId,
+      uid,
+      gender: "male" as const,
+      age: 28,
+      heightCm: 175,
+      weightKg: 78,
+      waistIn: 34,
+      neckIn: 15.5,
+      bmi: 25.5,
+      bmiCategory: "normal",
+      bodyFatPercent: 21.0,
+      bodyFatCategory: "average",
+      goal: "fat-loss" as const,
+      activityLevel: "moderately-active" as const,
+      dietPreference: "vegetarian" as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
 
     // 2. Generate and store customized plan
     const assessmentInput: AssessmentInput = {

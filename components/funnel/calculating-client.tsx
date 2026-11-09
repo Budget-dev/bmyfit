@@ -41,7 +41,7 @@ const STEPS = [
 
 export function CalculatingClient() {
   const router = useRouter();
-  const { getIdToken } = useAuth();
+  const { getIdToken, user } = useAuth();
   const { getFullInput, hydrated } = useFunnelState();
 
   const [progress, setProgress] = useState(12);
@@ -104,10 +104,12 @@ export function CalculatingClient() {
       targetResultUrlRef.current = `/result/${generatedId}`;
       calculationFinishedRef.current = true;
 
+      const effectiveUid = user?.uid && !user.isAnonymous ? user.uid : "anonymous-user";
+
       if (typeof window !== "undefined") {
         const localAssessment = {
           id: generatedId,
-          uid: "anonymous-user",
+          uid: effectiveUid,
           ...currentInput,
           ...calculated,
           createdAt: new Date().toISOString(),
@@ -122,12 +124,36 @@ export function CalculatingClient() {
           if (typeof window !== "undefined") {
             const firestorePayload = {
               id: generatedId,
-              uid: "anonymous-user",
+              uid: effectiveUid,
+              email: user?.email || "",
               ...currentInput,
               ...calculated,
               createdAt: new Date().toISOString(),
             };
             void setDoc(doc(db, "assessments", generatedId), firestorePayload).catch(() => {});
+
+            if (user?.uid && !user.isAnonymous) {
+              void setDoc(
+                doc(db, "users", user.uid),
+                {
+                  assessmentId: generatedId,
+                  goal: currentInput.goal,
+                  biometrics: {
+                    gender: currentInput.gender,
+                    age: currentInput.age,
+                    heightCm: currentInput.heightCm,
+                    weightKg: currentInput.weightKg,
+                    waistIn: currentInput.waistIn,
+                    neckIn: currentInput.neckIn,
+                    hipIn: currentInput.hipIn,
+                    bmi: calculated.bmi,
+                    bodyFatPercent: calculated.bodyFatPercent,
+                  },
+                  updatedAt: new Date().toISOString(),
+                },
+                { merge: true }
+              ).catch(() => {});
+            }
           }
 
           const token = await getIdToken().catch(() => null);
@@ -137,7 +163,11 @@ export function CalculatingClient() {
           const res = await fetch("/api/assessments", {
             method: "POST",
             headers,
-            body: JSON.stringify(currentInput),
+            body: JSON.stringify({
+              id: generatedId,
+              uid: effectiveUid,
+              ...currentInput,
+            }),
           }).catch(() => null);
 
           if (res && res.ok) {
@@ -147,7 +177,7 @@ export function CalculatingClient() {
               if (typeof window !== "undefined") {
                 const updated = {
                   id: data.assessmentId,
-                  uid: "anonymous-user",
+                  uid: effectiveUid,
                   ...currentInput,
                   ...calculated,
                   createdAt: new Date().toISOString(),
@@ -166,7 +196,7 @@ export function CalculatingClient() {
       targetResultUrlRef.current = "/result/local";
       calculationFinishedRef.current = true;
     }
-  }, [hydrated, getIdToken, getFullInput, router]);
+  }, [hydrated, getIdToken, getFullInput, router, user]);
 
   // Circle SVG metrics
   const radius = 54;
