@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Sparkles,
 } from "@/components/ui/icons";
+import { WhatsAppExpandableButton } from "@/components/ui/whatsapp-expandable-button";
 import type { ChatMessage } from "@/types/chat";
 import {
   subscribeToChatMessages,
@@ -160,37 +161,11 @@ export function ClientChatWidget({
       {/* ================= FLOATING LAUNCHER PILL ================= */}
       {!isOpen && (
         <div className={`fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 animate-bounce-subtle ${className}`}>
-          <button
-            type="button"
+          <WhatsAppExpandableButton
             onClick={() => setIsOpen(true)}
-            className="flex items-center gap-3 bg-[#075E54] hover:bg-[#128C7E] text-white px-4 py-3 rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 border-2 border-emerald-400/40 group"
-            aria-label="Open WhatsApp Chat with Coach Naveen"
-          >
-            {/* WhatsApp Green Badge Icon */}
-            <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-md">
-                <MessageCircle className="w-6 h-6 fill-white" />
-              </div>
-              {/* Online Pulse Indicator */}
-              <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 border-2 border-white rounded-full animate-pulse" />
-            </div>
-
-            {/* Label */}
-            <div className="text-left pr-1 hidden xs:block">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-black tracking-wide">Coach Chat</span>
-                <span className="text-[9px] font-extrabold uppercase bg-emerald-400 text-gray-950 px-1.5 py-0.2 rounded-full">
-                  ONLINE
-                </span>
-              </div>
-              <p className="text-[11px] text-emerald-100 font-medium">Message Coach Naveen directly</p>
-            </div>
-
-            {/* Unread indicator */}
-            {hasUnreadFromCoach && (
-              <span className="w-3 h-3 rounded-full bg-rose-500 animate-ping absolute -top-1 -right-1" />
-            )}
-          </button>
+            hasUnread={hasUnreadFromCoach}
+            title="Open WhatsApp Chat with Coach Naveen"
+          />
         </div>
       )}
 
@@ -203,7 +178,7 @@ export function ClientChatWidget({
               {/* Coach Avatar */}
               <div className="relative w-10 h-10 rounded-full overflow-hidden bg-white/20 border-2 border-emerald-400">
                 <Image
-                  src="/images/coach-naveen-v4.jpg"
+                  src="/images/coach-naveen-v3.jpg"
                   alt="Coach Naveen"
                   fill
                   className="object-cover object-top"
@@ -286,11 +261,10 @@ export function ClientChatWidget({
               return (
                 <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
                   <div
-                    className={`max-w-[82%] rounded-2xl p-3 shadow-xs relative text-left leading-relaxed ${
-                      isMe
-                        ? "bg-[#d9fdd3] text-gray-900 rounded-tr-xs border border-emerald-200/50"
-                        : "bg-white text-gray-900 rounded-tl-xs border border-gray-200/60"
-                    }`}
+                    className={`max-w-[82%] rounded-2xl p-3 shadow-xs relative text-left leading-relaxed ${isMe
+                      ? "bg-[#d9fdd3] text-gray-900 rounded-tr-xs border border-emerald-200/50"
+                      : "bg-white text-gray-900 rounded-tl-xs border border-gray-200/60"
+                      }`}
                   >
                     {/* Coach sender name label */}
                     {!isMe && (
@@ -322,17 +296,17 @@ export function ClientChatWidget({
             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider shrink-0">Ask:</span>
             {(isPaid
               ? [
-                  "⚖️ Logged my morning weight!",
-                  "🥗 Can I swap brown rice?",
-                  "💪 Leg workout soreness tip?",
-                  "💧 Finished 3.5L water target!",
-                ]
+                "⚖️ Logged my morning weight!",
+                "🥗 Can I swap brown rice?",
+                "💪 Leg workout soreness tip?",
+                "💧 Finished 3.5L water target!",
+              ]
               : [
-                  "🔥 How does the ₹99 plan work?",
-                  "🥗 Can I get a pure vegetarian diet?",
-                  "🏋️‍♂️ Can I workout at home?",
-                  "⏱️ How fast will I see results?",
-                ]
+                "🔥 How does the ₹99 plan work?",
+                "🥗 Can I get a pure vegetarian diet?",
+                "🏋️‍♂️ Can I workout at home?",
+                "⏱️ How fast will I see results?",
+              ]
             ).map((chip) => (
               <button
                 key={chip}
@@ -363,11 +337,10 @@ export function ClientChatWidget({
             <button
               type="submit"
               disabled={!inputText.trim() || sending}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition shadow-md shrink-0 ${
-                inputText.trim()
-                  ? "bg-[#25D366] hover:bg-[#1faa53] text-white active:scale-95"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition shadow-md shrink-0 ${inputText.trim()
+                ? "bg-[#25D366] hover:bg-[#1faa53] text-white active:scale-95"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
               aria-label="Send message"
             >
               <Send className="w-4 h-4 translate-x-0.5" />
