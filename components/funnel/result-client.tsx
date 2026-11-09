@@ -585,7 +585,7 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
                   {/* Desktop-only Coach Naveen Note */}
                   <div className="hidden md:flex items-start gap-3 p-4 rounded-2xl bg-white border border-gray-200 text-left shadow-sm">
                     <div className="relative w-11 h-11 rounded-full overflow-hidden border border-gray-300 shrink-0">
-                      <Image src="/images/coach-naveen-v3.jpg" alt="Coach Naveen" fill className="object-cover object-top" />
+                      <Image src="/images/coach-naveen-v4.jpg" alt="Coach Naveen" fill className="object-cover object-top" />
                     </div>
                     <div>
                       <h4 className="text-xs font-black text-gray-950">Coach Naveen’s Review</h4>

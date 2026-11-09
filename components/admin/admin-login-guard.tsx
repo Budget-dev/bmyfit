@@ -85,7 +85,7 @@ export function AdminLoginGuard({ children }: AdminLoginGuardProps) {
         age: 34,
         role: "admin",
         provider: "password",
-        avatarUrl: "/images/coach-naveen-v3.jpg",
+        avatarUrl: "/images/coach-naveen-v4.jpg",
         createdAt: new Date().toISOString(),
       };
 

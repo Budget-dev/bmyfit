@@ -119,8 +119,8 @@ export function SiteStructuredData() {
     name: "BMYFIT",
     alternateName: "BMYFIT Personal Fitness Coaching",
     url: siteUrl,
-    logo: `${siteUrl}/images/coach-portrait-v3.jpg`,
-    image: `${siteUrl}/images/coach-portrait-v3.jpg`,
+    logo: `${siteUrl}/images/coach-portrait-v4.jpg`,
+    image: `${siteUrl}/images/coach-portrait-v4.jpg`,
     description:
       "India's premier personalized fitness and Indian nutrition coaching platform by Coach Naveen. Science-backed, practical, and made for Indian bodies.",
     telephone: "+91-9112345678",
@@ -145,7 +145,7 @@ export function SiteStructuredData() {
       "@type": "Person",
       name: "Coach Naveen",
       jobTitle: "Head Coach & Sports Nutritionist",
-      image: `${siteUrl}/images/coach-naveen-v3.jpg`,
+      image: `${siteUrl}/images/coach-naveen-v4.jpg`,
       description:
         "Certified Fitness Coach & Sports Nutritionist with 7+ years of experience helping 1,000+ Indian adults transform their bodies through evidence-based nutrition.",
       sameAs: [

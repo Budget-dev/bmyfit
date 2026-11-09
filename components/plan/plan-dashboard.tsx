@@ -442,7 +442,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
           <div className="flex items-center gap-3.5">
             <div className="relative w-12 h-12 rounded-full overflow-hidden bg-white/10 border-2 border-white/60 shrink-0 shadow-md">
               <Image
-                src="/images/coach-naveen-v3.jpg"
+                src="/images/coach-naveen-v4.jpg"
                 alt="Coach Naveen"
                 fill
                 className="object-cover object-top"
@@ -1579,7 +1579,7 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
           <div className="flex items-center gap-4 text-center sm:text-left">
             <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white/60 flex-shrink-0 relative">
               <Image
-                src={plan.coach?.avatar || "/images/coach-naveen-v3.jpg"}
+                src={plan.coach?.avatar || "/images/coach-naveen-v4.jpg"}
                 alt={plan.coach?.name || "Coach Naveen"}
                 fill
                 className="object-cover"

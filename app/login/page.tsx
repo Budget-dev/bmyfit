@@ -81,7 +81,7 @@ export default function LoginPage() {
               <div className="flex items-center gap-2.5">
                 <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-400 shadow-xs shrink-0">
                   <Image
-                    src="/images/coach-naveen-v3.jpg"
+                    src="/images/coach-naveen-v4.jpg"
                     alt="Coach Naveen"
                     fill
                     className="object-cover object-top"

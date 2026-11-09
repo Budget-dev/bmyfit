@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     url: "https://bmyfit.in/about",
     images: [
       {
-        url: "/images/coach-portrait-v3.jpg",
+        url: "/images/coach-portrait-v4.jpg",
         width: 1200,
         height: 630,
         alt: "Coach Naveen - BMYFIT Head Coach",
@@ -118,7 +118,7 @@ export default function AboutPage() {
               <div className="relative shrink-0">
                 <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl overflow-hidden ring-4 ring-emerald-500/30 shadow-xl bg-surface-900">
                   <Image
-                    src="/images/coach-naveen-v3.jpg"
+                    src="/images/coach-naveen-v4.jpg"
                     alt="Coach Naveen - Blaze Gym Owner & Head Coach"
                     width={144}
                     height={144}

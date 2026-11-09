@@ -355,7 +355,7 @@ export function generateDashboardPlan(
       name: "Coach Naveen",
       role: "Blaze Gym Owner · Certified Fitness Coach & Sports Nutritionist",
       whatsAppNumber: "+919876543210",
-      avatar: "/images/coach-naveen-v3.jpg",
+      avatar: "/images/coach-naveen-v4.jpg",
     },
     weeks,
     createdAt: new Date().toISOString(),

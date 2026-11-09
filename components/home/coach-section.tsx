@@ -18,7 +18,7 @@ export function CoachSection() {
           <div className="w-[30%] min-[390px]:w-[32%] sm:w-40 md:w-52 lg:w-56 shrink-0">
             <div className="relative w-full aspect-[4/4.8] rounded-xl md:rounded-2xl overflow-hidden border border-gray-700 bg-black shadow-xl">
               <Image
-                src="/images/coach-naveen-v3.jpg"
+                src="/images/coach-naveen-v4.jpg"
                 alt="Coach Naveen · Blaze Gym Owner & Head Coach"
                 fill
                 sizes="(max-width: 768px) 35vw, 240px"
@@ -131,7 +131,7 @@ export function CoachSection() {
             <div className="flex items-center gap-3.5 mb-4">
               <div className="relative w-14 h-14 rounded-2xl overflow-hidden border border-gray-300 shadow-sm shrink-0 bg-gray-900">
                 <Image
-                  src="/images/coach-naveen-v3.jpg"
+                  src="/images/coach-naveen-v4.jpg"
                   alt="Coach Naveen"
                   fill
                   className="object-cover object-top"

@@ -967,7 +967,7 @@ export async function pushPlanToUserDashboard(
       name: coachName,
       role: currentPlan.coach?.role || "Blaze Gym Owner · Head Coach & Sports Nutritionist",
       whatsAppNumber: currentPlan.coach?.whatsAppNumber || "+919876543210",
-      avatar: currentPlan.coach?.avatar || "/images/coach-naveen-v3.jpg",
+      avatar: currentPlan.coach?.avatar || "/images/coach-naveen-v4.jpg",
     },
   };
 

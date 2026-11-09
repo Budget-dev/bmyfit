@@ -645,7 +645,7 @@ export default function GoalPage() {
               <div className="flex items-center gap-3">
                 <div className="relative w-10 h-10 rounded-full overflow-hidden border border-gray-300 shrink-0">
                   <Image
-                    src="/images/coach-naveen-v3.jpg"
+                    src="/images/coach-naveen-v4.jpg"
                     alt="Coach Naveen"
                     fill
                     className="object-cover object-top"

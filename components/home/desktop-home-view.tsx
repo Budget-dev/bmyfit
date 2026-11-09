@@ -509,7 +509,7 @@ export function DesktopHomeView() {
               <div className="mt-6 p-4 rounded-2xl bg-gray-900/90 border border-gray-700/60 flex items-center gap-4 z-10">
                 <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-gray-600 shadow-md">
                   <Image
-                    src="/images/coach-portrait-v3.jpg"
+                    src="/images/coach-portrait-v4.jpg"
                     alt="Coach Naveen"
                     fill
                     className="object-cover object-top"
@@ -648,14 +648,14 @@ export function DesktopHomeView() {
       </section>
 
       {/* ================= 5. ABOUT YOUR COACH FEATURE ================= */}
-      <section className="py-16 sm:py-24 bg-gradient-to-b from-[#04120a] to-[#071910] text-white border-b border-emerald-950/60">
+      <section className="py-16 sm:py-24 bg-gradient-to-b from-[#090d12] via-[#0d1117] to-[#161b22] text-white border-b border-gray-800/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Big Photo (5 cols) */}
             <div className="lg:col-span-5 relative">
               <div className="relative w-full aspect-[4/4.5] rounded-3xl overflow-hidden shadow-2xl border border-gray-700/80 bg-gray-900">
                 <Image
-                  src="/images/coach-portrait-v3.jpg"
+                  src="/images/coach-portrait-v4.jpg"
                   alt="Coach Naveen"
                   fill
                   className="object-cover object-top"

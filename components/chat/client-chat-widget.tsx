@@ -203,7 +203,7 @@ export function ClientChatWidget({
               {/* Coach Avatar */}
               <div className="relative w-10 h-10 rounded-full overflow-hidden bg-white/20 border-2 border-emerald-400">
                 <Image
-                  src="/images/coach-naveen-v3.jpg"
+                  src="/images/coach-naveen-v4.jpg"
                   alt="Coach Naveen"
                   fill
                   className="object-cover object-top"
