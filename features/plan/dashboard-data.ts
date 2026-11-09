@@ -355,7 +355,7 @@ export function generateDashboardPlan(
       name: "Coach Naveen",
       role: "Blaze Gym Owner · Certified Fitness Coach & Sports Nutritionist",
       whatsAppNumber: "+919876543210",
-      avatar: "/images/coach-naveen.jpg",
+      avatar: "/images/coach-naveen-v3.jpg",
     },
     weeks,
     createdAt: new Date().toISOString(),
@@ -367,12 +367,12 @@ export function generateDashboardPlan(
       options.medicalSummary ||
       (options.medicalAssessment
         ? {
-            hasDisease: options.medicalAssessment.hasDisease,
-            diseases: options.medicalAssessment.diseases,
-            customDiseaseDescription: options.medicalAssessment.customDiseaseDescription,
-            medications: options.medicalAssessment.medications,
-            documentsCount: options.medicalAssessment.documents?.length || 0,
-          }
+          hasDisease: options.medicalAssessment.hasDisease,
+          diseases: options.medicalAssessment.diseases,
+          customDiseaseDescription: options.medicalAssessment.customDiseaseDescription,
+          medications: options.medicalAssessment.medications,
+          documentsCount: options.medicalAssessment.documents?.length || 0,
+        }
         : undefined),
   };
 }

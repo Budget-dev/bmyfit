@@ -977,7 +977,7 @@ export function AdminDesktopConsole() {
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-full overflow-hidden border border-emerald-500/40 shrink-0 shadow-sm bg-surface-900">
                 <img
-                  src="/images/coach-naveen.jpg"
+                  src="/images/coach-naveen-v3.jpg"
                   alt="Coach Naveen"
                   className="w-full h-full object-cover object-top"
                 />

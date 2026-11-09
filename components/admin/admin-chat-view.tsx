@@ -231,10 +231,10 @@ export function AdminChatView({
             <div className="flex items-center gap-2.5">
               <div className="relative w-9 h-9 rounded-full overflow-hidden bg-emerald-600 border border-emerald-400">
                 <Image
-                  src="/images/coach-naveen.jpg"
+                  src="/images/coach-naveen-v3.jpg"
                   alt="Coach Naveen"
                   fill
-                  className="object-cover"
+                  className="object-cover object-top"
                 />
               </div>
               <div>

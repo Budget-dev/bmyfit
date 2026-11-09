@@ -105,7 +105,7 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
             doc(db, "assessments", assessment.id),
             { uid: user.uid, email: user.email || "" },
             { merge: true }
-          ).catch(() => {});
+          ).catch(() => { });
           void setDoc(
             doc(db, "users", user.uid),
             {
@@ -121,7 +121,7 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
               },
             },
             { merge: true }
-          ).catch(() => {});
+          ).catch(() => { });
         }
       } catch { }
     }
@@ -159,7 +159,7 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
           saveLocalAssessment(computed as unknown as Record<string, unknown>);
         }
       }
-    } catch {}
+    } catch { }
 
     if (!id || id === "local") {
       setLoading(false);
@@ -584,8 +584,8 @@ export function ResultClient({ id, assessment: initialAssessment }: ResultClient
 
                   {/* Desktop-only Coach Naveen Note */}
                   <div className="hidden md:flex items-start gap-3 p-4 rounded-2xl bg-white border border-gray-200 text-left shadow-sm">
-                    <div className="relative w-11 h-11 rounded-full overflow-hidden border border-emerald-500 shrink-0">
-                      <Image src="/images/coach-naveen.jpg" alt="Coach Naveen" fill className="object-cover object-top" />
+                    <div className="relative w-11 h-11 rounded-full overflow-hidden border border-gray-300 shrink-0">
+                      <Image src="/images/coach-naveen-v3.jpg" alt="Coach Naveen" fill className="object-cover object-top" />
                     </div>
                     <div>
                       <h4 className="text-xs font-black text-gray-950">Coach Naveen’s Review</h4>

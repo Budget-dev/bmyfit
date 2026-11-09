@@ -81,9 +81,9 @@ export default function SignupPage() {
 
             {/* Coach Naveen Endorsement Badge */}
             <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.04] border border-white/10">
-              <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[#00e676]/60 shrink-0 shadow-xs">
+              <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-400 shrink-0 shadow-xs">
                 <Image
-                  src="/images/coach-naveen.jpg"
+                  src="/images/coach-naveen-v3.jpg"
                   alt="Coach Naveen"
                   fill
                   className="object-cover object-top"

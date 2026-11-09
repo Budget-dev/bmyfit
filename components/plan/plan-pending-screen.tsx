@@ -199,9 +199,9 @@ export function PlanPendingScreen({ plan, onPlanApproved }: PlanPendingScreenPro
           {/* Head Trainer Coach Naveen Avatar */}
           <div className="relative group">
             <div className="absolute -inset-2 bg-gradient-to-r from-[#00e676] to-[#00c853] rounded-full blur-lg opacity-40 animate-pulse" />
-            <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-[#00e676] shadow-2xl bg-[#032315] mx-auto">
+            <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-white/60 shadow-2xl bg-black mx-auto">
               <Image
-                src="/images/coach-naveen.jpg"
+                src="/images/coach-naveen-v3.jpg"
                 alt="Coach Naveen"
                 fill
                 className="object-cover object-top"

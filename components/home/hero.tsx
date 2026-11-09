@@ -32,7 +32,7 @@ export function Hero() {
         />
       </div>
 
-      <div className="relative w-full rounded-t-[22px] sm:rounded-t-[24px] md:rounded-2xl rounded-b-none bg-[#021b14] border-t border-[#063322]/80 shadow-[0_6px_20px_rgba(0,0,0,0.2)] h-[160px] sm:h-[174px] md:h-[250px] lg:h-[280px] overflow-hidden flex items-start">
+      <div className="relative w-full rounded-t-[22px] sm:rounded-t-[24px] md:rounded-2xl rounded-b-none bg-[#0a0e14] border-t border-gray-800 shadow-[0_6px_20px_rgba(0,0,0,0.2)] h-[160px] sm:h-[174px] md:h-[250px] lg:h-[280px] overflow-hidden flex items-start">
         
         {/* Model Photography on Right Half - Perfectly framed inside the rounded card */}
         <div className="absolute right-0 top-0 bottom-0 w-[50%] min-[390px]:w-[48%] sm:w-[50%] md:w-[46%] lg:w-[42%] h-full pointer-events-none select-none z-10">
@@ -44,9 +44,9 @@ export function Hero() {
             sizes="(max-width: 768px) 55vw, (max-width: 1200px) 45vw, 500px"
             className="object-cover object-[center_6%] select-none"
           />
-          {/* Smooth multi-stop gradient overlay from dark card background into model */}
-          <div className="absolute inset-y-0 left-0 w-16 sm:w-24 md:w-36 bg-gradient-to-r from-[#021b14] via-[#021b14]/80 to-transparent pointer-events-none" />
-          <div className="absolute inset-x-0 bottom-0 h-6 md:h-12 bg-gradient-to-t from-[#021b14]/70 to-transparent pointer-events-none" />
+          {/* Smooth multi-stop gradient overlay from neutral dark card background into model */}
+          <div className="absolute inset-y-0 left-0 w-16 sm:w-24 md:w-36 bg-gradient-to-r from-[#0a0e14] via-[#0a0e14]/80 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 h-6 md:h-12 bg-gradient-to-t from-[#0a0e14]/70 to-transparent pointer-events-none" />
         </div>
 
         {/* Motivational Script on Top-Right over model's shoulder */}

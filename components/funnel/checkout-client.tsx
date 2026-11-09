@@ -1301,8 +1301,8 @@ export function CheckoutClient({ id, assessmentId: propAssessmentId }: CheckoutC
 
             {/* Coach Naveen Guarantee Card (Desktop Only) */}
             <div className="hidden md:flex bg-emerald-50/70 border border-emerald-100 rounded-2xl p-4 items-center gap-3 text-left">
-              <div className="relative w-11 h-11 rounded-full overflow-hidden border border-emerald-500 shrink-0">
-                <Image src="/images/coach-naveen.jpg" alt="Coach Naveen" fill className="object-cover object-top" />
+              <div className="relative w-11 h-11 rounded-full overflow-hidden border border-gray-300 shrink-0">
+                <Image src="/images/coach-naveen-v3.jpg" alt="Coach Naveen" fill className="object-cover object-top" />
               </div>
               <div className="text-left text-xs">
                 <p className="font-bold text-gray-900">Coach Naveen’s Guarantee</p>

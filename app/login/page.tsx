@@ -79,9 +79,9 @@ export default function LoginPage() {
                 &ldquo;Consistency over perfection. Every meal and every resistance set recorded in your BMYFIT plan brings you closer to sustainable, drug-free fat loss and strength.&rdquo;
               </p>
               <div className="flex items-center gap-2.5">
-                <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[#00e676]/60 shadow-xs shrink-0">
+                <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-400 shadow-xs shrink-0">
                   <Image
-                    src="/images/coach-naveen.jpg"
+                    src="/images/coach-naveen-v3.jpg"
                     alt="Coach Naveen"
                     fill
                     className="object-cover object-top"

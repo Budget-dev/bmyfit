@@ -232,8 +232,8 @@ export default function GoalPage() {
                 <div
                   onClick={() => setSelectedFocus("lose-fat")}
                   className={`p-3 md:p-4 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${selectedFocus === "lose-fat"
-                      ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
-                      : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
+                    ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
+                    : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
                     }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 pr-1">
@@ -261,8 +261,8 @@ export default function GoalPage() {
                 <div
                   onClick={() => setSelectedFocus("build-strength")}
                   className={`p-3 md:p-4 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${selectedFocus === "build-strength"
-                      ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
-                      : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
+                    ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
+                    : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
                     }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 pr-1">
@@ -294,8 +294,8 @@ export default function GoalPage() {
                 <div
                   onClick={() => setSelectedFocus("recomposition")}
                   className={`col-span-2 p-3 md:p-4 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${selectedFocus === "recomposition"
-                      ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
-                      : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
+                    ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
+                    : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
                     }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 pr-1">
@@ -328,8 +328,8 @@ export default function GoalPage() {
                 <div
                   onClick={() => setSelectedFocus("improve-fitness")}
                   className={`p-3 md:p-4 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${selectedFocus === "improve-fitness"
-                      ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
-                      : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
+                    ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
+                    : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
                     }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 pr-1">
@@ -359,8 +359,8 @@ export default function GoalPage() {
                 <div
                   onClick={() => setSelectedFocus("build-consistency")}
                   className={`p-3 md:p-4 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${selectedFocus === "build-consistency"
-                      ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
-                      : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
+                    ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
+                    : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
                     }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 pr-1">
@@ -403,8 +403,8 @@ export default function GoalPage() {
                 <div
                   onClick={() => setExperienceLevel("beginner")}
                   className={`p-3 md:p-4 rounded-2xl border flex flex-col justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${experienceLevel === "beginner"
-                      ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
-                      : "bg-white border-gray-200 hover:border-gray-300"
+                    ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
+                    : "bg-white border-gray-200 hover:border-gray-300"
                     }`}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -431,8 +431,8 @@ export default function GoalPage() {
                 <div
                   onClick={() => setExperienceLevel("intermediate")}
                   className={`p-3 md:p-4 rounded-2xl border flex flex-col justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${experienceLevel === "intermediate"
-                      ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
-                      : "bg-white border-gray-200 hover:border-gray-300"
+                    ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
+                    : "bg-white border-gray-200 hover:border-gray-300"
                     }`}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -460,8 +460,8 @@ export default function GoalPage() {
                 <div
                   onClick={() => setExperienceLevel("advanced")}
                   className={`p-3 md:p-4 rounded-2xl border flex flex-col justify-between cursor-pointer active:scale-98 transition-all min-w-0 ${experienceLevel === "advanced"
-                      ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
-                      : "bg-white border-gray-200 hover:border-gray-300"
+                    ? "bg-[#eaf7ee] border-emerald-500 shadow-sm ring-1 ring-emerald-500/30"
+                    : "bg-white border-gray-200 hover:border-gray-300"
                     }`}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -537,11 +537,10 @@ export default function GoalPage() {
                       setSelectedCalculator(item.id);
                       setShowAllCalculators(true);
                     }}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer active:scale-95 ${
-                      selectedCalculator === item.id && showAllCalculators
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer active:scale-95 ${selectedCalculator === item.id && showAllCalculators
                         ? "bg-[#eaf7ee] border-emerald-500 shadow-xs ring-1 ring-emerald-500/30"
                         : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
-                    }`}
+                      }`}
                   >
                     <div className="text-base mb-1">{item.icon}</div>
                     <div className="text-[11px] font-bold text-gray-950 truncate">{item.name}</div>
@@ -562,9 +561,8 @@ export default function GoalPage() {
                     : "Show More Calculators (All 22 Fitness & Health Tools)"}
                 </span>
                 <svg
-                  className={`w-3.5 h-3.5 text-emerald-700 transition-transform duration-200 ${
-                    showAllCalculators ? "rotate-180" : ""
-                  }`}
+                  className={`w-3.5 h-3.5 text-emerald-700 transition-transform duration-200 ${showAllCalculators ? "rotate-180" : ""
+                    }`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -645,9 +643,9 @@ export default function GoalPage() {
             {/* Coach Tip Card */}
             <Card className="p-5 rounded-2xl bg-gray-50 border border-gray-200 space-y-2">
               <div className="flex items-center gap-3">
-                <div className="relative w-10 h-10 rounded-full overflow-hidden border border-emerald-500 shrink-0">
+                <div className="relative w-10 h-10 rounded-full overflow-hidden border border-gray-300 shrink-0">
                   <Image
-                    src="/images/coach-naveen.jpg"
+                    src="/images/coach-naveen-v3.jpg"
                     alt="Coach Naveen"
                     fill
                     className="object-cover object-top"

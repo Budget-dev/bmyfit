@@ -750,8 +750,8 @@ export function BodyDetailsClient({ initialStep }: BodyDetailsClientProps) {
                 {/* Coach Naveen Tip Card */}
                 <div className="p-5 rounded-2xl bg-gray-50 border border-gray-200 space-y-2">
                   <div className="flex items-center gap-3">
-                    <div className="relative w-10 h-10 rounded-full overflow-hidden border border-emerald-500 shrink-0">
-                      <Image src="/images/coach-naveen.jpg" alt="Coach Naveen" fill className="object-cover object-top" />
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden border border-gray-300 shrink-0">
+                      <Image src="/images/coach-naveen-v3.jpg" alt="Coach Naveen" fill className="object-cover object-top" />
                     </div>
                     <div>
                       <h4 className="text-xs font-black text-gray-950">Coach Naveen’s Tip</h4>

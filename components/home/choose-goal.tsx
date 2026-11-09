@@ -126,7 +126,7 @@ export function ChooseGoal() {
                   sizes="(max-width: 640px) 25vw, 25vw"
                   className="object-cover object-top select-none group-hover:scale-105 transition-transform duration-200"
                 />
-                
+
                 {/* Floating Round Badge at the boundary */}
                 <div
                   className={`absolute -bottom-2.5 left-1.5 sm:left-2 w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-white ${goal.badgeBg} flex items-center justify-center shadow-sm z-10`}

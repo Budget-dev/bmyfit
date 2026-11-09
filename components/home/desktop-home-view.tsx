@@ -378,8 +378,8 @@ export function DesktopHomeView() {
                       type="button"
                       onClick={() => setGender("male")}
                       className={`py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 cursor-pointer ${gender === "male"
-                          ? "bg-[#00e676] text-gray-950 shadow-md"
-                          : "bg-emerald-950/80 text-gray-300 border border-emerald-800/40 hover:bg-emerald-900/60"
+                        ? "bg-[#00e676] text-gray-950 shadow-md"
+                        : "bg-emerald-950/80 text-gray-300 border border-emerald-800/40 hover:bg-emerald-900/60"
                         }`}
                     >
                       <FontAwesomeIcon icon={faUserCheck} className="w-3.5 h-3.5" />
@@ -389,8 +389,8 @@ export function DesktopHomeView() {
                       type="button"
                       onClick={() => setGender("female")}
                       className={`py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 cursor-pointer ${gender === "female"
-                          ? "bg-[#00e676] text-gray-950 shadow-md"
-                          : "bg-emerald-950/80 text-gray-300 border border-emerald-800/40 hover:bg-emerald-900/60"
+                        ? "bg-[#00e676] text-gray-950 shadow-md"
+                        : "bg-emerald-950/80 text-gray-300 border border-emerald-800/40 hover:bg-emerald-900/60"
                         }`}
                     >
                       <FontAwesomeIcon icon={faHeartPulse} className="w-3.5 h-3.5" />
@@ -509,7 +509,7 @@ export function DesktopHomeView() {
               <div className="mt-6 p-4 rounded-2xl bg-gray-900/90 border border-gray-700/60 flex items-center gap-4 z-10">
                 <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-gray-600 shadow-md">
                   <Image
-                    src="/images/coach-portrait.jpg"
+                    src="/images/coach-portrait-v3.jpg"
                     alt="Coach Naveen"
                     fill
                     className="object-cover object-top"
@@ -655,7 +655,7 @@ export function DesktopHomeView() {
             <div className="lg:col-span-5 relative">
               <div className="relative w-full aspect-[4/4.5] rounded-3xl overflow-hidden shadow-2xl border border-gray-700/80 bg-gray-900">
                 <Image
-                  src="/images/coach-portrait.jpg"
+                  src="/images/coach-portrait-v3.jpg"
                   alt="Coach Naveen"
                   fill
                   className="object-cover object-top"

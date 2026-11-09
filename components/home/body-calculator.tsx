@@ -225,7 +225,7 @@ export function BodyCalculator({ className }: { className?: string } = {}) {
   return (
     <section id="calculator-card" className={`relative w-full px-0 sm:px-3 -mt-3.5 sm:-mt-4 md:mt-3 z-20 max-w-xl md:max-w-5xl lg:max-w-6xl mx-auto flex flex-col ${className || ""}`}>
       <div className="w-full flex-1 bg-white rounded-t-[24px] sm:rounded-t-[28px] md:rounded-2xl rounded-b-2xl p-3 min-[390px]:p-3.5 md:p-6 lg:p-8 border-t md:border border-gray-100 shadow-[0_-3px_12px_rgba(0,0,0,0.05)] md:shadow-card flex flex-col justify-between">
-        
+
         {error && (
           <div className="mb-2 p-1.5 md:p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[9.5px] md:text-xs">
             {error}
@@ -254,7 +254,7 @@ export function BodyCalculator({ className }: { className?: string } = {}) {
 
         {/* 2-Column Side-by-Side Grid - Expands to occupy full card height */}
         <div className="flex flex-row items-stretch divide-x divide-gray-100 flex-1 my-1 md:my-3">
-          
+
           {/* Left Column: Form Inputs */}
           <form onSubmit={handleCalculate} className="w-[52%] md:w-[50%] pr-2 md:pr-6 flex flex-col justify-between flex-1 space-y-1.5 md:space-y-3">
 
@@ -366,11 +366,10 @@ export function BodyCalculator({ className }: { className?: string } = {}) {
               <button
                 type="button"
                 onClick={() => setGender("male")}
-                className={`py-1 min-[390px]:py-1.5 px-1.5 rounded-full text-[10px] min-[390px]:text-[10.5px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                  gender === "male"
+                className={`py-1 min-[390px]:py-1.5 px-1.5 rounded-full text-[10px] min-[390px]:text-[10.5px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${gender === "male"
                     ? "bg-[#042017] text-white shadow-sm"
                     : "bg-gray-100 hover:bg-gray-200/80 text-gray-700"
-                }`}
+                  }`}
               >
                 <span>♂</span>
                 <span>Male</span>
@@ -379,11 +378,10 @@ export function BodyCalculator({ className }: { className?: string } = {}) {
               <button
                 type="button"
                 onClick={() => setGender("female")}
-                className={`py-1 min-[390px]:py-1.5 px-1.5 rounded-full text-[10px] min-[390px]:text-[10.5px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                  gender === "female"
+                className={`py-1 min-[390px]:py-1.5 px-1.5 rounded-full text-[10px] min-[390px]:text-[10.5px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${gender === "female"
                     ? "bg-[#042017] text-white shadow-sm"
                     : "bg-gray-100 hover:bg-gray-200/80 text-gray-700"
-                }`}
+                  }`}
               >
                 <span>♀</span>
                 <span>Female</span>
@@ -467,7 +465,7 @@ export function BodyCalculator({ className }: { className?: string } = {}) {
 
             {/* Three Metrics Bar: Body Fat, Lean Mass, Daily Calories */}
             <div className="w-full grid grid-cols-3 gap-0.5 md:gap-2 pt-1 md:pt-3 mt-0.5 md:mt-2 border-t border-gray-100 text-center">
-              
+
               <div>
                 <div className="flex items-center justify-center gap-0.5 text-gray-900">
                   <svg className="w-2.5 h-2.5 text-[#059669] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

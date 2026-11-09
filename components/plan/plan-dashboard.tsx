@@ -440,12 +440,12 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
         {/* ================= COACH DIRECT WHATSAPP CHAT BANNER ================= */}
         <section className="bg-gradient-to-r from-[#075E54] via-[#0b7468] to-[#128C7E] rounded-3xl p-4 sm:p-5 text-white shadow-md flex flex-col sm:flex-row items-center justify-between gap-4 border border-emerald-400/40">
           <div className="flex items-center gap-3.5">
-            <div className="relative w-12 h-12 rounded-full overflow-hidden bg-white/10 border-2 border-[#25D366] shrink-0 shadow-md">
+            <div className="relative w-12 h-12 rounded-full overflow-hidden bg-white/10 border-2 border-white/60 shrink-0 shadow-md">
               <Image
-                src="/images/coach-naveen.jpg"
+                src="/images/coach-naveen-v3.jpg"
                 alt="Coach Naveen"
                 fill
-                className="object-cover"
+                className="object-cover object-top"
               />
               <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#25D366] rounded-full border-2 border-[#075E54] animate-pulse" />
             </div>
@@ -1577,9 +1577,9 @@ export function PlanDashboard({ initialPlan, isDevPreview = false }: PlanDashboa
         {/* Coach Bio Card */}
         <section className="bg-gradient-to-r from-emerald-950 via-[#032e1c] to-emerald-900 text-white rounded-3xl p-5 sm:p-6 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4 text-center sm:text-left">
-            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-emerald-400 flex-shrink-0 relative">
+            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white/60 flex-shrink-0 relative">
               <Image
-                src={plan.coach?.avatar || "/images/coach-naveen.jpg"}
+                src={plan.coach?.avatar || "/images/coach-naveen-v3.jpg"}
                 alt={plan.coach?.name || "Coach Naveen"}
                 fill
                 className="object-cover"

@@ -9,16 +9,16 @@ export function CoachSection() {
 
   return (
     <section id="coach-section" className="relative px-2.5 sm:px-4 py-1 sm:py-1.5 md:py-4 max-w-xl md:max-w-5xl lg:max-w-6xl mx-auto w-full">
-      {/* Dark Forest Green Card */}
-      <div className="relative rounded-[22px] md:rounded-3xl bg-gradient-to-br from-[#021811] via-[#031d15] to-[#010e0a] p-2.5 min-[390px]:p-3 sm:p-3.5 md:p-6 lg:p-7 overflow-hidden border border-emerald-950/80 shadow-md">
+      {/* Premium Athletic Slate Card */}
+      <div className="relative rounded-[22px] md:rounded-3xl bg-gradient-to-br from-[#0d1117] via-[#161b22] to-[#090d12] p-2.5 min-[390px]:p-3 sm:p-3.5 md:p-6 lg:p-7 overflow-hidden border border-gray-800/80 shadow-md">
         
         <div className="relative z-10 flex flex-row items-center gap-2.5 sm:gap-3.5 md:gap-6">
           
           {/* Left Column: Coach Portrait */}
           <div className="w-[30%] min-[390px]:w-[32%] sm:w-40 md:w-52 lg:w-56 shrink-0">
-            <div className="relative w-full aspect-[4/4.8] rounded-xl md:rounded-2xl overflow-hidden border border-gray-700/60 bg-gray-900 shadow-lg">
+            <div className="relative w-full aspect-[4/4.8] rounded-xl md:rounded-2xl overflow-hidden border border-gray-700 bg-black shadow-xl">
               <Image
-                src="/images/coach-naveen.jpg"
+                src="/images/coach-naveen-v3.jpg"
                 alt="Coach Naveen · Blaze Gym Owner & Head Coach"
                 fill
                 sizes="(max-width: 768px) 35vw, 240px"
@@ -41,7 +41,7 @@ export function CoachSection() {
               <button
                 type="button"
                 onClick={() => setShowModal(true)}
-                className="inline-flex items-center gap-1 px-2 py-0.5 md:px-3 md:py-1 rounded-full border border-emerald-500/40 hover:border-[#00e676] bg-black/50 text-white text-[8px] min-[390px]:text-[8.5px] md:text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-sm hover:bg-emerald-950/40"
+                className="inline-flex items-center gap-1 px-2 py-0.5 md:px-3 md:py-1 rounded-full border border-gray-700 hover:border-gray-500 bg-black/60 text-white text-[8px] min-[390px]:text-[8.5px] md:text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-sm hover:bg-white/10"
               >
                 <span>Know More</span>
                 <span className="text-[#00e676]">→</span>
@@ -64,7 +64,7 @@ export function CoachSection() {
             {/* 4 Credentials Bar with Vertical Dividers */}
             <div
               onClick={() => setShowModal(true)}
-              className="mt-1.5 md:mt-3 pt-1.5 md:pt-3 border-t border-emerald-900/60 grid grid-cols-4 gap-0.5 md:gap-2 divide-x divide-emerald-900/60 text-center cursor-pointer hover:bg-emerald-950/30 rounded-lg p-0.5 md:p-1.5 transition-colors"
+              className="mt-1.5 md:mt-3 pt-1.5 md:pt-3 border-t border-gray-800 grid grid-cols-4 gap-0.5 md:gap-2 divide-x divide-gray-800 text-center cursor-pointer hover:bg-white/5 rounded-lg p-0.5 md:p-1.5 transition-colors"
               title="Click to view coach credentials & certifications"
             >
               <div className="flex items-center justify-center gap-0.5 md:gap-1.5 px-0.5">
@@ -129,9 +129,9 @@ export function CoachSection() {
             </button>
 
             <div className="flex items-center gap-3.5 mb-4">
-              <div className="relative w-14 h-14 rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-sm shrink-0">
+              <div className="relative w-14 h-14 rounded-2xl overflow-hidden border border-gray-300 shadow-sm shrink-0 bg-gray-900">
                 <Image
-                  src="/images/coach-naveen.jpg"
+                  src="/images/coach-naveen-v3.jpg"
                   alt="Coach Naveen"
                   fill
                   className="object-cover object-top"
@@ -141,7 +141,7 @@ export function CoachSection() {
                 <h3 className="text-base font-black text-gray-950">
                   Coach Naveen
                 </h3>
-                <p className="text-xs text-emerald-700 font-bold">
+                <p className="text-xs text-gray-700 font-bold">
                   Founder of Blaze Gym · Certified Fitness Coach &amp; Sports Nutritionist
                 </p>
                 <p className="text-[10px] text-gray-400">Owner of Multi-Branch Fitness Facilities across India</p>
@@ -152,20 +152,20 @@ export function CoachSection() {
               Over a decade of elite physical conditioning and sports nutrition experience. Coach Naveen owns and operates Blaze Gym along with several leading fitness centers, specializing in drug-free muscle building, visceral fat reduction, and tailored Indian diet formulations (Vegetarian, Eggetarian, Non-Veg).
             </p>
 
-            <div className="bg-emerald-50/80 border border-emerald-200/70 rounded-2xl p-3.5 space-y-1.5 text-xs text-emerald-950 mb-5">
-              <div className="font-bold flex items-center gap-1.5 text-emerald-900">
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3.5 space-y-1.5 text-xs text-gray-800 mb-5">
+              <div className="font-bold flex items-center gap-1.5 text-gray-900">
                 <span className="text-[#00c853]">✓</span>
                 <span>Owner of Blaze Gym &amp; Multiple Fitness Facilities</span>
               </div>
-              <div className="font-bold flex items-center gap-1.5 text-emerald-900">
+              <div className="font-bold flex items-center gap-1.5 text-gray-900">
                 <span className="text-[#00c853]">✓</span>
                 <span>Certified Fitness Trainer &amp; Advanced Sports Nutritionist</span>
               </div>
-              <div className="font-medium flex items-center gap-1.5 text-emerald-800">
+              <div className="font-medium flex items-center gap-1.5 text-gray-700">
                 <span className="text-[#00c853]">✓</span>
                 <span>15,000+ Verified South Asian Body Transformations</span>
               </div>
-              <div className="font-medium flex items-center gap-1.5 text-emerald-800">
+              <div className="font-medium flex items-center gap-1.5 text-gray-700">
                 <span className="text-[#00c853]">✓</span>
                 <span>Scientific Resistance Protocols &amp; Direct Coach Plan Review</span>
               </div>
